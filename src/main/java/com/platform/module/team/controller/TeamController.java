@@ -8,6 +8,7 @@ import com.platform.module.team.service.TeamService;
 import com.platform.module.team.vo.TeamMemberVO;
 import com.platform.module.team.vo.TeamVO;
 import com.platform.module.team.vo.TimelineEvent;
+import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -23,7 +24,7 @@ public class TeamController {
     }
 
     @PostMapping
-    public Result<TeamVO> createTeam(@RequestBody CreateTeamDTO dto) {
+    public Result<TeamVO> createTeam(@Valid @RequestBody CreateTeamDTO dto) {
         TeamVO teamVO = teamService.createTeam(dto);
         return Result.success(teamVO);
     }

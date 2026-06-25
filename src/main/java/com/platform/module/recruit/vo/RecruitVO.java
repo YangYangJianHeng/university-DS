@@ -22,4 +22,9 @@ public class RecruitVO {
     private String auditStatus;
     private Integer viewCount;
     private LocalDateTime createdAt;
+
+    // 转为项目后的关联
+    private Long projectId;
+    private Long teamId;
+    private Integer continueRecruit;
 }

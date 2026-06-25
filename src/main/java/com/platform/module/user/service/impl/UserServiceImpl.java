@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.platform.common.exception.BusinessException;
 import com.platform.common.util.JwtUtil;
 import com.platform.common.util.UserContext;
+import com.platform.module.user.dto.ChangePasswordDTO;
 import com.platform.module.user.dto.LoginDTO;
 import com.platform.module.user.dto.RegisterDTO;
 import com.platform.module.user.dto.UpdateProfileDTO;
@@ -16,10 +17,15 @@ import com.platform.module.user.vo.UserVO;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 public class UserServiceImpl implements UserService {
@@ -57,7 +63,7 @@ public class UserServiceImpl implements UserService {
         user.setStudentId(dto.getStudentId());
         user.setMajor(dto.getMajor());
         user.setGrade(dto.getGrade());
-        user.setRole("user");
+        user.setRole("USER");
         user.setStatus(1);
 
         userMapper.insert(user);
@@ -133,11 +139,46 @@ public class UserServiceImpl implements UserService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
+    public void changePassword(Long userId, ChangePasswordDTO dto) {
+        User user = userMapper.selectById(userId);
+        if (user == null) {
+            throw BusinessException.notFound("用户不存在");
+        }
+
+        // 验证原密码
+        if (!passwordEncoder.matches(dto.getOldPassword(), user.getPassword())) {
+            throw BusinessException.badRequest("原密码不正确");
+        }
+
+        // 新密码不能与原密码相同
+        if (passwordEncoder.matches(dto.getNewPassword(), user.getPassword())) {
+            throw BusinessException.badRequest("新密码不能与原密码相同");
+        }
+
+        // 更新密码
+        user.setPassword(passwordEncoder.encode(dto.getNewPassword()));
+        userMapper.updateById(user);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
     public void addSkill(Long userId, String skillName, String level) {
+        // 检查是否已存在同名技能
+        Long count = userSkillMapper.selectCount(
+                new LambdaQueryWrapper<UserSkill>()
+                        .eq(UserSkill::getUserId, userId)
+                        .eq(UserSkill::getSkillName, skillName));
+        if (count > 0) {
+            throw BusinessException.conflict("该技能已存在");
+        }
+        if (skillName == null || skillName.trim().isEmpty()) {
+            throw BusinessException.badRequest("技能名称不能为空");
+        }
+
         UserSkill userSkill = new UserSkill();
         userSkill.setUserId(userId);
-        userSkill.setSkillName(skillName);
-        userSkill.setLevel(level);
+        userSkill.setSkillName(skillName.trim());
+        userSkill.setLevel(level != null ? level : "BEGINNER");
 
         userSkillMapper.insert(userSkill);
     }
@@ -157,12 +198,78 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    public List<Map<String, Object>> getSkills(Long userId) {
+        List<UserSkill> skills = userSkillMapper.selectList(
+                new LambdaQueryWrapper<UserSkill>().eq(UserSkill::getUserId, userId));
+        return skills.stream().map(s -> {
+            Map<String, Object> map = new HashMap<>();
+            map.put("id", s.getId());
+            map.put("skillName", s.getSkillName());
+            map.put("level", s.getLevel());
+            return map;
+        }).collect(Collectors.toList());
+    }
+
+    @Override
     public UserVO getUserById(Long userId) {
         User user = userMapper.selectById(userId);
         if (user == null) {
             throw BusinessException.notFound("User not found");
         }
         return buildUserVO(user);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public String uploadAvatar(Long userId, MultipartFile file) {
+        User user = userMapper.selectById(userId);
+        if (user == null) {
+            throw BusinessException.notFound("User not found");
+        }
+
+        // Validate file
+        if (file.isEmpty()) {
+            throw BusinessException.badRequest("文件不能为空");
+        }
+        String contentType = file.getContentType();
+        if (contentType == null || !contentType.startsWith("image/")) {
+            throw BusinessException.badRequest("只能上传图片文件");
+        }
+        if (file.getSize() > 5 * 1024 * 1024) {
+            throw BusinessException.badRequest("图片大小不能超过5MB");
+        }
+
+        try {
+            // Create upload directory
+            String uploadDir = "uploads/avatars/";
+            Path uploadPath = Paths.get(uploadDir);
+            if (!Files.exists(uploadPath)) {
+                Files.createDirectories(uploadPath);
+            }
+
+            // Generate unique filename
+            String originalFilename = file.getOriginalFilename();
+            String extension = "";
+            if (originalFilename != null && originalFilename.contains(".")) {
+                extension = originalFilename.substring(originalFilename.lastIndexOf("."));
+            }
+            String filename = userId + "_" + UUID.randomUUID().toString().substring(0, 8) + extension;
+
+            // Save file
+            Path filePath = uploadPath.resolve(filename);
+            Files.copy(file.getInputStream(), filePath, StandardCopyOption.REPLACE_EXISTING);
+
+            // Build avatar URL (relative path, will be served by static resource mapping or nginx)
+            String avatarUrl = "/uploads/avatars/" + filename;
+
+            // Update user avatar
+            user.setAvatar(avatarUrl);
+            userMapper.updateById(user);
+
+            return avatarUrl;
+        } catch (IOException e) {
+            throw BusinessException.error("头像上传失败: " + e.getMessage());
+        }
     }
 
     private UserVO buildUserVO(User user) {

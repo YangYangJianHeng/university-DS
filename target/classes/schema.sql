@@ -65,6 +65,9 @@ CREATE TABLE IF NOT EXISTS `recruit` (
     `status` VARCHAR(20) DEFAULT 'OPEN',
     `audit_status` VARCHAR(20) DEFAULT 'PENDING',
     `view_count` INT DEFAULT 0,
+    `project_id` BIGINT COMMENT '关联的项目ID（转为项目后填充）',
+    `team_id` BIGINT COMMENT '关联的团队ID（转为项目后填充）',
+    `continue_recruit` TINYINT DEFAULT 0 COMMENT '转为项目后是否继续招募：0=停止，1=继续',
     `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (`publisher_id`) REFERENCES `user`(`id`)
 );
@@ -119,28 +122,80 @@ CREATE TABLE IF NOT EXISTS `team_teacher` (
 CREATE TABLE IF NOT EXISTS `project` (
     `id` BIGINT AUTO_INCREMENT PRIMARY KEY,
     `team_id` BIGINT NOT NULL,
+    `leader_id` BIGINT NOT NULL COMMENT '项目负责人',
     `name` VARCHAR(200) NOT NULL,
     `description` TEXT,
     `status` VARCHAR(20) DEFAULT 'ONGOING',
     `started_at` DATE,
     `ended_at` DATE,
     `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (`team_id`) REFERENCES `team`(`id`)
+    FOREIGN KEY (`team_id`) REFERENCES `team`(`id`),
+    FOREIGN KEY (`leader_id`) REFERENCES `user`(`id`)
 );
 
--- 10. 任务表
+-- 10. 任务表（改造：移除assignee_id，改为多人指派）
 CREATE TABLE IF NOT EXISTS `task` (
     `id` BIGINT AUTO_INCREMENT PRIMARY KEY,
     `project_id` BIGINT NOT NULL,
+    `creator_id` BIGINT NOT NULL COMMENT '任务创建者（项目负责人）',
     `title` VARCHAR(200) NOT NULL,
     `description` TEXT,
-    `assignee_id` BIGINT,
+    `required_skills` VARCHAR(500) COMMENT '任务所需技能，逗号分隔',
     `priority` VARCHAR(10) DEFAULT 'MEDIUM',
-    `status` VARCHAR(20) DEFAULT 'PENDING',
+    `status` VARCHAR(20) DEFAULT 'TODO' COMMENT 'TODO/IN_PROGRESS/SUBMITTED/REVIEWING/DONE/OVERDUE',
     `deadline` DATETIME,
     `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+    `updated_at` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (`project_id`) REFERENCES `project`(`id`),
-    FOREIGN KEY (`assignee_id`) REFERENCES `user`(`id`)
+    FOREIGN KEY (`creator_id`) REFERENCES `user`(`id`)
+);
+
+-- 10.1 任务执行人关联表（多人指派）
+CREATE TABLE IF NOT EXISTS `task_assignee` (
+    `id` BIGINT AUTO_INCREMENT PRIMARY KEY,
+    `task_id` BIGINT NOT NULL,
+    `user_id` BIGINT NOT NULL,
+    `assignment_note` VARCHAR(500) COMMENT '负责人对该执行人的分工说明',
+    `skill_match_score` DECIMAL(3,2) DEFAULT 0 COMMENT '技能匹配度（0-1）',
+    `status` VARCHAR(20) DEFAULT 'ASSIGNED' COMMENT 'ASSIGNED/ACCEPTED/REJECTED',
+    `assigned_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+    `accepted_at` DATETIME,
+    FOREIGN KEY (`task_id`) REFERENCES `task`(`id`),
+    FOREIGN KEY (`user_id`) REFERENCES `user`(`id`),
+    UNIQUE KEY `uk_task_user` (`task_id`, `user_id`),
+    INDEX `idx_status` (`status`)
+);
+
+-- 10.2 任务成果提交表（阶段性成果）
+CREATE TABLE IF NOT EXISTS `task_submission` (
+    `id` BIGINT AUTO_INCREMENT PRIMARY KEY,
+    `task_id` BIGINT NOT NULL,
+    `submitter_id` BIGINT NOT NULL COMMENT '提交人',
+    `title` VARCHAR(200) NOT NULL COMMENT '成果标题',
+    `description` TEXT COMMENT '成果描述',
+    `file_urls` JSON COMMENT '附件URL列表（图片/视频/压缩包/文档）',
+    `status` VARCHAR(20) DEFAULT 'PENDING_REVIEW' COMMENT 'PENDING_REVIEW/APPROVED/REJECTED',
+    `review_comment` TEXT COMMENT '验收意见',
+    `reviewer_id` BIGINT COMMENT '验收人（项目负责人）',
+    `reviewed_at` DATETIME COMMENT '验收时间',
+    `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (`task_id`) REFERENCES `task`(`id`),
+    FOREIGN KEY (`submitter_id`) REFERENCES `user`(`id`),
+    FOREIGN KEY (`reviewer_id`) REFERENCES `user`(`id`),
+    INDEX `idx_status` (`status`)
+);
+
+-- 10.3 任务评论表
+CREATE TABLE IF NOT EXISTS `task_comment` (
+    `id` BIGINT AUTO_INCREMENT PRIMARY KEY,
+    `task_id` BIGINT NOT NULL,
+    `user_id` BIGINT NOT NULL,
+    `content` TEXT NOT NULL,
+    `mentioned_user_ids` JSON COMMENT '@提及的用户ID列表',
+    `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (`task_id`) REFERENCES `task`(`id`),
+    FOREIGN KEY (`user_id`) REFERENCES `user`(`id`),
+    INDEX `idx_task_id` (`task_id`)
 );
 
 -- 11. 竞赛信息表
@@ -181,6 +236,7 @@ CREATE TABLE IF NOT EXISTS `achievement` (
     `id` BIGINT AUTO_INCREMENT PRIMARY KEY,
     `project_id` BIGINT,
     `team_id` BIGINT,
+    `submitter_id` BIGINT,
     `title` VARCHAR(200) NOT NULL,
     `type` VARCHAR(30),
     `description` TEXT,
@@ -268,7 +324,16 @@ CREATE TABLE IF NOT EXISTS `audit_log` (
     FOREIGN KEY (`operator_id`) REFERENCES `user`(`id`)
 );
 
--- 19. 系统配置表
+-- 19. 公告表
+CREATE TABLE IF NOT EXISTS `announcement` (
+    `id` BIGINT AUTO_INCREMENT PRIMARY KEY,
+    `title` VARCHAR(200) NOT NULL,
+    `content` TEXT,
+    `type` VARCHAR(30) DEFAULT 'SYSTEM',
+    `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 20. 系统配置表
 CREATE TABLE IF NOT EXISTS `system_config` (
     `id` BIGINT AUTO_INCREMENT PRIMARY KEY,
     `config_key` VARCHAR(100) UNIQUE NOT NULL,

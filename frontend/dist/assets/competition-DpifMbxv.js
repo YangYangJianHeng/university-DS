@@ -1,0 +1,1 @@
+import{r as o}from"./request-DxApAtjI.js";function e(t){return o.get("/competition/list",{params:t})}function n(t){return o.get(`/competition/${t}`)}function c(t){return o.post(`/competition/${t}/collect`)}export{c,n as g,e as l};

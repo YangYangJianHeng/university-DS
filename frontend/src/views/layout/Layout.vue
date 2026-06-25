@@ -27,7 +27,7 @@
         </el-tooltip>
         <el-dropdown trigger="click" class="user-dropdown">
           <div class="user-info">
-            <el-avatar :size="34" class="user-avatar">{{ (userStore.username || 'U').charAt(0).toUpperCase() }}</el-avatar>
+            <el-avatar :size="34" :src="userStore.userInfo?.avatar" class="user-avatar">{{ (userStore.username || 'U').charAt(0).toUpperCase() }}</el-avatar>
             <div class="user-text">
               <span class="user-name">{{ userStore.username || '用户' }}</span>
               <span class="user-role">{{ roleLabel }}</span>
@@ -207,11 +207,11 @@ function handleLogout() {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  background: #fff;
+  background: var(--color-header-bg);
   height: 64px !important;
   padding: 0 24px;
-  border-bottom: 1px solid #e8ecf1;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+  border-bottom: 1px solid var(--color-header-border);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.03);
   z-index: 100;
   flex-shrink: 0;
 }
@@ -233,8 +233,8 @@ function handleLogout() {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--gradient-primary);
-  border-radius: 10px;
+  background: var(--color-primary);
+  border-radius: 8px;
   color: #fff;
 }
 
@@ -244,15 +244,15 @@ function handleLogout() {
 }
 
 .brand-title {
-  font-size: 18px;
+  font-size: 17px;
   font-weight: 700;
-  color: #1a1a2e;
+  color: var(--color-text-primary);
   line-height: 1.2;
 }
 
 .brand-subtitle {
   font-size: 11px;
-  color: #909399;
+  color: var(--color-text-muted);
   line-height: 1.2;
 }
 
@@ -264,19 +264,21 @@ function handleLogout() {
 
 .header-btn {
   border: none !important;
-  background: #f5f6fa !important;
-  width: 36px;
-  height: 36px;
-  border-radius: 10px !important;
+  background: var(--color-bg) !important;
+  width: 38px;
+  height: 38px;
+  border-radius: 8px !important;
   font-size: 18px;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 0 !important;
-  transition: all 0.2s;
+  transition: all var(--transition-fast);
+  color: var(--color-text-secondary) !important;
 }
 .header-btn:hover {
-  background: #eef0f6 !important;
+  background: var(--color-bg-hover) !important;
+  color: var(--color-primary) !important;
 }
 
 .notif-badge :deep(.el-badge__content) {
@@ -295,15 +297,15 @@ function handleLogout() {
   gap: 10px;
   padding: 4px 12px 4px 4px;
   border-radius: 24px;
-  background: #f5f6fa;
-  transition: all 0.2s;
+  background: var(--color-bg);
+  transition: all var(--transition-fast);
 }
 .user-info:hover {
-  background: #eef0f6;
+  background: var(--color-bg-hover);
 }
 
 .user-avatar {
-  background: var(--gradient-primary) !important;
+  background: var(--color-primary) !important;
   font-size: 14px;
   font-weight: 600;
   color: #fff;
@@ -319,17 +321,17 @@ function handleLogout() {
 .user-name {
   font-size: 13px;
   font-weight: 600;
-  color: #1a1a2e;
+  color: var(--color-text-primary);
 }
 
 .user-role {
   font-size: 11px;
-  color: #909399;
+  color: var(--color-text-muted);
 }
 
 .dropdown-arrow {
   font-size: 14px;
-  color: #909399;
+  color: var(--color-text-muted);
   transition: transform 0.2s;
 }
 
@@ -340,8 +342,8 @@ function handleLogout() {
 }
 
 .layout-aside {
-  background: #fff;
-  border-right: 1px solid #e8ecf1;
+  background: var(--color-sidebar-bg);
+  border-right: 1px solid var(--color-border-light);
   height: 100%;
   overflow-y: auto;
   overflow-x: hidden;
@@ -355,9 +357,9 @@ function handleLogout() {
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  color: #909399;
-  border-bottom: 1px solid #e8ecf1;
-  transition: color var(--transition-fast);
+  color: var(--color-text-muted);
+  border-bottom: 1px solid var(--color-border-light);
+  transition: all var(--transition-fast);
 }
 .collapse-btn:hover {
   color: var(--color-primary);
@@ -371,21 +373,23 @@ function handleLogout() {
 
 .sidebar-menu :deep(.el-menu-item) {
   margin: 2px 8px;
-  border-radius: 8px;
+  border-radius: 6px;
   height: 42px;
   line-height: 42px;
   font-size: 14px;
+  color: var(--color-text-secondary);
   transition: all var(--transition-fast);
 }
 
 .sidebar-menu :deep(.el-menu-item.is-active) {
-  background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+  background: var(--color-sidebar-active);
   color: var(--color-primary);
   font-weight: 600;
 }
 
 .sidebar-menu :deep(.el-menu-item:hover) {
-  background: #f5f6fa;
+  background: var(--color-sidebar-hover);
+  color: var(--color-text-primary);
 }
 
 .sidebar-menu :deep(.el-menu-item .el-icon) {
@@ -394,7 +398,7 @@ function handleLogout() {
 
 /* ===== Main Content ===== */
 .layout-main {
-  background: #f5f6fa;
+  background: var(--color-bg-page);
   height: 100%;
   overflow-y: auto;
   padding: 24px;
@@ -460,7 +464,7 @@ function handleLogout() {
   align-items: center;
   justify-content: center;
   padding: 60px 0;
-  color: #c0c4cc;
+  color: var(--color-text-placeholder);
   gap: 12px;
 }
 .notif-empty p {
@@ -473,16 +477,16 @@ function handleLogout() {
   align-items: flex-start;
   gap: 10px;
   padding: 14px 16px;
-  border-bottom: 1px solid #f0f2f5;
+  border-bottom: 1px solid var(--color-border-light);
   cursor: pointer;
   transition: background 0.2s;
   position: relative;
 }
 .notif-item:hover {
-  background: #f5f7fa;
+  background: var(--color-bg);
 }
 .notif-item.unread {
-  background: #f0f5ff;
+  background: var(--color-primary-light);
 }
 
 .notif-dot {
@@ -502,13 +506,13 @@ function handleLogout() {
 .notif-title {
   font-size: 14px;
   font-weight: 600;
-  color: #1a1a2e;
+  color: var(--color-text-primary);
   margin-bottom: 4px;
 }
 
 .notif-body {
   font-size: 13px;
-  color: #606266;
+  color: var(--color-text-secondary);
   line-height: 1.4;
   margin-bottom: 6px;
   overflow: hidden;
@@ -520,6 +524,6 @@ function handleLogout() {
 
 .notif-time {
   font-size: 11px;
-  color: #c0c4cc;
+  color: var(--color-text-placeholder);
 }
 </style>

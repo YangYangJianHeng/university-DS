@@ -31,6 +31,10 @@ public class BusinessException extends RuntimeException {
         return new BusinessException(404, message);
     }
 
+    public static BusinessException error(String message) {
+        return new BusinessException(500, message);
+    }
+
     public static BusinessException conflict(String message) {
         return new BusinessException(409, message);
     }

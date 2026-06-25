@@ -12,6 +12,7 @@ public class Achievement {
     private Long id;
     private Long projectId;
     private Long teamId;
+    private Long submitterId;
     private String title;
     private String type;
     private String description;

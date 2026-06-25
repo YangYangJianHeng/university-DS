@@ -31,6 +31,31 @@
 
     <!-- Tabs -->
     <el-tabs v-model="activeTab" class="project-tabs" type="border-card">
+      <!-- Members -->
+      <el-tab-pane label="团队成员" name="members">
+        <div class="tab-toolbar">
+          <div class="toolbar-title">
+            <span>团队成员</span>
+            <el-tag size="small" type="info">{{ projectMembers.length }}</el-tag>
+          </div>
+          <el-button type="primary" size="small" @click="showAddMemberDialog = true">
+            <el-icon><Plus /></el-icon>添加成员
+          </el-button>
+        </div>
+        <div class="member-grid" v-if="projectMembers.length > 0">
+          <div v-for="m in projectMembers" :key="m.id" class="member-card">
+            <el-avatar :size="40">{{ m.userName?.charAt(0) }}</el-avatar>
+            <div class="member-info">
+              <span class="member-name">{{ m.userName }}</span>
+              <el-tag size="small" :type="m.role === 'LEADER' ? 'danger' : 'primary'">
+                {{ m.role === 'LEADER' ? '队长' : '成员' }}
+              </el-tag>
+            </div>
+          </div>
+        </div>
+        <el-empty v-else description="暂无团队成员" />
+      </el-tab-pane>
+
       <!-- Tasks -->
       <el-tab-pane label="任务" name="tasks">
         <div class="tab-toolbar">
@@ -173,6 +198,19 @@
         <el-button type="primary" :loading="taskSubmitting" @click="handleCreateTask">创建</el-button>
       </template>
     </el-dialog>
+
+    <!-- Add Member Dialog -->
+    <el-dialog v-model="showAddMemberDialog" title="添加团队成员" width="420px">
+      <el-form @submit.prevent>
+        <el-form-item label="用户ID">
+          <el-input-number v-model="addMemberId" placeholder="输入用户ID" :min="1" style="width:100%" controls-position="right" />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="showAddMemberDialog = false">取消</el-button>
+        <el-button type="primary" :loading="addMemberLoading" @click="handleAddMember">确认添加</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -181,7 +219,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import dayjs from 'dayjs'
-import { getProject, getGanttData, getRiskAssessment } from '@/api/project'
+import { getProject, getGanttData, getRiskAssessment, addProjectMember, getProjectMembers } from '@/api/project'
 import { listTasks, createTask, updateTaskStatus } from '@/api/task'
 
 const router = useRouter()
@@ -191,6 +229,12 @@ const projectId = Number(route.params.id)
 const loading = ref(false)
 const project = ref<any>({})
 const activeTab = ref('tasks')
+
+// Members
+const projectMembers = ref<any[]>([])
+const showAddMemberDialog = ref(false)
+const addMemberId = ref<number | null>(null)
+const addMemberLoading = ref(false)
 
 const tasks = ref<any[]>([])
 const showTaskDialog = ref(false)
@@ -237,9 +281,10 @@ function statusLabel(s: string) { return statusLabelMap[s] || s }
 function priorityType(p: string) { if (p === 'HIGH') return 'danger'; if (p === 'MEDIUM') return 'warning'; return 'primary' }
 function riskLevelType(l: string) { if (l === 'HIGH') return 'danger'; if (l === 'MEDIUM') return 'warning'; return 'info' }
 
-onMounted(async () => { await loadProject(); await loadTasks(); await loadGantt(); await loadRisk() })
+onMounted(async () => { await loadProject(); await loadTasks(); await loadGantt(); await loadRisk(); await loadMembers() })
 
 async function loadProject() { loading.value = true; try { const res = await getProject(projectId); project.value = res.data || {} } catch (_) { project.value = {} } finally { loading.value = false } }
+async function loadMembers() { try { const res = await getProjectMembers(projectId); projectMembers.value = res.data || [] } catch (_) { projectMembers.value = [] } }
 async function loadTasks() { try { const res = await listTasks({ projectId }); tasks.value = res.data || [] } catch (_) { tasks.value = [] } }
 async function loadGantt() { try { const res = await getGanttData(projectId); ganttData.value = res.data || [] } catch (_) { ganttData.value = [] } }
 async function loadRisk() { try { const res = await getRiskAssessment(projectId); riskData.value = res.data || [] } catch (_) { riskData.value = [] } }
@@ -258,6 +303,18 @@ async function handleCreateTask() {
     taskForm.value = { title: '', assigneeId: null, priority: 'MEDIUM', deadline: null, description: '' }
     await loadTasks()
   } catch (_) {} finally { taskSubmitting.value = false }
+}
+
+async function handleAddMember() {
+  if (!addMemberId.value) { ElMessage.warning('请输入用户ID'); return }
+  addMemberLoading.value = true
+  try {
+    await addProjectMember(projectId, addMemberId.value)
+    ElMessage.success('成员添加成功')
+    showAddMemberDialog.value = false
+    addMemberId.value = null
+    await loadMembers()
+  } catch (_) {} finally { addMemberLoading.value = false }
 }
 </script>
 
@@ -329,4 +386,10 @@ async function handleCreateTask() {
 .risk-name { font-weight: 600; font-size: 14px; color: #1a1a2e; }
 .risk-desc { font-size: 13px; color: #606266; margin-bottom: 8px; }
 .risk-meta { display: flex; flex-wrap: wrap; gap: 12px; font-size: 12px; color: #909399; }
+
+/* Members */
+.member-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; }
+.member-card { display: flex; align-items: center; gap: 12px; padding: 12px 16px; background: var(--color-bg); border-radius: var(--radius-md); border: 1px solid var(--color-border-light); }
+.member-info { display: flex; flex-direction: column; gap: 4px; }
+.member-name { font-weight: 600; font-size: 14px; color: var(--color-text-primary); }
 </style>

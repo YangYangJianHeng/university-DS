@@ -41,6 +41,28 @@
             </div>
           </el-card>
 
+          <!-- Associated Projects -->
+          <el-card shadow="never" class="section-card">
+            <template #header>
+              <div class="section-header-title">
+                <div class="section-header-icon" style="background:linear-gradient(135deg,#409eff,#79bbff)">
+                  <el-icon :size="14" color="#fff"><FolderOpened /></el-icon>
+                </div>
+                <span>关联项目</span>
+                <el-tag size="small" type="info">{{ teamProjects.length }}</el-tag>
+              </div>
+            </template>
+            <div v-if="teamProjects.length === 0" class="empty-hint">暂无关联项目</div>
+            <div v-else class="project-mini-list">
+              <div v-for="p in teamProjects" :key="p.id" class="project-mini-item" @click="router.push(`/project/${p.id}`)">
+                <div class="project-mini-name">{{ p.name }}</div>
+                <el-tag size="small" :type="p.status === 'ARCHIVED' ? 'info' : 'success'" effect="plain">
+                  {{ p.status === 'ARCHIVED' ? '已归档' : p.status === 'COMPLETED' ? '已完成' : '进行中' }}
+                </el-tag>
+              </div>
+            </div>
+          </el-card>
+
           <!-- Members -->
           <el-card shadow="never" class="section-card">
             <template #header>
@@ -142,7 +164,11 @@ import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import dayjs from 'dayjs'
 import { useUserStore } from '@/stores/user'
-import { getTeam, getMembers, getTimeline, quitTeam, removeMember } from '@/api/team'
+import { getTeam, quitTeam, removeMember } from '@/api/team'
+import { getMyProjects } from '@/api/project'
+import axios from 'axios'
+
+const SKIP_TOAST = { skipErrorToast: true }
 
 const route = useRoute()
 const router = useRouter()
@@ -152,6 +178,7 @@ const loading = ref(false)
 const team = ref<any>(null)
 const members = ref<any[]>([])
 const timeline = ref<any[]>([])
+const teamProjects = ref<any[]>([])
 
 const isMember = computed(() => {
   const uid = userStore.userInfo?.id
@@ -166,17 +193,27 @@ const isLeader = computed(() => {
 
 async function fetchTeam() {
   loading.value = true
+  const id = Number(route.params.id)
   try {
-    const id = Number(route.params.id)
-    const [teamRes, membersRes, timelineRes] = await Promise.all([
-      getTeam(id), getMembers(id), getTimeline(id),
-    ])
+    // 主数据：团队信息必须成功
+    const teamRes = await getTeam(id)
     team.value = teamRes.data
-    members.value = membersRes.data || []
-    timeline.value = timelineRes.data || []
   } catch (_) {
-    team.value = null; members.value = []; timeline.value = []
-  } finally { loading.value = false }
+    team.value = null
+    loading.value = false
+    return
+  }
+
+  // 附属数据：独立加载，互不影响，静默失败不弹错误提示
+  try { const res = await axios.get('/api/team/' + id + '/members', SKIP_TOAST); members.value = res.data?.data || [] } catch (_) { members.value = [] }
+  try { const res = await axios.get('/api/team/' + id + '/timeline', SKIP_TOAST); timeline.value = res.data?.data || [] } catch (_) { timeline.value = [] }
+  try {
+    const res = await axios.get('/api/project/my', SKIP_TOAST)
+    const allProjects = res.data?.data || []
+    teamProjects.value = allProjects.filter((p: any) => p.teamId === id)
+  } catch (_) { teamProjects.value = [] }
+
+  loading.value = false
 }
 
 async function handleQuitTeam() {
@@ -271,4 +308,14 @@ onMounted(() => fetchTeam())
 
 .summary-label { font-size: 13px; color: #909399; }
 .summary-value { font-size: 14px; color: #1a1a2e; font-weight: 500; }
+
+/* Project mini list */
+.project-mini-list { display: flex; flex-direction: column; gap: 8px; }
+.project-mini-item {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 14px; background: var(--color-bg); border-radius: var(--radius-sm);
+  cursor: pointer; transition: all 0.2s; border: 1px solid var(--color-border-light);
+}
+.project-mini-item:hover { background: var(--color-bg-hover); border-color: var(--color-primary); }
+.project-mini-name { font-weight: 500; font-size: 14px; color: var(--color-text-primary); }
 </style>

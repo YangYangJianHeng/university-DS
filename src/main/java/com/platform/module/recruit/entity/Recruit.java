@@ -22,6 +22,11 @@ public class Recruit {
     private String auditStatus;
     private Integer viewCount;
 
+    // 转为项目后的关联
+    private Long projectId;
+    private Long teamId;
+    private Integer continueRecruit;
+
     @TableField(fill = FieldFill.INSERT)
     private LocalDateTime createdAt;
 }

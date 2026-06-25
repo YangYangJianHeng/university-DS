@@ -1,6 +1,13 @@
 import axios from 'axios'
 import { ElMessage } from 'element-plus'
 
+// 扩展 axios 配置，支持跳过错误提示
+declare module 'axios' {
+  interface AxiosRequestConfig {
+    skipErrorToast?: boolean
+  }
+}
+
 const request = axios.create({
   baseURL: '/api',
   timeout: 30000,
@@ -24,7 +31,9 @@ request.interceptors.response.use(
   (response) => {
     const res = response.data
     if (res.code !== 200) {
-      ElMessage.error(res.message || '请求失败')
+      if (!(response.config as any).skipErrorToast) {
+        ElMessage.error(res.message || '请求失败')
+      }
       if (res.code === 401 && !isRedirecting) {
         handleUnauthorized()
       }
@@ -33,8 +42,10 @@ request.interceptors.response.use(
     return res
   },
   (error) => {
-    const msg = error.response?.data?.message || error.message || '网络错误'
-    ElMessage.error(msg)
+    if (!(error.config as any)?.skipErrorToast) {
+      const msg = error.response?.data?.message || error.message || '网络错误'
+      ElMessage.error(msg)
+    }
     if (error.response?.status === 401 && !isRedirecting) {
       handleUnauthorized()
     }

@@ -4,18 +4,31 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.platform.common.exception.BusinessException;
+import com.platform.module.admin.entity.Announcement;
 import com.platform.module.admin.entity.AuditLog;
+import com.platform.module.admin.mapper.AnnouncementMapper;
 import com.platform.module.admin.mapper.AuditLogMapper;
 import com.platform.module.admin.service.AdminService;
+import com.platform.module.achievement.entity.Achievement;
+import com.platform.module.achievement.mapper.AchievementMapper;
+import com.platform.module.collaboration.entity.Task;
+import com.platform.module.collaboration.mapper.TaskMapper;
+import com.platform.module.project.entity.Project;
+import com.platform.module.project.mapper.ProjectMapper;
 import com.platform.module.recruit.entity.Recruit;
 import com.platform.module.recruit.mapper.RecruitMapper;
+import com.platform.module.teacher.entity.Teacher;
+import com.platform.module.teacher.mapper.TeacherMapper;
+import com.platform.module.competition.entity.Competition;
+import com.platform.module.team.entity.Team;
+import com.platform.module.team.mapper.TeamMapper;
 import com.platform.module.user.entity.User;
 import com.platform.module.user.mapper.UserMapper;
+import com.platform.module.competition.mapper.CompetitionMapper;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.*;
-import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.stream.Collectors;
 
 @Service
@@ -24,15 +37,30 @@ public class AdminServiceImpl implements AdminService {
     private final UserMapper userMapper;
     private final AuditLogMapper auditLogMapper;
     private final RecruitMapper recruitMapper;
-
-    // In-memory announcement storage for simplicity
-    private final List<Map<String, Object>> announcements = new CopyOnWriteArrayList<>();
+    private final TeamMapper teamMapper;
+    private final ProjectMapper projectMapper;
+    private final CompetitionMapper competitionMapper;
+    private final TaskMapper taskMapper;
+    private final TeacherMapper teacherMapper;
+    private final AnnouncementMapper announcementMapper;
+    private final AchievementMapper achievementMapper;
 
     public AdminServiceImpl(UserMapper userMapper, AuditLogMapper auditLogMapper,
-                            RecruitMapper recruitMapper) {
+                            RecruitMapper recruitMapper, TeamMapper teamMapper,
+                            ProjectMapper projectMapper, CompetitionMapper competitionMapper,
+                            TaskMapper taskMapper, TeacherMapper teacherMapper,
+                            AnnouncementMapper announcementMapper,
+                            AchievementMapper achievementMapper) {
         this.userMapper = userMapper;
         this.auditLogMapper = auditLogMapper;
         this.recruitMapper = recruitMapper;
+        this.teamMapper = teamMapper;
+        this.projectMapper = projectMapper;
+        this.competitionMapper = competitionMapper;
+        this.taskMapper = taskMapper;
+        this.teacherMapper = teacherMapper;
+        this.announcementMapper = announcementMapper;
+        this.achievementMapper = achievementMapper;
     }
 
     @Override
@@ -84,6 +112,11 @@ public class AdminServiceImpl implements AdminService {
         long totalUsers = userMapper.selectCount(null);
         long activeUsers = userMapper.selectCount(new LambdaQueryWrapper<User>().eq(User::getStatus, 1));
 
+        // Team / Project / Competition totals
+        long totalTeams = teamMapper.selectCount(null);
+        long totalProjects = projectMapper.selectCount(null);
+        long totalCompetitions = competitionMapper.selectCount(null);
+
         // Audit stats
         long pendingAudits = auditLogMapper.selectCount(
                 new LambdaQueryWrapper<AuditLog>().eq(AuditLog::getAfterStatus, "PENDING"));
@@ -93,6 +126,9 @@ public class AdminServiceImpl implements AdminService {
 
         stats.put("totalUsers", totalUsers);
         stats.put("activeUsers", activeUsers);
+        stats.put("totalTeams", totalTeams);
+        stats.put("totalProjects", totalProjects);
+        stats.put("totalCompetitions", totalCompetitions);
         stats.put("pendingAudits", pendingAudits);
         stats.put("pendingRecruits", pendingRecruits);
         stats.put("timestamp", LocalDateTime.now().toString());
@@ -103,29 +139,62 @@ public class AdminServiceImpl implements AdminService {
     @Override
     public Map<String, Object> getWeeklyReport() {
         Map<String, Object> report = new HashMap<>();
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime weekAgo = now.minusDays(7);
+
         report.put("period", "本周");
-        report.put("newUsers", 15);
-        report.put("activeProjects", 8);
-        report.put("completedTasks", 42);
-        report.put("newCompetitions", 3);
-        report.put("generatedAt", LocalDateTime.now().toString());
+
+        // 真实统计数据
+        long newUsers = userMapper.selectCount(
+                new LambdaQueryWrapper<User>().ge(User::getCreatedAt, weekAgo));
+        report.put("newUsers", newUsers);
+
+        long totalProjects = projectMapper.selectCount(null);
+        report.put("totalProjects", totalProjects);
+
+        long activeProjects = projectMapper.selectCount(
+                new LambdaQueryWrapper<Project>().eq(Project::getStatus, "IN_PROGRESS"));
+        report.put("activeProjects", activeProjects);
+
+        long completedTasks = taskMapper.selectCount(
+                new LambdaQueryWrapper<Task>().eq(Task::getStatus, "DONE"));
+        report.put("completedTasks", completedTasks);
+
+        long totalTasks = taskMapper.selectCount(null);
+        report.put("totalTasks", totalTasks);
+
+        long totalTeams = teamMapper.selectCount(null);
+        report.put("totalTeams", totalTeams);
+
+        long totalUsers = userMapper.selectCount(null);
+        report.put("totalUsers", totalUsers);
+
+        report.put("generatedAt", now.toString());
         return report;
     }
 
     @Override
     public void createAnnouncement(String title, String content, String type) {
-        Map<String, Object> announcement = new HashMap<>();
-        announcement.put("id", System.currentTimeMillis());
-        announcement.put("title", title);
-        announcement.put("content", content);
-        announcement.put("type", type != null ? type : "SYSTEM");
-        announcement.put("createdAt", LocalDateTime.now().toString());
-        announcements.add(announcement);
+        Announcement announcement = new Announcement();
+        announcement.setTitle(title);
+        announcement.setContent(content);
+        announcement.setType(type != null ? type : "SYSTEM");
+        announcementMapper.insert(announcement);
     }
 
     @Override
     public List<Map<String, Object>> listAnnouncements() {
-        return new ArrayList<>(announcements);
+        List<Announcement> list = announcementMapper.selectList(
+                new LambdaQueryWrapper<Announcement>().orderByDesc(Announcement::getCreatedAt));
+        return list.stream().map(a -> {
+            Map<String, Object> map = new HashMap<>();
+            map.put("id", a.getId());
+            map.put("title", a.getTitle());
+            map.put("content", a.getContent());
+            map.put("type", a.getType());
+            map.put("createdAt", a.getCreatedAt() != null ? a.getCreatedAt().toString() : null);
+            return map;
+        }).collect(Collectors.toList());
     }
 
     @Override
@@ -147,7 +216,8 @@ public class AdminServiceImpl implements AdminService {
             recruit.setAuditStatus("APPROVED");
         } else if ("REJECT".equals(action)) {
             recruit.setAuditStatus("REJECTED");
-            recruit.setStatus("REJECTED");
+            // 注意: 不修改 recruit.status，该字段控制招募展示状态（OPEN/CLOSED）
+            // auditStatus 控制审核状态（PENDING/APPROVED/REJECTED）
         } else {
             throw BusinessException.badRequest("无效操作: " + action);
         }
@@ -176,5 +246,208 @@ public class AdminServiceImpl implements AdminService {
         }
         user.setRole(role);
         userMapper.updateById(user);
+    }
+
+    // ---- Project Management ----
+
+    @Override
+    public IPage<Project> listAllProjects(int page, int size) {
+        return projectMapper.selectPage(new Page<>(page, size),
+                new LambdaQueryWrapper<Project>().orderByDesc(Project::getCreatedAt));
+    }
+
+    @Override
+    public Project updateProject(Long id, String name, String description, String status) {
+        Project project = projectMapper.selectById(id);
+        if (project == null) {
+            throw BusinessException.notFound("项目不存在");
+        }
+        if (name != null && !name.trim().isEmpty()) project.setName(name.trim());
+        if (description != null) project.setDescription(description);
+        if (status != null) project.setStatus(status);
+        projectMapper.updateById(project);
+        return project;
+    }
+
+    @Override
+    @org.springframework.transaction.annotation.Transactional
+    public void deleteProject(Long id) {
+        Project project = projectMapper.selectById(id);
+        if (project == null) {
+            throw BusinessException.notFound("项目不存在");
+        }
+        // 删除项目下的所有任务
+        taskMapper.delete(new LambdaQueryWrapper<Task>().eq(Task::getProjectId, id));
+        projectMapper.deleteById(id);
+    }
+
+    // ---- Task Management ----
+
+    @Override
+    public IPage<Task> listAllTasks(int page, int size) {
+        return taskMapper.selectPage(new Page<>(page, size),
+                new LambdaQueryWrapper<Task>().orderByDesc(Task::getCreatedAt));
+    }
+
+    @Override
+    public Task updateTask(Long id, String title, String description, String priority, String status) {
+        Task task = taskMapper.selectById(id);
+        if (task == null) {
+            throw BusinessException.notFound("任务不存在");
+        }
+        if (title != null && !title.trim().isEmpty()) task.setTitle(title.trim());
+        if (description != null) task.setDescription(description);
+        // 任务已改为多人指派模式（TaskAssignee表），不再有单一assigneeId字段
+        if (priority != null) task.setPriority(priority);
+        if (status != null) task.setStatus(status);
+        taskMapper.updateById(task);
+        return task;
+    }
+
+    @Override
+    public void deleteTask(Long id) {
+        Task task = taskMapper.selectById(id);
+        if (task == null) {
+            throw BusinessException.notFound("任务不存在");
+        }
+        taskMapper.deleteById(id);
+    }
+
+    // ---- Team Management ----
+
+    @Override
+    public IPage<Team> listAllTeams(int page, int size) {
+        return teamMapper.selectPage(new Page<>(page, size),
+                new LambdaQueryWrapper<Team>().orderByDesc(Team::getCreatedAt));
+    }
+
+    @Override
+    public Team updateTeam(Long id, String name, String status) {
+        Team team = teamMapper.selectById(id);
+        if (team == null) {
+            throw BusinessException.notFound("团队不存在");
+        }
+        if (name != null && !name.trim().isEmpty()) team.setName(name.trim());
+        if (status != null) team.setStatus(status);
+        teamMapper.updateById(team);
+        return team;
+    }
+
+    @Override
+    public void deleteTeam(Long id) {
+        Team team = teamMapper.selectById(id);
+        if (team == null) {
+            throw BusinessException.notFound("团队不存在");
+        }
+        // 删除团队下的所有项目
+        List<Project> projects = projectMapper.selectList(
+                new LambdaQueryWrapper<Project>().eq(Project::getTeamId, id));
+        for (Project p : projects) {
+            taskMapper.delete(new LambdaQueryWrapper<Task>().eq(Task::getProjectId, p.getId()));
+        }
+        projectMapper.delete(new LambdaQueryWrapper<Project>().eq(Project::getTeamId, id));
+        teamMapper.deleteById(id);
+    }
+
+    // ---- Teacher Management ----
+
+    @Override
+    public IPage<Teacher> listAllTeachers(int page, int size) {
+        return teacherMapper.selectPage(new Page<>(page, size), null);
+    }
+
+    @Override
+    public Teacher updateTeacher(Long id, String department, String title, String researchFields, Integer isVerified) {
+        Teacher teacher = teacherMapper.selectById(id);
+        if (teacher == null) {
+            throw BusinessException.notFound("导师不存在");
+        }
+        if (department != null) teacher.setDepartment(department);
+        if (title != null) teacher.setTitle(title);
+        if (researchFields != null) teacher.setResearchFields(researchFields);
+        if (isVerified != null) teacher.setIsVerified(isVerified);
+        teacherMapper.updateById(teacher);
+        return teacher;
+    }
+
+    @Override
+    public void deleteTeacher(Long id) {
+        Teacher teacher = teacherMapper.selectById(id);
+        if (teacher == null) {
+            throw BusinessException.notFound("导师不存在");
+        }
+        teacherMapper.deleteById(id);
+    }
+
+    // ---- Competition Management ----
+
+    @Override
+    public IPage<Competition> listAllCompetitions(int page, int size) {
+        return competitionMapper.selectPage(new Page<>(page, size),
+                new LambdaQueryWrapper<Competition>().orderByDesc(Competition::getRegisterStart));
+    }
+
+    @Override
+    public Competition updateCompetition(Long id, Competition competition) {
+        Competition existing = competitionMapper.selectById(id);
+        if (existing == null) {
+            throw BusinessException.notFound("竞赛不存在");
+        }
+        if (competition.getName() != null) existing.setName(competition.getName());
+        if (competition.getLevel() != null) existing.setLevel(competition.getLevel());
+        if (competition.getCategory() != null) existing.setCategory(competition.getCategory());
+        if (competition.getOrganizer() != null) existing.setOrganizer(competition.getOrganizer());
+        if (competition.getDescription() != null) existing.setDescription(competition.getDescription());
+        if (competition.getStatus() != null) existing.setStatus(competition.getStatus());
+        if (competition.getRegisterStart() != null) existing.setRegisterStart(competition.getRegisterStart());
+        if (competition.getRegisterEnd() != null) existing.setRegisterEnd(competition.getRegisterEnd());
+        if (competition.getEventStart() != null) existing.setEventStart(competition.getEventStart());
+        if (competition.getEventEnd() != null) existing.setEventEnd(competition.getEventEnd());
+        if (competition.getOfficialUrl() != null) existing.setOfficialUrl(competition.getOfficialUrl());
+        competitionMapper.updateById(existing);
+        return existing;
+    }
+
+    @Override
+    public void deleteCompetition(Long id) {
+        Competition competition = competitionMapper.selectById(id);
+        if (competition == null) {
+            throw BusinessException.notFound("竞赛不存在");
+        }
+        competitionMapper.deleteById(id);
+    }
+
+    // ---- Achievement Management ----
+
+    @Override
+    public IPage<Achievement> listAllAchievements(int page, int size) {
+        return achievementMapper.selectPage(new Page<>(page, size),
+                new LambdaQueryWrapper<Achievement>().orderByDesc(Achievement::getCreatedAt));
+    }
+
+    @Override
+    public Achievement updateAchievement(Long id, Achievement achievement) {
+        Achievement existing = achievementMapper.selectById(id);
+        if (existing == null) {
+            throw BusinessException.notFound("成果不存在");
+        }
+        if (achievement.getTitle() != null) existing.setTitle(achievement.getTitle());
+        if (achievement.getType() != null) existing.setType(achievement.getType());
+        if (achievement.getDescription() != null) existing.setDescription(achievement.getDescription());
+        if (achievement.getAwardLevel() != null) existing.setAwardLevel(achievement.getAwardLevel());
+        if (achievement.getFileUrls() != null) existing.setFileUrls(achievement.getFileUrls());
+        if (achievement.getIsPublic() != null) existing.setIsPublic(achievement.getIsPublic());
+        if (achievement.getIsFeatured() != null) existing.setIsFeatured(achievement.getIsFeatured());
+        achievementMapper.updateById(existing);
+        return existing;
+    }
+
+    @Override
+    public void deleteAchievement(Long id) {
+        Achievement achievement = achievementMapper.selectById(id);
+        if (achievement == null) {
+            throw BusinessException.notFound("成果不存在");
+        }
+        achievementMapper.deleteById(id);
     }
 }

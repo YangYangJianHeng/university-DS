@@ -19,3 +19,16 @@ export function likeAchievement(id: number) {
 export function getAchievementStatistics() {
   return request.get('/achievement/statistics')
 }
+
+// Admin achievement management
+export function adminListAchievements(params: any) {
+  return request.get('/admin/achievements', { params })
+}
+
+export function adminUpdateAchievement(id: number, data: any) {
+  return request.put(`/admin/achievements/${id}`, data)
+}
+
+export function adminDeleteAchievement(id: number) {
+  return request.delete(`/admin/achievements/${id}`)
+}

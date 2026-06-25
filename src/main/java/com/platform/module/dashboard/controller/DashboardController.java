@@ -9,6 +9,8 @@ import com.platform.module.team.entity.TeamMember;
 import com.platform.module.team.mapper.TeamMapper;
 import com.platform.module.team.mapper.TeamMemberMapper;
 import com.platform.module.collaboration.entity.Task;
+import com.platform.module.collaboration.entity.TaskAssignee;
+import com.platform.module.collaboration.mapper.TaskAssigneeMapper;
 import com.platform.module.collaboration.mapper.TaskMapper;
 import com.platform.module.notification.entity.Notification;
 import com.platform.module.notification.mapper.NotificationMapper;
@@ -31,6 +33,7 @@ public class DashboardController {
 
     private final TeamMemberMapper teamMemberMapper;
     private final TaskMapper taskMapper;
+    private final TaskAssigneeMapper taskAssigneeMapper;
     private final NotificationMapper notificationMapper;
     private final RecruitMapper recruitMapper;
     private final TeamMapper teamMapper;
@@ -40,6 +43,7 @@ public class DashboardController {
 
     public DashboardController(TeamMemberMapper teamMemberMapper,
                                TaskMapper taskMapper,
+                               TaskAssigneeMapper taskAssigneeMapper,
                                NotificationMapper notificationMapper,
                                RecruitMapper recruitMapper,
                                TeamMapper teamMapper,
@@ -48,6 +52,7 @@ public class DashboardController {
                                UserSkillMapper userSkillMapper) {
         this.teamMemberMapper = teamMemberMapper;
         this.taskMapper = taskMapper;
+        this.taskAssigneeMapper = taskAssigneeMapper;
         this.notificationMapper = notificationMapper;
         this.recruitMapper = recruitMapper;
         this.teamMapper = teamMapper;
@@ -68,9 +73,9 @@ public class DashboardController {
                 new LambdaQueryWrapper<TeamMember>().eq(TeamMember::getUserId, userId));
         data.put("teamCount", teamCount);
 
-        // Task count (assigned to me)
-        long taskCount = taskMapper.selectCount(
-                new LambdaQueryWrapper<Task>().eq(Task::getAssigneeId, userId));
+        // Task count (assigned to me via TaskAssignee table)
+        long taskCount = taskAssigneeMapper.selectCount(
+                new LambdaQueryWrapper<TaskAssignee>().eq(TaskAssignee::getUserId, userId));
         data.put("taskCount", taskCount);
 
         // Unread notification count
@@ -144,13 +149,18 @@ public class DashboardController {
                 new LambdaQueryWrapper<TeamMember>().eq(TeamMember::getUserId, userId));
         stats.put("totalTeams", teamCount);
 
-        long taskCount = taskMapper.selectCount(
-                new LambdaQueryWrapper<Task>().eq(Task::getAssigneeId, userId));
+        long taskCount = taskAssigneeMapper.selectCount(
+                new LambdaQueryWrapper<TaskAssignee>().eq(TaskAssignee::getUserId, userId));
         stats.put("totalTasks", taskCount);
 
-        long completedTasks = taskMapper.selectCount(
+        // 查询任务表中关联的已完成任务
+        List<Long> userTaskIds = taskAssigneeMapper.selectList(
+                        new LambdaQueryWrapper<TaskAssignee>()
+                                .eq(TaskAssignee::getUserId, userId))
+                .stream().map(TaskAssignee::getTaskId).collect(java.util.stream.Collectors.toList());
+        long completedTasks = userTaskIds.isEmpty() ? 0 : taskMapper.selectCount(
                 new LambdaQueryWrapper<Task>()
-                        .eq(Task::getAssigneeId, userId)
+                        .in(Task::getId, userTaskIds)
                         .eq(Task::getStatus, "DONE"));
         stats.put("completedTasks", completedTasks);
 

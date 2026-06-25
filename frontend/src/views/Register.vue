@@ -171,7 +171,7 @@ async function handleRegister() {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #f5f7fa 0%, #e4e9f0 100%);
+  background: linear-gradient(135deg, #eef1f5 0%, #dfe3e8 100%);
   position: relative;
   overflow: hidden;
 }
@@ -190,7 +190,7 @@ async function handleRegister() {
 .bg-shape-1 {
   width: 500px;
   height: 500px;
-  background: linear-gradient(135deg, rgba(102, 126, 234, 0.08) 0%, rgba(118, 75, 162, 0.05) 100%);
+  background: linear-gradient(135deg, rgba(91, 127, 149, 0.06) 0%, rgba(122, 143, 166, 0.04) 100%);
   top: -150px;
   right: -80px;
 }
@@ -198,7 +198,7 @@ async function handleRegister() {
 .bg-shape-2 {
   width: 350px;
   height: 350px;
-  background: linear-gradient(135deg, rgba(67, 233, 123, 0.06) 0%, rgba(56, 249, 215, 0.08) 100%);
+  background: linear-gradient(135deg, rgba(107, 158, 133, 0.06) 0%, rgba(136, 153, 166, 0.06) 100%);
   bottom: -80px;
   left: -60px;
 }
@@ -209,7 +209,7 @@ async function handleRegister() {
   max-width: 95vw;
   min-height: 600px;
   background: #fff;
-  border-radius: 24px;
+  border-radius: 18px;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.08);
   overflow: hidden;
   z-index: 1;
@@ -299,13 +299,13 @@ async function handleRegister() {
 .card-header h2 {
   font-size: 22px;
   font-weight: 700;
-  color: #1a1a2e;
+  color: var(--color-text-primary);
   margin-bottom: 6px;
 }
 
 .card-header p {
   font-size: 14px;
-  color: #909399;
+  color: var(--color-text-muted);
 }
 
 .register-form :deep(.el-input__wrapper) {
@@ -328,8 +328,8 @@ async function handleRegister() {
   height: 46px;
   font-size: 16px;
   font-weight: 600;
-  border-radius: 10px;
-  background: var(--gradient-primary);
+  border-radius: 8px;
+  background: var(--color-primary);
   border: none;
   color: #fff;
   letter-spacing: 4px;
@@ -337,7 +337,7 @@ async function handleRegister() {
 }
 
 .register-btn:hover {
-  box-shadow: 0 4px 20px rgba(102, 126, 234, 0.4);
+  box-shadow: 0 4px 20px rgba(91, 127, 149, 0.35);
   transform: translateY(-1px);
   color: #fff;
 }
@@ -346,7 +346,7 @@ async function handleRegister() {
   text-align: center;
   margin-top: 20px;
   font-size: 14px;
-  color: #909399;
+  color: var(--color-text-muted);
 }
 
 .login-link {

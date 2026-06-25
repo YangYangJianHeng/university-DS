@@ -214,7 +214,7 @@ onMounted(() => fetchRecruits())
 /* ===== Page Header ===== */
 .page-header-bar {
   background: var(--gradient-primary);
-  border-radius: 16px;
+  border-radius: var(--radius-md);
   padding: 28px 32px;
   margin-bottom: 20px;
   color: #fff;
@@ -252,7 +252,7 @@ onMounted(() => fetchRecruits())
 
 /* ===== Filter ===== */
 .filter-card {
-  border-radius: 14px;
+  border-radius: var(--radius-md);
   margin-bottom: 20px;
 }
 
@@ -261,14 +261,14 @@ onMounted(() => fetchRecruits())
   cursor: pointer;
   transition: all 0.25s;
   height: 100%;
-  border-radius: 12px;
+  border-radius: var(--radius-sm);
   overflow: hidden;
   display: flex;
   flex-direction: column;
 }
 .recruit-card:hover {
   transform: translateY(-3px);
-  box-shadow: 0 8px 24px rgba(0,0,0,0.1);
+  box-shadow: var(--shadow-lg);
 }
 
 .card-type-badge {
@@ -283,7 +283,7 @@ onMounted(() => fetchRecruits())
 .card-title {
   font-size: 16px;
   font-weight: 600;
-  color: #1a1a2e;
+  color: var(--color-text-primary);
   margin-bottom: 8px;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -295,7 +295,7 @@ onMounted(() => fetchRecruits())
   align-items: center;
   gap: 4px;
   font-size: 13px;
-  color: #909399;
+  color: var(--color-text-muted);
   margin-bottom: 10px;
 }
 
@@ -308,9 +308,9 @@ onMounted(() => fetchRecruits())
 
 .more-skills {
   font-size: 11px;
-  color: #909399;
+  color: var(--color-text-muted);
   padding: 2px 6px;
-  background: #f5f7fa;
+  background: var(--color-bg);
   border-radius: 4px;
 }
 
@@ -319,7 +319,7 @@ onMounted(() => fetchRecruits())
   align-items: center;
   justify-content: space-between;
   padding: 12px 16px;
-  border-top: 1px solid #f0f2f5;
+  border-top: 1px solid var(--color-border-light);
 }
 
 .footer-left {
@@ -327,7 +327,7 @@ onMounted(() => fetchRecruits())
   align-items: center;
   gap: 14px;
   font-size: 12px;
-  color: #909399;
+  color: var(--color-text-muted);
 }
 
 .member-count, .deadline {

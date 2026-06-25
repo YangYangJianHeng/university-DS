@@ -31,3 +31,11 @@ export function getRiskAssessment(id: number) {
 export function getMyProjects() {
   return request.get('/project/my')
 }
+
+export function addProjectMember(projectId: number, userId: number) {
+  return request.post(`/project/${projectId}/member`, { userId })
+}
+
+export function getProjectMembers(projectId: number) {
+  return request.get(`/project/${projectId}/members`)
+}

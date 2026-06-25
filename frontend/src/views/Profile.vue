@@ -1,11 +1,24 @@
 <template>
   <div class="profile-page">
-    <!-- User Header -->
+    <!-- User Header with avatar upload -->
     <el-card class="profile-header" shadow="never">
       <div class="header-content">
-        <el-avatar :size="72" :src="userInfo.avatar" class="user-avatar">
-          {{ userInfo.username?.charAt(0)?.toUpperCase() }}
-        </el-avatar>
+        <div class="avatar-section">
+          <el-avatar :size="80" :src="userInfo.avatar" class="user-avatar">
+            {{ userInfo.username?.charAt(0)?.toUpperCase() }}
+          </el-avatar>
+          <div class="avatar-overlay" @click="triggerUpload">
+            <el-icon :size="20"><Camera /></el-icon>
+            <span>更换头像</span>
+          </div>
+          <input
+            ref="fileInputRef"
+            type="file"
+            accept="image/*"
+            style="display:none"
+            @change="handleAvatarChange"
+          />
+        </div>
         <div class="header-info">
           <h2>{{ userInfo.username || '未知用户' }}</h2>
           <p class="header-meta">
@@ -13,6 +26,7 @@
             <span v-if="userInfo.grade"> | {{ userInfo.grade }}</span>
             <span v-if="userInfo.studentId"> | {{ userInfo.studentId }}</span>
           </p>
+          <p class="header-bio" v-if="userInfo.bio">{{ userInfo.bio }}</p>
         </div>
       </div>
     </el-card>
@@ -28,26 +42,29 @@
               <el-form-item label="用户名" prop="username">
                 <el-input v-model="profileForm.username" maxlength="20" />
               </el-form-item>
-              <el-form-item label="手机号" prop="phone">
+              <el-form-item label="手机号">
                 <el-input v-model="profileForm.phone" maxlength="11" disabled />
               </el-form-item>
-              <el-form-item label="学号" prop="studentId">
+              <el-form-item label="学号">
                 <el-input v-model="profileForm.studentId" />
               </el-form-item>
-              <el-form-item label="专业" prop="major">
+              <el-form-item label="专业">
                 <el-input v-model="profileForm.major" />
               </el-form-item>
-              <el-form-item label="年级" prop="grade">
+              <el-form-item label="年级">
                 <el-select v-model="profileForm.grade" style="width:100%">
                   <el-option label="大一" value="大一" /><el-option label="大二" value="大二" /><el-option label="大三" value="大三" /><el-option label="大四" value="大四" />
                   <el-option label="研一" value="研一" /><el-option label="研二" value="研二" /><el-option label="研三" value="研三" />
                 </el-select>
               </el-form-item>
-              <el-form-item label="邮箱" prop="email">
+              <el-form-item label="邮箱">
                 <el-input v-model="profileForm.email" />
               </el-form-item>
+              <el-form-item label="个人简介">
+                <el-input v-model="profileForm.bio" type="textarea" :rows="3" maxlength="200" show-word-limit />
+              </el-form-item>
               <el-form-item>
-                <el-button type="primary" :loading="saving" class="save-btn" @click="handleUpdateProfile">保存修改</el-button>
+                <el-button type="primary" :loading="saving" @click="handleUpdateProfile">保存修改</el-button>
               </el-form-item>
             </el-form>
           </div>
@@ -78,7 +95,29 @@
           </div>
         </el-tab-pane>
 
-        <!-- Tab 3: Stats -->
+        <!-- Tab 3: Change Password -->
+        <el-tab-pane label="修改密码" name="password">
+          <div class="tab-content">
+            <h3 class="tab-title">修改密码</h3>
+            <el-form ref="passwordFormRef" :model="passwordForm" :rules="passwordRules" label-width="100px" size="large" class="profile-form">
+              <el-form-item label="原密码" prop="oldPassword">
+                <el-input v-model="passwordForm.oldPassword" type="password" show-password placeholder="请输入原密码" maxlength="32" />
+              </el-form-item>
+              <el-form-item label="新密码" prop="newPassword">
+                <el-input v-model="passwordForm.newPassword" type="password" show-password placeholder="6-32位新密码" maxlength="32" />
+              </el-form-item>
+              <el-form-item label="确认密码" prop="confirmPassword">
+                <el-input v-model="passwordForm.confirmPassword" type="password" show-password placeholder="请再次输入新密码" maxlength="32" />
+              </el-form-item>
+              <el-form-item>
+                <el-button type="primary" :loading="changingPwd" @click="handleChangePassword">修改密码</el-button>
+                <el-button @click="handleResetPasswordForm">重置</el-button>
+              </el-form-item>
+            </el-form>
+          </div>
+        </el-tab-pane>
+
+        <!-- Tab 4: Stats -->
         <el-tab-pane label="数据统计" name="stats">
           <div class="tab-content">
             <h3 class="tab-title">技能雷达</h3>
@@ -105,8 +144,8 @@
             <div v-if="badges.length === 0" class="empty-hint">暂无成就徽章，继续努力吧！</div>
             <div v-else class="badges-grid">
               <div v-for="badge in badges" :key="badge.id" class="badge-item">
-                <div class="badge-icon-wrapper" :style="{ background: badge.color || '#e6f7ff' }">
-                  <el-icon :size="36" :color="badge.iconColor || '#409eff'"><Trophy /></el-icon>
+                <div class="badge-icon-wrapper">
+                  <el-icon :size="36" :color="'#4a6b7e'"><Trophy /></el-icon>
                 </div>
                 <div class="badge-name">{{ badge.name }}</div>
                 <div class="badge-desc">{{ badge.description || '' }}</div>
@@ -123,11 +162,11 @@
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted } from 'vue'
 import { useUserStore } from '@/stores/user'
-import { getProfile, updateProfile, addSkill, deleteSkill } from '@/api/user'
+import { getProfile, updateProfile, addSkill, deleteSkill, uploadAvatar, changePassword } from '@/api/user'
 import { getStatistics, getSkillRadar, getBadges } from '@/api/dashboard'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import type { FormInstance, FormRules } from 'element-plus'
-import { Plus, Delete, Trophy } from '@element-plus/icons-vue'
+import { Plus, Delete, Trophy, Camera, Lock } from '@element-plus/icons-vue'
 
 import { use } from 'echarts/core'
 import { CanvasRenderer } from 'echarts/renderers'
@@ -139,11 +178,12 @@ use([CanvasRenderer, RadarChart, BarChart, RadarComponent, TooltipComponent, Leg
 
 const userStore = useUserStore()
 const profileFormRef = ref<FormInstance>()
+const fileInputRef = ref<HTMLInputElement>()
 const activeTab = ref('info')
 const userInfo = reactive<any>({})
 const saving = ref(false)
 
-const profileForm = reactive({ username: '', phone: '', studentId: '', major: '', grade: '', email: '' })
+const profileForm = reactive({ username: '', phone: '', studentId: '', major: '', grade: '', email: '', bio: '' })
 const profileRules: FormRules = {
   username: [{ required: true, message: '请输入用户名', trigger: 'blur' }, { min: 2, max: 20, message: '长度在 2-20 个字符', trigger: 'blur' }],
   email: [{ type: 'email', message: '请输入正确的邮箱', trigger: 'blur' }],
@@ -152,8 +192,31 @@ const profileRules: FormRules = {
 const skills = ref<any[]>([])
 const newSkill = reactive({ name: '', level: '熟练' })
 
-function levelType(level: string): 'info' | 'success' | 'warning' | 'danger' {
-  const map: Record<string, 'info' | 'success' | 'warning' | 'danger'> = { '入门': 'info', '熟练': '', '掌握': 'success', '精通': 'warning', '大师': 'danger' }
+// 修改密码
+const passwordFormRef = ref<FormInstance>()
+const changingPwd = ref(false)
+const passwordForm = reactive({ oldPassword: '', newPassword: '', confirmPassword: '' })
+const validateConfirmPassword = (_rule: any, value: string, callback: any) => {
+  if (value !== passwordForm.newPassword) {
+    callback(new Error('两次输入的密码不一致'))
+  } else {
+    callback()
+  }
+}
+const passwordRules: FormRules = {
+  oldPassword: [{ required: true, message: '请输入原密码', trigger: 'blur' }],
+  newPassword: [
+    { required: true, message: '请输入新密码', trigger: 'blur' },
+    { min: 6, max: 32, message: '密码长度需要6-32位', trigger: 'blur' },
+  ],
+  confirmPassword: [
+    { required: true, message: '请再次输入新密码', trigger: 'blur' },
+    { validator: validateConfirmPassword, trigger: 'blur' },
+  ],
+}
+
+function levelType(level: string): 'info' | 'success' | 'warning' | 'danger' | '' {
+  const map: Record<string, 'info' | 'success' | 'warning' | 'danger' | ''> = { '入门': 'info', '熟练': '', '掌握': 'success', '精通': 'warning', '大师': 'danger' }
   return map[level] || 'info'
 }
 
@@ -169,9 +232,9 @@ const radarOption = computed(() => ({
   radar: {
     indicator: radarData.value.map((s: any) => ({ name: s.name || s.skillName || '', max: 100 })),
     center: ['50%', '50%'], radius: '60%', shape: 'polygon' as const,
-    splitArea: { areaStyle: { color: ['rgba(64,158,255,0.02)', 'rgba(64,158,255,0.05)'] } },
+    splitArea: { areaStyle: { color: ['rgba(74,107,126,0.02)', 'rgba(74,107,126,0.05)'] } },
   },
-  series: [{ type: 'radar', data: [{ value: radarData.value.map((s: any) => s.value ?? s.level ?? 0), name: '技能水平', areaStyle: { color: 'rgba(64,158,255,0.2)' }, lineStyle: { color: '#409eff', width: 2 }, itemStyle: { color: '#409eff' } }] }],
+  series: [{ type: 'radar', data: [{ value: radarData.value.map((s: any) => s.value ?? s.level ?? 0), name: '技能水平', areaStyle: { color: 'rgba(74,107,126,0.15)' }, lineStyle: { color: '#4a6b7e', width: 2 }, itemStyle: { color: '#4a6b7e' } }] }],
 }))
 
 const statsOption = computed(() => ({
@@ -179,7 +242,7 @@ const statsOption = computed(() => ({
   grid: { left: '3%', right: '4%', bottom: '15%', containLabel: true },
   xAxis: { type: 'category' as const, data: statsLabels.value, axisLabel: { rotate: 30, fontSize: 12 } },
   yAxis: { type: 'value' as const },
-  series: [{ type: 'bar', data: statsValues.value, barWidth: '50%', itemStyle: { borderRadius: [4, 4, 0, 0], color: { type: 'linear' as const, x: 0, y: 0, x2: 0, y2: 1, colorStops: [{ offset: 0, color: '#667eea' }, { offset: 1, color: '#764ba2' }] } } }],
+  series: [{ type: 'bar', data: statsValues.value, barWidth: '50%', itemStyle: { borderRadius: [4, 4, 0, 0], color: '#4a6b7e' } }],
 }))
 
 function formatDate(dateStr: string): string {
@@ -187,6 +250,41 @@ function formatDate(dateStr: string): string {
   const d = new Date(dateStr)
   const pad = (n: number) => n.toString().padStart(2, '0')
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
+}
+
+function triggerUpload() {
+  fileInputRef.value?.click()
+}
+
+async function handleAvatarChange(e: Event) {
+  const target = e.target as HTMLInputElement
+  const file = target.files?.[0]
+  if (!file) return
+
+  // Validate file type and size
+  if (!file.type.startsWith('image/')) {
+    ElMessage.warning('请选择图片文件')
+    return
+  }
+  if (file.size > 5 * 1024 * 1024) {
+    ElMessage.warning('图片大小不能超过5MB')
+    return
+  }
+
+  try {
+    const formData = new FormData()
+    formData.append('file', file)
+    const res = await uploadAvatar(formData)
+    const avatarUrl = res.data?.avatar || res.data?.url || res.data
+    userInfo.avatar = avatarUrl
+    ElMessage.success('头像更新成功')
+    userStore.fetchProfile()
+  } catch (err: any) {
+    ElMessage.error(err?.message || '头像上传失败')
+  } finally {
+    // Reset input so same file can be re-selected
+    target.value = ''
+  }
 }
 
 async function fetchProfileData() {
@@ -200,6 +298,7 @@ async function fetchProfileData() {
     profileForm.major = data.major || ''
     profileForm.grade = data.grade || ''
     profileForm.email = data.email || ''
+    profileForm.bio = data.bio || ''
     skills.value = data.skills || data.skillList || []
   } catch (_) {}
 }
@@ -230,7 +329,7 @@ async function handleUpdateProfile() {
   if (!valid) return
   saving.value = true
   try {
-    await updateProfile({ username: profileForm.username, studentId: profileForm.studentId, major: profileForm.major, grade: profileForm.grade, email: profileForm.email })
+    await updateProfile({ username: profileForm.username, studentId: profileForm.studentId, major: profileForm.major, grade: profileForm.grade, email: profileForm.email, bio: profileForm.bio })
     ElMessage.success('资料更新成功')
     userStore.fetchProfile()
   } finally { saving.value = false }
@@ -249,6 +348,25 @@ async function handleDeleteSkill(id: number) {
   try { await ElMessageBox.confirm('确定要删除该技能吗？', '提示', { type: 'warning', confirmButtonText: '删除', cancelButtonText: '取消' }); await deleteSkill(id); ElMessage.success('技能已删除'); skills.value = skills.value.filter((s) => s.id !== id) } catch (_) {}
 }
 
+async function handleChangePassword() {
+  if (!passwordFormRef.value) return
+  const valid = await passwordFormRef.value.validate().catch(() => false)
+  if (!valid) return
+  changingPwd.value = true
+  try {
+    await changePassword({ oldPassword: passwordForm.oldPassword, newPassword: passwordForm.newPassword })
+    ElMessage.success('密码修改成功，请妥善保管新密码')
+    handleResetPasswordForm()
+  } finally { changingPwd.value = false }
+}
+
+function handleResetPasswordForm() {
+  passwordForm.oldPassword = ''
+  passwordForm.newPassword = ''
+  passwordForm.confirmPassword = ''
+  passwordFormRef.value?.resetFields()
+}
+
 onMounted(() => { fetchProfileData(); fetchStatsData() })
 </script>
 
@@ -257,49 +375,83 @@ onMounted(() => { fetchProfileData(); fetchStatsData() })
 
 .profile-header {
   margin-bottom: 20px;
-  border-radius: 14px;
+  border-radius: var(--radius-md);
 }
 
 .header-content {
   display: flex;
   align-items: center;
-  gap: 24px;
+  gap: 28px;
+}
+
+/* Avatar section with upload overlay */
+.avatar-section {
+  position: relative;
+  flex-shrink: 0;
+  cursor: pointer;
 }
 
 .user-avatar {
-  flex-shrink: 0;
-  background: var(--gradient-primary) !important;
-  font-size: 28px;
+  background: var(--color-primary) !important;
+  font-size: 30px;
   color: #fff;
+  border: 3px solid var(--color-border-light);
+}
+
+.avatar-overlay {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: rgba(0,0,0,0.4);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  opacity: 0;
+  transition: opacity var(--transition-fast);
+  color: #fff;
+  font-size: 12px;
+}
+.avatar-section:hover .avatar-overlay {
+  opacity: 1;
 }
 
 .header-info h2 {
-  margin: 0 0 4px;
+  margin: 0 0 6px;
   font-size: 22px;
-  color: #1a1a2e;
+  color: var(--color-text-primary);
 }
 
 .header-meta {
-  margin: 0;
+  margin: 0 0 6px;
   font-size: 14px;
-  color: #909399;
+  color: var(--color-text-muted);
+}
+
+.header-bio {
+  margin: 0;
+  font-size: 13px;
+  color: var(--color-text-secondary);
+  line-height: 1.5;
 }
 
 .profile-body {
-  border-radius: 14px;
+  border-radius: var(--radius-md);
   min-height: 480px;
 }
 
 .profile-tabs { min-height: 440px; }
-.profile-tabs :deep(.el-tabs__item) { font-size: 14px; height: 44px; line-height: 44px; }
+.profile-tabs :deep(.el-tabs__item) { font-size: 14px; height: 44px; line-height: 44px; color: var(--color-text-secondary); }
 .profile-tabs :deep(.el-tabs__item.is-active) { color: var(--color-primary); font-weight: 600; }
+.profile-tabs :deep(.el-tabs__active-bar) { background-color: var(--color-primary); }
 
 .tab-content { padding: 0 8px; }
 
 .tab-title {
   margin: 0 0 20px;
-  font-size: 18px;
-  color: #1a1a2e;
+  font-size: 17px;
+  color: var(--color-text-primary);
   font-weight: 600;
   padding-left: 12px;
   border-left: 3px solid var(--color-primary);
@@ -307,7 +459,7 @@ onMounted(() => { fetchProfileData(); fetchStatsData() })
 
 .profile-form { max-width: 480px; }
 
-.save-btn { border-radius: 8px; }
+.save-btn { border-radius: 6px; }
 
 .skill-input-row { display: flex; gap: 12px; margin-bottom: 20px; align-items: flex-start; }
 .skill-input { flex: 1; }
@@ -317,32 +469,47 @@ onMounted(() => { fetchProfileData(); fetchStatsData() })
 
 .skill-item {
   display: flex; align-items: center; justify-content: space-between;
-  padding: 10px 16px; background: #f5f7fa; border-radius: 8px; transition: background 0.2s;
+  padding: 10px 16px; background: var(--color-bg); border-radius: 6px; transition: background 0.2s;
 }
-.skill-item:hover { background: #ecf5ff; }
+.skill-item:hover { background: var(--color-primary-light); }
 
 .skill-info { display: flex; align-items: center; gap: 12px; }
-.skill-name { font-size: 15px; color: #1a1a2e; font-weight: 500; }
+.skill-name { font-size: 14px; color: var(--color-text-primary); font-weight: 500; }
 
-.empty-hint { text-align: center; padding: 40px 0; color: #909399; font-size: 14px; }
+.empty-hint { text-align: center; padding: 40px 0; color: var(--color-text-muted); font-size: 14px; }
 
 .chart-container { height: 320px; margin-bottom: 16px; }
 .chart { width: 100%; height: 100%; }
 
 .stats-summary { margin-top: 24px; }
 
-.summary-card { text-align: center; border-radius: 10px; margin-bottom: 12px; }
+.summary-card { text-align: center; border-radius: var(--radius-sm); margin-bottom: 12px; }
 .summary-value { font-size: 28px; font-weight: 700; color: var(--color-primary); }
-.summary-label { font-size: 13px; color: #909399; margin-top: 4px; }
+.summary-label { font-size: 13px; color: var(--color-text-muted); margin-top: 4px; }
 
 .badges-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 20px; }
 
-.badge-item { text-align: center; padding: 20px 12px; border-radius: 12px; background: #fafafa; border: 1px solid #ebeef5; transition: all 0.2s; }
-.badge-item:hover { transform: translateY(-4px); box-shadow: 0 8px 24px rgba(0,0,0,0.08); }
+.badge-item {
+  text-align: center;
+  padding: 20px 12px;
+  border-radius: var(--radius-sm);
+  background: var(--color-bg);
+  border: 1px solid var(--color-border-light);
+  transition: all 0.2s;
+}
+.badge-item:hover { transform: translateY(-4px); box-shadow: var(--shadow-md); }
 
-.badge-icon-wrapper { width: 64px; height: 64px; margin: 0 auto 12px; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
+.badge-icon-wrapper {
+  width: 64px; height: 64px;
+  margin: 0 auto 12px;
+  border-radius: 50%;
+  background: var(--color-primary-light);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
 
-.badge-name { font-size: 14px; font-weight: 600; color: #1a1a2e; margin-bottom: 4px; }
-.badge-desc { font-size: 12px; color: #909399; line-height: 1.4; margin-bottom: 4px; }
-.badge-date { font-size: 11px; color: #c0c4cc; margin-top: 4px; }
+.badge-name { font-size: 14px; font-weight: 600; color: var(--color-text-primary); margin-bottom: 4px; }
+.badge-desc { font-size: 12px; color: var(--color-text-muted); line-height: 1.4; margin-bottom: 4px; }
+.badge-date { font-size: 11px; color: var(--color-text-placeholder); margin-top: 4px; }
 </style>

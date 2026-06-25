@@ -44,6 +44,19 @@ public class CalendarEventController {
         return Result.success(calendarEventService.detectConflicts(userId, startTime, endTime, excludeEventId));
     }
 
+    @PostMapping("/check-conflict")
+    @Operation(summary = "Check time conflict via POST")
+    public Result<List<Map<String, Object>>> checkConflict(@RequestBody Map<String, Object> request) {
+        Long userId = UserContext.getCurrentUserId();
+        String start = (String) request.get("start");
+        String end = (String) request.get("end");
+        Long excludeEventId = request.get("excludeEventId") != null ?
+                Long.valueOf(request.get("excludeEventId").toString()) : null;
+        LocalDateTime startTime = start != null ? LocalDateTime.parse(start) : LocalDateTime.now();
+        LocalDateTime endTime = end != null ? LocalDateTime.parse(end) : LocalDateTime.now().plusHours(1);
+        return Result.success(calendarEventService.detectConflicts(userId, startTime, endTime, excludeEventId));
+    }
+
     @GetMapping("/reminders")
     @Operation(summary = "Get events needing reminder")
     public Result<List<CalendarEvent>> reminders() {

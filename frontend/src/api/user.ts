@@ -27,3 +27,13 @@ export function addSkill(skillName: string, level: string) {
 export function deleteSkill(id: number) {
   return request.delete(`/user/skills/${id}`)
 }
+
+export function uploadAvatar(formData: FormData) {
+  return request.post('/user/avatar', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' }
+  })
+}
+
+export function changePassword(data: { oldPassword: string; newPassword: string }) {
+  return request.put('/user/password', data)
+}

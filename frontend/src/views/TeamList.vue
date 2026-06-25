@@ -5,6 +5,7 @@
         <h2>我的团队</h2>
         <p class="page-desc">管理和查看你创建或加入的所有团队</p>
       </div>
+      <el-button type="primary" :icon="Plus" @click="openCreateDialog">创建团队</el-button>
     </div>
 
     <el-card shadow="never" class="main-card">
@@ -88,6 +89,22 @@
         </el-tab-pane>
       </el-tabs>
     </el-card>
+
+    <!-- Create Team Dialog -->
+    <el-dialog v-model="createDialogVisible" title="创建团队" width="480px" :close-on-click-modal="false" destroy-on-close>
+      <el-form ref="createFormRef" :model="createForm" :rules="createRules" label-width="80px" @submit.prevent>
+        <el-form-item label="团队名称" prop="name">
+          <el-input v-model="createForm.name" placeholder="请输入团队名称" maxlength="50" show-word-limit />
+        </el-form-item>
+        <el-form-item label="关联招募" prop="recruitId">
+          <el-input-number v-model="createForm.recruitId" placeholder="可选，关联的招募ID" :min="0" style="width:100%" controls-position="right" />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="createDialogVisible = false">取消</el-button>
+        <el-button type="primary" :loading="submitting" @click="handleCreate">确认创建</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -95,7 +112,9 @@
 import { ref, reactive, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import dayjs from 'dayjs'
-import { getMyTeams, getJoinedTeams } from '@/api/team'
+import { Plus } from '@element-plus/icons-vue'
+import { ElMessage, type FormInstance, type FormRules } from 'element-plus'
+import { getMyTeams, getJoinedTeams, createTeam } from '@/api/team'
 
 const router = useRouter()
 
@@ -104,6 +123,44 @@ const createdTeams = ref<any[]>([])
 const joinedTeams = ref<any[]>([])
 
 const loading = reactive({ created: false, joined: false })
+
+// --- Create Team ---
+const createDialogVisible = ref(false)
+const submitting = ref(false)
+const createFormRef = ref<FormInstance>()
+const createForm = reactive({ name: '', recruitId: null as number | null })
+
+const createRules: FormRules = {
+  name: [
+    { required: true, message: '请输入团队名称', trigger: 'blur' },
+    { min: 2, max: 50, message: '团队名称长度需要2-50位', trigger: 'blur' },
+  ],
+}
+
+function openCreateDialog() {
+  createForm.name = ''
+  createForm.recruitId = null
+  createDialogVisible.value = true
+}
+
+async function handleCreate() {
+  const valid = await createFormRef.value?.validate().catch(() => false)
+  if (!valid) return
+
+  submitting.value = true
+  try {
+    const payload: any = { name: createForm.name }
+    if (createForm.recruitId) payload.recruitId = createForm.recruitId
+    await createTeam(payload)
+    ElMessage.success('团队创建成功')
+    createDialogVisible.value = false
+    await fetchMyTeams()
+  } catch (e: any) {
+    ElMessage.error(e?.response?.data?.message || '创建失败')
+  } finally {
+    submitting.value = false
+  }
+}
 
 async function fetchMyTeams() {
   loading.created = true
@@ -148,6 +205,9 @@ onMounted(() => { fetchMyTeams(); fetchJoinedTeams() })
   padding: 24px 32px;
   margin-bottom: 20px;
   color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
 }
 .page-header-bar h2 { font-size: 22px; font-weight: 700; margin: 0 0 4px; }
 .page-desc { margin: 0; font-size: 14px; opacity: 0.8; }

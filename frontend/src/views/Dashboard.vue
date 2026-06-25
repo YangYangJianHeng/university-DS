@@ -248,7 +248,7 @@ onMounted(() => {
 /* ===== Welcome Banner ===== */
 .welcome-banner {
   background: var(--gradient-primary);
-  border-radius: 16px;
+  border-radius: var(--radius-md);
   padding: 32px 36px;
   margin-bottom: 24px;
   color: #fff;
@@ -317,7 +317,7 @@ onMounted(() => {
 
 .stat-card {
   border: none;
-  border-radius: 14px;
+  border-radius: var(--radius-md);
   color: #fff;
   margin-bottom: 16px;
   padding: 4px;
@@ -375,14 +375,14 @@ onMounted(() => {
   gap: 6px;
 }
 
-.stat-trend .up { color: #43e97b; }
-.stat-trend .down { color: #ff6b6b; }
+.stat-trend .up { color: var(--color-success); }
+.stat-trend .down { color: var(--color-danger); }
 
 /* ===== Content Cards ===== */
 .main-row { margin-bottom: 24px; }
 
 .content-card {
-  border-radius: 14px;
+  border-radius: var(--radius-md);
   margin-bottom: 20px;
 }
 
@@ -398,7 +398,7 @@ onMounted(() => {
   gap: 10px;
   font-size: 16px;
   font-weight: 600;
-  color: #1a1a2e;
+  color: var(--color-text-primary);
 }
 
 .header-icon {
@@ -431,8 +431,8 @@ onMounted(() => {
 }
 
 .recruit-card-item:hover {
-  background: #f5f7fa;
-  border-color: #e8ecf1;
+  background: var(--color-bg);
+  border-color: var(--color-border);
 }
 
 .recruit-card-item + .recruit-card-item {
@@ -454,15 +454,15 @@ onMounted(() => {
   flex-shrink: 0;
 }
 
-.recruit-status-dot.open { background: #43e97b; }
-.recruit-status-dot.closed { background: #c0c4cc; }
+.recruit-status-dot.open { background: var(--color-success); }
+.recruit-status-dot.closed { background: var(--color-text-placeholder); }
 
 .recruit-item-info { flex: 1; min-width: 0; }
 
 .recruit-item-title {
   font-size: 14px;
   font-weight: 600;
-  color: #1a1a2e;
+  color: var(--color-text-primary);
   margin-bottom: 4px;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -474,7 +474,7 @@ onMounted(() => {
   align-items: center;
   gap: 16px;
   font-size: 12px;
-  color: #909399;
+  color: var(--color-text-muted);
 }
 
 .recruit-item-meta span {
@@ -501,7 +501,7 @@ onMounted(() => {
 }
 
 .quick-action-item:hover {
-  background: #f5f7fa;
+  background: var(--color-bg);
 }
 
 .qa-icon {
@@ -519,12 +519,12 @@ onMounted(() => {
 .qa-title {
   font-size: 14px;
   font-weight: 600;
-  color: #1a1a2e;
+  color: var(--color-text-primary);
   margin-bottom: 2px;
 }
 
 .qa-desc {
   font-size: 12px;
-  color: #909399;
+  color: var(--color-text-muted);
 }
 </style>

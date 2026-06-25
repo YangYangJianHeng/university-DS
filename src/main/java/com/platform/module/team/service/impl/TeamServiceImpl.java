@@ -23,7 +23,9 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
@@ -100,9 +102,23 @@ public class TeamServiceImpl implements TeamService {
 
     @Override
     public List<TeamVO> getMyTeams(Long userId) {
-        List<Team> teams = teamMapper.selectList(
+        // 查询用户作为队长的团队
+        List<Team> leaderTeams = teamMapper.selectList(
                 new LambdaQueryWrapper<Team>().eq(Team::getLeaderId, userId));
-        return teams.stream().map(this::buildTeamVO).collect(Collectors.toList());
+        // 查询用户作为成员加入的团队
+        List<TeamMember> memberships = teamMemberMapper.selectList(
+                new LambdaQueryWrapper<TeamMember>().eq(TeamMember::getUserId, userId));
+        List<Long> memberTeamIds = memberships.stream()
+                .map(TeamMember::getTeamId)
+                .filter(tid -> leaderTeams.stream().noneMatch(t -> t.getId().equals(tid)))
+                .collect(Collectors.toList());
+        List<Team> memberTeams = memberTeamIds.isEmpty()
+                ? Collections.emptyList()
+                : teamMapper.selectBatchIds(memberTeamIds);
+
+        List<Team> allTeams = new ArrayList<>(leaderTeams);
+        allTeams.addAll(memberTeams);
+        return allTeams.stream().map(this::buildTeamVO).collect(Collectors.toList());
     }
 
     @Override
@@ -127,8 +143,12 @@ public class TeamServiceImpl implements TeamService {
         if (team == null) {
             throw BusinessException.notFound("Team not found");
         }
+        // 检查团队状态
+        if ("DISBANDED".equals(team.getStatus())) {
+            throw BusinessException.badRequest("团队已解散，无法加入");
+        }
 
-        // Check if user is already a member
+        // Check if user is already a member (包括PENDING状态)
         Long count = teamMemberMapper.selectCount(
                 new LambdaQueryWrapper<TeamMember>()
                         .eq(TeamMember::getTeamId, teamId)
@@ -215,6 +235,20 @@ public class TeamServiceImpl implements TeamService {
                 new LambdaQueryWrapper<TeamMember>()
                         .eq(TeamMember::getTeamId, teamId));
 
+        // 批量查询用户，避免N+1问题
+        List<Long> userIds = members.stream()
+                .map(TeamMember::getUserId)
+                .distinct()
+                .collect(Collectors.toList());
+        Map<Long, String> userNameMap = new HashMap<>();
+        if (!userIds.isEmpty()) {
+            List<User> users = userMapper.selectBatchIds(userIds);
+            for (User user : users) {
+                userNameMap.put(user.getId(), user.getUsername());
+            }
+        }
+
+        Map<Long, String> finalUserNameMap = userNameMap;
         return members.stream().map(m -> {
             TeamMemberVO vo = new TeamMemberVO();
             vo.setId(m.getId());
@@ -222,11 +256,7 @@ public class TeamServiceImpl implements TeamService {
             vo.setUserId(m.getUserId());
             vo.setRole(m.getRole());
             vo.setJoinedAt(m.getJoinedAt());
-
-            User user = userMapper.selectById(m.getUserId());
-            if (user != null) {
-                vo.setUserName(user.getUsername());
-            }
+            vo.setUserName(finalUserNameMap.getOrDefault(m.getUserId(), "Unknown"));
             return vo;
         }).collect(Collectors.toList());
     }

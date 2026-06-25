@@ -36,6 +36,14 @@ public class NotificationController {
         return Result.success();
     }
 
+    @PutMapping("/read-all")
+    @Operation(summary = "Mark all notifications as read")
+    public Result<Void> markAllRead() {
+        Long userId = UserContext.getCurrentUserId();
+        notificationService.markAllRead(userId);
+        return Result.success();
+    }
+
     @GetMapping("/unread-count")
     @Operation(summary = "Get unread notification count")
     public Result<Long> unreadCount() {

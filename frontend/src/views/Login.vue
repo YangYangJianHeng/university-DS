@@ -142,7 +142,7 @@ async function handleLogin() {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #f5f7fa 0%, #e4e9f0 100%);
+  background: linear-gradient(135deg, #eef1f5 0%, #dfe3e8 100%);
   position: relative;
   overflow: hidden;
 }
@@ -161,7 +161,7 @@ async function handleLogin() {
 .bg-shape-1 {
   width: 600px;
   height: 600px;
-  background: linear-gradient(135deg, rgba(102, 126, 234, 0.08) 0%, rgba(118, 75, 162, 0.05) 100%);
+  background: linear-gradient(135deg, rgba(91, 127, 149, 0.06) 0%, rgba(122, 143, 166, 0.04) 100%);
   top: -200px;
   right: -100px;
 }
@@ -169,7 +169,7 @@ async function handleLogin() {
 .bg-shape-2 {
   width: 400px;
   height: 400px;
-  background: linear-gradient(135deg, rgba(102, 126, 234, 0.05) 0%, rgba(240, 147, 251, 0.08) 100%);
+  background: linear-gradient(135deg, rgba(91, 127, 149, 0.04) 0%, rgba(176, 190, 197, 0.06) 100%);
   bottom: -100px;
   left: -100px;
 }
@@ -177,7 +177,7 @@ async function handleLogin() {
 .bg-shape-3 {
   width: 200px;
   height: 200px;
-  background: linear-gradient(135deg, rgba(245, 87, 108, 0.05) 0%, rgba(254, 225, 64, 0.05) 100%);
+  background: linear-gradient(135deg, rgba(107, 158, 133, 0.05) 0%, rgba(184, 160, 110, 0.05) 100%);
   top: 30%;
   left: 10%;
 }
@@ -188,7 +188,7 @@ async function handleLogin() {
   max-width: 95vw;
   min-height: 560px;
   background: #fff;
-  border-radius: 24px;
+  border-radius: 18px;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.08);
   overflow: hidden;
   z-index: 1;
@@ -298,13 +298,13 @@ async function handleLogin() {
 .card-header h2 {
   font-size: 24px;
   font-weight: 700;
-  color: #1a1a2e;
+  color: var(--color-text-primary);
   margin-bottom: 8px;
 }
 
 .card-header p {
   font-size: 14px;
-  color: #909399;
+  color: var(--color-text-muted);
 }
 
 .login-form :deep(.el-input__wrapper) {
@@ -327,15 +327,15 @@ async function handleLogin() {
   height: 46px;
   font-size: 16px;
   font-weight: 600;
-  border-radius: 10px;
-  background: var(--gradient-primary);
+  border-radius: 8px;
+  background: var(--color-primary);
   border: none;
   letter-spacing: 4px;
   transition: all 0.3s;
 }
 
 .login-btn:hover {
-  box-shadow: 0 4px 20px rgba(102, 126, 234, 0.4);
+  box-shadow: 0 4px 20px rgba(91, 127, 149, 0.35);
   transform: translateY(-1px);
 }
 
@@ -343,7 +343,7 @@ async function handleLogin() {
   text-align: center;
   margin-top: 24px;
   font-size: 14px;
-  color: #909399;
+  color: var(--color-text-muted);
 }
 
 .register-link {

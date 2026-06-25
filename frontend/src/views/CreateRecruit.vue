@@ -153,15 +153,17 @@ async function handleSubmit() {
   const valid = await formRef.value?.validate().catch(() => false)
   if (!valid) return
 
-  submitting.value = true
+    submitting.value = true
   try {
+    // deadline 需要转换为 LocalDateTime 格式 (yyyy-MM-ddTHH:mm:ss)
+    const deadlineStr = form.deadline ? form.deadline + 'T23:59:59' : null
     const res = await createRecruit({
       title: form.title,
       description: form.description,
       projectType: form.projectType,
       requiredSkills: form.requiredSkills,
       maxMembers: form.maxMembers,
-      deadline: form.deadline,
+      deadline: deadlineStr,
     })
     ElMessage.success('招募发布成功')
     router.push(`/recruit/${res.data?.id || ''}`)

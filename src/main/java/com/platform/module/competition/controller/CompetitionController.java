@@ -34,6 +34,28 @@ public class CompetitionController {
         return Result.success(competition);
     }
 
+    @PutMapping("/{id}")
+    @Operation(summary = "Update competition (admin)")
+    public Result<Competition> update(@PathVariable Long id, @RequestBody Competition competition) {
+        Competition existing = competitionService.getById(id);
+        if (existing == null) {
+            return Result.notFound("Competition not found");
+        }
+        if (competition.getName() != null) existing.setName(competition.getName());
+        if (competition.getLevel() != null) existing.setLevel(competition.getLevel());
+        if (competition.getCategory() != null) existing.setCategory(competition.getCategory());
+        if (competition.getOrganizer() != null) existing.setOrganizer(competition.getOrganizer());
+        if (competition.getDescription() != null) existing.setDescription(competition.getDescription());
+        if (competition.getStatus() != null) existing.setStatus(competition.getStatus());
+        if (competition.getRegisterStart() != null) existing.setRegisterStart(competition.getRegisterStart());
+        if (competition.getRegisterEnd() != null) existing.setRegisterEnd(competition.getRegisterEnd());
+        if (competition.getEventStart() != null) existing.setEventStart(competition.getEventStart());
+        if (competition.getEventEnd() != null) existing.setEventEnd(competition.getEventEnd());
+        if (competition.getOfficialUrl() != null) existing.setOfficialUrl(competition.getOfficialUrl());
+        competitionService.updateById(existing);
+        return Result.success(existing);
+    }
+
     @GetMapping("/list")
     @Operation(summary = "List competitions with filters")
     public Result<IPage<Competition>> list(@RequestParam(required = false) String level,

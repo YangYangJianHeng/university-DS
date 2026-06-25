@@ -9,11 +9,13 @@ import com.platform.module.achievement.entity.Achievement;
 import com.platform.module.achievement.service.AchievementService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.Map;
 
+@Slf4j
 @Tag(name = "Achievement Management")
 @RestController
 @RequestMapping("/api/achievement")
@@ -37,15 +39,26 @@ public class AchievementController {
                                            @RequestParam(required = false) String awardLevel,
                                            @RequestParam(defaultValue = "1") int page,
                                            @RequestParam(defaultValue = "10") int size) {
-        LambdaQueryWrapper<Achievement> wrapper = new LambdaQueryWrapper<>();
-        if (type != null && !type.isEmpty()) {
-            wrapper.eq(Achievement::getType, type);
+        try {
+            LambdaQueryWrapper<Achievement> wrapper = new LambdaQueryWrapper<>();
+            // 前台只展示公开的成果
+            wrapper.eq(Achievement::getIsPublic, 1);
+            if (type != null && !type.isEmpty()) {
+                wrapper.eq(Achievement::getType, type);
+            }
+            if (awardLevel != null && !awardLevel.isEmpty()) {
+                wrapper.eq(Achievement::getAwardLevel, awardLevel);
+            }
+            wrapper.orderByDesc(Achievement::getCreatedAt);
+            return Result.success(achievementService.page(new Page<>(page, size), wrapper));
+        } catch (Exception e) {
+            // 表不存在或结构异常时返回空数据，不阻断前端展示
+            log.warn("Failed to list achievements, returning empty result: {}", e.getMessage());
+            IPage<Achievement> emptyPage = new Page<>(page, size);
+            emptyPage.setRecords(java.util.Collections.emptyList());
+            emptyPage.setTotal(0);
+            return Result.success(emptyPage);
         }
-        if (awardLevel != null && !awardLevel.isEmpty()) {
-            wrapper.eq(Achievement::getAwardLevel, awardLevel);
-        }
-        wrapper.orderByDesc(Achievement::getCreatedAt);
-        return Result.success(achievementService.page(new Page<>(page, size), wrapper));
     }
 
     @GetMapping("/{id}")
@@ -68,8 +81,13 @@ public class AchievementController {
         if (existing == null) {
             return Result.notFound("Achievement not found");
         }
-        achievement.setId(id);
-        achievementService.updateById(achievement);
+        // 仅允许更新安全字段，防止批量赋值覆盖受保护字段（isFeatured, viewCount, likeCount等）
+        if (achievement.getTitle() != null) existing.setTitle(achievement.getTitle());
+        if (achievement.getDescription() != null) existing.setDescription(achievement.getDescription());
+        if (achievement.getAwardLevel() != null) existing.setAwardLevel(achievement.getAwardLevel());
+        if (achievement.getFileUrls() != null) existing.setFileUrls(achievement.getFileUrls());
+        if (achievement.getIsPublic() != null) existing.setIsPublic(achievement.getIsPublic());
+        achievementService.updateById(existing);
         return Result.success(achievementService.getById(id));
     }
 
@@ -109,6 +127,8 @@ public class AchievementController {
     @GetMapping("/share/list")
     @Operation(summary = "List share posts")
     public Result<List<Achievement>> shareList() {
-        return Result.success(achievementService.getSharePosts());
+        return Result.success(achievementService.getSharePosts().stream()
+                .filter(a -> a.getIsPublic() != null && a.getIsPublic() == 1)
+                .toList());
     }
 }

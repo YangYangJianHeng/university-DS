@@ -2,73 +2,57 @@ package com.platform.module.collaboration.controller;
 
 import com.platform.common.result.Result;
 import com.platform.common.util.UserContext;
-import com.platform.module.collaboration.entity.Message;
-import com.platform.module.collaboration.entity.Task;
-import com.platform.module.collaboration.mapper.MessageMapper;
+import com.platform.module.collaboration.dto.*;
+import com.platform.module.collaboration.entity.*;
 import com.platform.module.collaboration.service.TaskService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.web.bind.annotation.*;
 
-import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.stream.Collectors;
+import java.util.List;
+import java.util.Map;
 
-@Tag(name = "Task & Collaboration")
+@Tag(name = "任务中心")
 @RestController
 @RequestMapping("/api")
 public class TaskController {
 
     private final TaskService taskService;
-    private final MessageMapper messageMapper;
 
-    // In-memory vote storage for simplicity (no Vote entity)
-    private final Map<Long, Map<String, Object>> votes = new ConcurrentHashMap<>();
-    private final Map<Long, List<Long>> voteRecords = new ConcurrentHashMap<>();
-    private long voteIdCounter = 1;
-
-    public TaskController(TaskService taskService, MessageMapper messageMapper) {
+    public TaskController(TaskService taskService) {
         this.taskService = taskService;
-        this.messageMapper = messageMapper;
     }
 
-    // ---- Task APIs ----
+    // ==================== 任务管理 ====================
 
     @PostMapping("/task")
-    @Operation(summary = "Create task")
-    public Result<Task> createTask(@RequestBody Task task) {
-        return Result.success(taskService.create(task));
+    @Operation(summary = "创建任务（负责人专属，支持多人指派）")
+    public Result<Task> createTask(@RequestBody TaskCreateRequest request) {
+        return Result.success(taskService.createTask(request));
     }
 
     @GetMapping("/task/{id}")
-    @Operation(summary = "Get task detail")
-    public Result<Task> detail(@PathVariable Long id) {
-        Task task = taskService.getById(id);
-        if (task == null) {
-            return Result.notFound("Task not found");
-        }
-        return Result.success(task);
+    @Operation(summary = "获取任务详情（含执行人、成果、评论）")
+    public Result<TaskDetailVO> detail(@PathVariable Long id) {
+        return Result.success(taskService.getTaskDetail(id));
     }
 
     @PutMapping("/task/{id}")
-    @Operation(summary = "Update task")
+    @Operation(summary = "更新任务")
     public Result<Task> updateTask(@PathVariable Long id, @RequestBody Task task) {
         task.setId(id);
         return Result.success(taskService.updateTask(task));
     }
 
     @PutMapping("/task/{id}/status")
-    @Operation(summary = "Update task status")
+    @Operation(summary = "更新任务状态")
     public Result<Void> updateStatus(@PathVariable Long id, @RequestBody Map<String, String> request) {
-        String status = request.get("status");
-        taskService.updateStatus(id, status);
+        taskService.updateStatus(id, request.get("status"));
         return Result.success();
     }
 
     @GetMapping("/task/list")
-    @Operation(summary = "List tasks by project (if projectId is null, return all)")
+    @Operation(summary = "获取项目下任务列表")
     public Result<List<Task>> listByProject(@RequestParam(required = false) Long projectId) {
         if (projectId != null) {
             return Result.success(taskService.getByProject(projectId));
@@ -77,78 +61,89 @@ public class TaskController {
     }
 
     @GetMapping("/task/my")
-    @Operation(summary = "Get my tasks")
+    @Operation(summary = "我的任务（我参与的所有任务）")
     public Result<List<Task>> myTasks() {
-        Long userId = UserContext.getCurrentUserId();
-        return Result.success(taskService.getMyTasks(userId));
+        return Result.success(taskService.getMyTasks(UserContext.getCurrentUserId()));
     }
 
-    // ---- Vote APIs (in-memory) ----
-
-    @PostMapping("/vote")
-    @Operation(summary = "Create vote")
-    public Result<Map<String, Object>> createVote(@RequestBody Map<String, Object> request) {
-        Long voteId = voteIdCounter++;
-        Map<String, Object> vote = new HashMap<>();
-        vote.put("id", voteId);
-        vote.put("title", request.get("title"));
-        vote.put("options", request.get("options"));
-        vote.put("deadline", request.get("deadline"));
-        vote.put("status", "ACTIVE");
-        vote.put("createdBy", UserContext.getCurrentUserId());
-        vote.put("createdAt", LocalDateTime.now().toString());
-        votes.put(voteId, vote);
-        voteRecords.put(voteId, new ArrayList<>());
-
-        Map<String, Object> result = new HashMap<>(vote);
-        return Result.success(result);
+    @GetMapping("/task/managed")
+    @Operation(summary = "我管理的任务（负责人视角，支持多项目管理）")
+    public Result<List<Task>> managedTasks() {
+        return Result.success(taskService.getManagedTasks(UserContext.getCurrentUserId()));
     }
 
-    @PostMapping("/vote/{id}/cast")
-    @Operation(summary = "Cast vote")
-    public Result<Void> castVote(@PathVariable Long id, @RequestBody Map<String, Object> request) {
-        Map<String, Object> vote = votes.get(id);
-        if (vote == null) {
-            return Result.notFound("Vote not found");
-        }
-        Long userId = UserContext.getCurrentUserId();
-        List<Long> records = voteRecords.get(id);
-        if (records.contains(userId)) {
-            return Result.conflict("Already voted");
-        }
-        records.add(userId);
+    // ==================== 人员指派 ====================
+
+    @GetMapping("/task/{id}/recommend")
+    @Operation(summary = "智能推荐匹配成员（基于技能标签，Top-5）")
+    public Result<List<TaskDetailVO.AssigneeVO>> recommendAssignees(@PathVariable Long id) {
+        return Result.success(taskService.recommendAssignees(id));
+    }
+
+    @PostMapping("/task/{id}/assignee")
+    @Operation(summary = "添加任务执行人")
+    public Result<Void> addAssignee(@PathVariable Long id, @RequestBody Map<String, Object> request) {
+        Long userId = Long.valueOf(request.get("userId").toString());
+        String note = (String) request.get("assignmentNote");
+        taskService.addAssignee(id, userId, note);
         return Result.success();
     }
 
-    // ---- Weekly Report ----
+    @DeleteMapping("/task/{id}/assignee/{userId}")
+    @Operation(summary = "移除任务执行人")
+    public Result<Void> removeAssignee(@PathVariable Long id, @PathVariable Long userId) {
+        taskService.removeAssignee(id, userId);
+        return Result.success();
+    }
 
-    @GetMapping("/team/{teamId}/weekly-report")
-    @Operation(summary = "Get weekly report")
-    public Result<Map<String, Object>> weeklyReport(@PathVariable Long teamId) {
-        Map<String, Object> report = new HashMap<>();
-        report.put("teamId", teamId);
+    @PutMapping("/task/{id}/accept")
+    @Operation(summary = "接受/拒绝任务")
+    public Result<Void> acceptTask(@PathVariable Long id, @RequestBody Map<String, Boolean> request) {
+        taskService.acceptTask(id, request.getOrDefault("accept", true));
+        return Result.success();
+    }
 
-        LocalDate now = LocalDate.now();
-        LocalDate weekStart = now.minusDays(now.getDayOfWeek().getValue() - 1);
-        LocalDate weekEnd = weekStart.plusDays(6);
+    @GetMapping("/task/{id}/assignees")
+    @Operation(summary = "获取任务执行人列表")
+    public Result<List<TaskAssignee>> getAssignees(@PathVariable Long id) {
+        return Result.success(taskService.getAssignees(id));
+    }
 
-        report.put("weekStart", weekStart.toString());
-        report.put("weekEnd", weekEnd.toString());
+    // ==================== 成果提交 ====================
 
-        // Count messages this week
-        long messageCount = messageMapper.selectCount(
-                new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<Message>()
-                        .eq(Message::getTeamId, teamId)
-                        .ge(Message::getCreatedAt, weekStart.atStartOfDay()));
-        report.put("messageCount", messageCount);
+    @PostMapping("/task/submission")
+    @Operation(summary = "提交阶段性成果")
+    public Result<TaskSubmission> submitResult(@RequestBody SubmissionRequest request) {
+        return Result.success(taskService.submitResult(request));
+    }
 
-        // Count tasks
-        long taskCount = taskService.count(
-                new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<Task>()
-                        .eq(Task::getProjectId, teamId));
-        report.put("taskCount", taskCount);
+    @GetMapping("/task/{id}/submissions")
+    @Operation(summary = "获取任务成果提交记录")
+    public Result<List<TaskSubmission>> getSubmissions(@PathVariable Long id) {
+        return Result.success(taskService.getSubmissions(id));
+    }
 
-        report.put("generatedAt", LocalDateTime.now().toString());
-        return Result.success(report);
+    @PutMapping("/task/submission/{id}/review")
+    @Operation(summary = "验收成果（通过/退回）")
+    public Result<Void> reviewSubmission(@PathVariable Long id, @RequestBody ReviewRequest request) {
+        taskService.reviewSubmission(id, request);
+        return Result.success();
+    }
+
+    // ==================== 评论 ====================
+
+    @PostMapping("/task/{id}/comment")
+    @Operation(summary = "添加评论")
+    public Result<TaskComment> addComment(@PathVariable Long id, @RequestBody Map<String, Object> request) {
+        String content = (String) request.get("content");
+        @SuppressWarnings("unchecked")
+        List<Long> mentionedUserIds = (List<Long>) request.get("mentionedUserIds");
+        return Result.success(taskService.addComment(id, content, mentionedUserIds));
+    }
+
+    @GetMapping("/task/{id}/comments")
+    @Operation(summary = "获取任务评论列表")
+    public Result<List<TaskComment>> getComments(@PathVariable Long id) {
+        return Result.success(taskService.getComments(id));
     }
 }

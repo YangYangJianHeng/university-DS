@@ -1,6 +1,10 @@
 package com.platform.common.config;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.platform.module.achievement.entity.Achievement;
+import com.platform.module.achievement.mapper.AchievementMapper;
+import com.platform.module.admin.entity.AuditLog;
+import com.platform.module.admin.mapper.AuditLogMapper;
 import com.platform.module.collaboration.entity.Task;
 import com.platform.module.collaboration.mapper.TaskMapper;
 import com.platform.module.notification.entity.Notification;
@@ -11,6 +15,8 @@ import com.platform.module.recruit.entity.Application;
 import com.platform.module.recruit.entity.Recruit;
 import com.platform.module.recruit.mapper.ApplicationMapper;
 import com.platform.module.recruit.mapper.RecruitMapper;
+import com.platform.module.teacher.entity.Teacher;
+import com.platform.module.teacher.mapper.TeacherMapper;
 import com.platform.module.team.entity.Team;
 import com.platform.module.team.entity.TeamMember;
 import com.platform.module.team.mapper.TeamMapper;
@@ -40,6 +46,9 @@ public class DataInitializer implements CommandLineRunner {
     private final ProjectMapper projectMapper;
     private final TaskMapper taskMapper;
     private final NotificationMapper notificationMapper;
+    private final TeacherMapper teacherMapper;
+    private final AchievementMapper achievementMapper;
+    private final AuditLogMapper auditLogMapper;
     private final PasswordEncoder passwordEncoder;
 
     public DataInitializer(UserMapper userMapper, UserSkillMapper userSkillMapper,
@@ -47,6 +56,9 @@ public class DataInitializer implements CommandLineRunner {
                            TeamMapper teamMapper, TeamMemberMapper teamMemberMapper,
                            ProjectMapper projectMapper, TaskMapper taskMapper,
                            NotificationMapper notificationMapper,
+                           TeacherMapper teacherMapper,
+                           AchievementMapper achievementMapper,
+                           AuditLogMapper auditLogMapper,
                            PasswordEncoder passwordEncoder) {
         this.userMapper = userMapper;
         this.userSkillMapper = userSkillMapper;
@@ -57,6 +69,9 @@ public class DataInitializer implements CommandLineRunner {
         this.projectMapper = projectMapper;
         this.taskMapper = taskMapper;
         this.notificationMapper = notificationMapper;
+        this.teacherMapper = teacherMapper;
+        this.achievementMapper = achievementMapper;
+        this.auditLogMapper = auditLogMapper;
         this.passwordEncoder = passwordEncoder;
     }
 
@@ -80,6 +95,15 @@ public class DataInitializer implements CommandLineRunner {
 
         // ---- 6. 初始化通知数据 ----
         initNotifications();
+
+        // ---- 7. 初始化导师数据 ----
+        initTeachers();
+
+        // ---- 8. 初始化成果数据 ----
+        initAchievements();
+
+        // ---- 9. 初始化审核日志 ----
+        initAuditLogs();
     }
 
     private void initUsers() {
@@ -126,6 +150,20 @@ public class DataInitializer implements CommandLineRunner {
         if (findUserByPhone("13800000008") == null) {
             createUser("13800000008", "2024008", "周十", "123456",
                     "物联网工程", "2024级", "USER", 1);
+        }
+
+        // ---- 教师用户 ----
+        if (findUserByPhone("13800000010") == null) {
+            createUser("13800000010", "T2024001", "王教授", "123456",
+                    "计算机科学与技术", null, "TEACHER", 1);
+        }
+        if (findUserByPhone("13800000011") == null) {
+            createUser("13800000011", "T2024002", "李教授", "123456",
+                    "人工智能", null, "TEACHER", 1);
+        }
+        if (findUserByPhone("13800000012") == null) {
+            createUser("13800000012", "T2024003", "张教授", "123456",
+                    "电子信息工程", null, "TEACHER", 1);
         }
     }
 
@@ -316,9 +354,10 @@ public class DataInitializer implements CommandLineRunner {
                 new LambdaQueryWrapper<Team>().eq(Team::getName, "AI教育先锋队"));
         if (t1 == null) return;
 
-        // 项目
+        // 项目（带leader_id）
         Project p1 = new Project();
         p1.setTeamId(t1.getId());
+        p1.setLeaderId(2L); // 张三作为项目负责人
         p1.setName("基于AI的个性化学习推荐平台");
         p1.setDescription("利用机器学习算法分析学生学习行为，提供个性化的学习资源推荐。项目目标：完成核心推荐算法、Web端和移动端适配。");
         p1.setStatus("ONGOING");
@@ -326,22 +365,24 @@ public class DataInitializer implements CommandLineRunner {
         p1.setEndedAt(LocalDate.of(2026, 10, 30));
         projectMapper.insert(p1);
 
-        // 项目任务
+        // 项目任务（新结构：creator_id + required_skills）
         Task task1 = new Task();
         task1.setProjectId(p1.getId());
+        task1.setCreatorId(2L);
         task1.setTitle("需求分析与系统设计");
         task1.setDescription("完成项目需求文档、系统架构设计和数据库设计");
-        task1.setAssigneeId(2L);
+        task1.setRequiredSkills("Java,Spring Boot,系统设计");
         task1.setPriority("HIGH");
-        task1.setStatus("COMPLETED");
+        task1.setStatus("DONE");
         task1.setDeadline(LocalDateTime.of(2026, 6, 15, 23, 59));
         taskMapper.insert(task1);
 
         Task task2 = new Task();
         task2.setProjectId(p1.getId());
+        task2.setCreatorId(2L);
         task2.setTitle("用户管理模块开发");
         task2.setDescription("实现用户注册、登录、个人信息管理等功能");
-        task2.setAssigneeId(2L);
+        task2.setRequiredSkills("Java,Spring Boot,Vue.js");
         task2.setPriority("HIGH");
         task2.setStatus("IN_PROGRESS");
         task2.setDeadline(LocalDateTime.of(2026, 7, 10, 23, 59));
@@ -349,31 +390,34 @@ public class DataInitializer implements CommandLineRunner {
 
         Task task3 = new Task();
         task3.setProjectId(p1.getId());
+        task3.setCreatorId(2L);
         task3.setTitle("学习行为数据采集");
         task3.setDescription("设计并实现用户学习行为的数据采集和存储模块");
-        task3.setAssigneeId(3L);
+        task3.setRequiredSkills("Python,数据分析,MySQL");
         task3.setPriority("MEDIUM");
-        task3.setStatus("PENDING");
+        task3.setStatus("TODO");
         task3.setDeadline(LocalDateTime.of(2026, 7, 20, 23, 59));
         taskMapper.insert(task3);
 
         Task task4 = new Task();
         task4.setProjectId(p1.getId());
+        task4.setCreatorId(2L);
         task4.setTitle("推荐算法原型开发");
         task4.setDescription("基于协同过滤和知识图谱的混合推荐算法实现");
-        task4.setAssigneeId(null);
+        task4.setRequiredSkills("Python,PyTorch,机器学习");
         task4.setPriority("HIGH");
-        task4.setStatus("PENDING");
+        task4.setStatus("TODO");
         task4.setDeadline(LocalDateTime.of(2026, 8, 15, 23, 59));
         taskMapper.insert(task4);
 
         Task task5 = new Task();
         task5.setProjectId(p1.getId());
+        task5.setCreatorId(2L);
         task5.setTitle("前端页面开发");
         task5.setDescription("实现Web端主要页面，包括首页、学习推荐、个人中心等");
-        task5.setAssigneeId(null);
+        task5.setRequiredSkills("Vue.js,TypeScript,前端开发");
         task5.setPriority("MEDIUM");
-        task5.setStatus("PENDING");
+        task5.setStatus("TODO");
         task5.setDeadline(LocalDateTime.of(2026, 8, 30, 23, 59));
         taskMapper.insert(task5);
 
@@ -413,6 +457,149 @@ public class DataInitializer implements CommandLineRunner {
         });
 
         System.out.println("Seed notifications created.");
+    }
+
+    private void initTeachers() {
+        if (teacherMapper.selectCount(new LambdaQueryWrapper<>()) > 0) return;
+
+        // 王教授 - 计算机科学与技术 (userId=10, phone=13800000010)
+        Teacher t1 = new Teacher();
+        t1.setUserId(10L);
+        t1.setDepartment("计算机科学与技术学院");
+        t1.setTitle("教授");
+        t1.setResearchFields("[\"分布式系统\",\"云计算\",\"大数据\"]");
+        t1.setMaxTeams(3);
+        t1.setCurrentTeams(0);
+        t1.setIsVerified(1);
+        t1.setRating(new java.math.BigDecimal("4.8"));
+        teacherMapper.insert(t1);
+
+        // 李教授 - 人工智能 (userId=11, phone=13800000011)
+        Teacher t2 = new Teacher();
+        t2.setUserId(11L);
+        t2.setDepartment("人工智能学院");
+        t2.setTitle("副教授");
+        t2.setResearchFields("[\"机器学习\",\"自然语言处理\",\"知识图谱\"]");
+        t2.setMaxTeams(5);
+        t2.setCurrentTeams(1);
+        t2.setIsVerified(1);
+        t2.setRating(new java.math.BigDecimal("4.5"));
+        teacherMapper.insert(t2);
+
+        // 张教授 - 电子信息工程 (userId=12, phone=13800000012)
+        Teacher t3 = new Teacher();
+        t3.setUserId(12L);
+        t3.setDepartment("电子信息工程学院");
+        t3.setTitle("教授");
+        t3.setResearchFields("[\"嵌入式系统\",\"物联网\",\"信号处理\"]");
+        t3.setMaxTeams(4);
+        t3.setCurrentTeams(0);
+        t3.setIsVerified(1);
+        t3.setRating(new java.math.BigDecimal("4.6"));
+        teacherMapper.insert(t3);
+
+        System.out.println("Seed teachers created: 王教授, 李教授, 张教授");
+    }
+
+    private void initAchievements() {
+        if (achievementMapper.selectCount(new LambdaQueryWrapper<>()) > 0) return;
+
+        Team t1 = teamMapper.selectOne(
+                new LambdaQueryWrapper<Team>().eq(Team::getName, "AI教育先锋队"));
+        if (t1 == null) return;
+
+        // 成果1: 竞赛获奖
+        Achievement a1 = new Achievement();
+        a1.setTeamId(t1.getId());
+        a1.setTitle("2025年全国大学生AI创新应用大赛一等奖");
+        a1.setType("AWARD");
+        a1.setDescription("团队开发的「智能学习助手」在全国大学生AI创新应用大赛中荣获一等奖。项目基于大语言模型和知识图谱技术，为学生提供个性化学习辅导。");
+        a1.setAwardLevel("NATIONAL");
+        a1.setIsPublic(1);
+        a1.setIsFeatured(1);
+        a1.setViewCount(256);
+        a1.setLikeCount(48);
+        achievementMapper.insert(a1);
+
+        // 成果2: 论文
+        Achievement a2 = new Achievement();
+        a2.setTeamId(t1.getId());
+        a2.setTitle("基于深度强化学习的自适应学习路径推荐方法");
+        a2.setType("PAPER");
+        a2.setDescription("发表于《计算机教育》2025年第3期。提出了一种结合知识追踪和深度强化学习的自适应学习路径推荐方法。");
+        a2.setAwardLevel("NATIONAL");
+        a2.setIsPublic(1);
+        a2.setIsFeatured(0);
+        a2.setViewCount(132);
+        a2.setLikeCount(23);
+        achievementMapper.insert(a2);
+
+        // 成果3: 软件著作权
+        Achievement a3 = new Achievement();
+        a3.setTeamId(t1.getId());
+        a3.setTitle("智能学习推荐平台V1.0");
+        a3.setType("SOFTWARE");
+        a3.setDescription("登记号：2025SR1234567。基于协同过滤和知识图谱的混合推荐算法，实现了学习资源的精准推荐。");
+        a3.setAwardLevel("NATIONAL");
+        a3.setIsPublic(1);
+        a3.setIsFeatured(0);
+        a3.setViewCount(89);
+        a3.setLikeCount(15);
+        achievementMapper.insert(a3);
+
+        // 成果4: 专利
+        Achievement a4 = new Achievement();
+        a4.setTeamId(t1.getId());
+        a4.setTitle("一种基于用户画像的学习资源个性化推荐方法");
+        a4.setType("PATENT");
+        a4.setDescription("发明专利，申请号：CN202510012345.6。通过构建多维用户画像，实现学习资源的智能推荐。");
+        a4.setAwardLevel("PROVINCIAL");
+        a4.setIsPublic(1);
+        a4.setIsFeatured(0);
+        a4.setViewCount(67);
+        a4.setLikeCount(10);
+        achievementMapper.insert(a4);
+
+        System.out.println("Seed achievements created: 4 items");
+    }
+
+    private void initAuditLogs() {
+        if (auditLogMapper.selectCount(new LambdaQueryWrapper<>()) > 0) return;
+
+        // 审核日志1: 审核通过的招募
+        AuditLog log1 = new AuditLog();
+        log1.setTargetType("RECRUIT");
+        log1.setTargetId(1L);
+        log1.setOperatorId(1L);
+        log1.setAction("APPROVE");
+        log1.setReason("符合平台规范，项目内容完整");
+        log1.setBeforeStatus("PENDING");
+        log1.setAfterStatus("APPROVED");
+        auditLogMapper.insert(log1);
+
+        // 审核日志2: 审核驳回的招募
+        AuditLog log2 = new AuditLog();
+        log2.setTargetType("RECRUIT");
+        log2.setTargetId(2L);
+        log2.setOperatorId(1L);
+        log2.setAction("REJECT");
+        log2.setReason("项目描述不够详细，需要补充具体方案");
+        log2.setBeforeStatus("PENDING");
+        log2.setAfterStatus("REJECTED");
+        auditLogMapper.insert(log2);
+
+        // 审核日志3: 审核通过的招募
+        AuditLog log3 = new AuditLog();
+        log3.setTargetType("RECRUIT");
+        log3.setTargetId(3L);
+        log3.setOperatorId(1L);
+        log3.setAction("APPROVE");
+        log3.setReason("项目创新性好，符合大赛要求");
+        log3.setBeforeStatus("PENDING");
+        log3.setAfterStatus("APPROVED");
+        auditLogMapper.insert(log3);
+
+        System.out.println("Seed audit logs created: 3 records");
     }
 
     // ---- 辅助方法 ----

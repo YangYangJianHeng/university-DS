@@ -3,6 +3,7 @@ package com.platform.module.recruit.controller;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.platform.common.result.Result;
 import com.platform.common.util.UserContext;
+import com.platform.module.recruit.dto.ConvertToProjectDTO;
 import com.platform.module.recruit.dto.CreateRecruitDTO;
 import com.platform.module.recruit.dto.UpdateRecruitDTO;
 import com.platform.module.recruit.entity.Application;
@@ -12,6 +13,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -110,5 +112,30 @@ public class RecruitController {
     public Result<List<Application>> getApplications(@PathVariable Long id) {
         List<Application> applications = recruitService.getApplications(id);
         return Result.success(applications);
+    }
+
+    /**
+     * Approve or reject an application (publisher only).
+     */
+    @PutMapping("/applications/{applicationId}")
+    public Result<String> approveApplication(@PathVariable Long applicationId,
+                                             @RequestParam boolean approved) {
+        Long publisherId = UserContext.getCurrentUserId();
+        recruitService.approveApplication(applicationId, publisherId, approved);
+        return Result.success(approved ? "已通过申请" : "已拒绝申请");
+    }
+
+    /**
+     * 将招募转为项目：创建项目、团队，并可继续招募和批量创建任务
+     * (publisher or admin only)
+     */
+    @PostMapping("/{id}/convert-to-project")
+    public Result<Map<String, Object>> convertToProject(@PathVariable Long id,
+                                                         @Valid @RequestBody ConvertToProjectDTO dto) {
+        Long projectId = recruitService.convertToProject(id, dto);
+        Map<String, Object> result = new HashMap<>();
+        result.put("projectId", projectId);
+        result.put("message", "招募已成功转为项目");
+        return Result.success(result);
     }
 }

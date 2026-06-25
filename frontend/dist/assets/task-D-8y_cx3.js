@@ -1,0 +1,1 @@
+import{r as s}from"./request-DxApAtjI.js";function u(t){return s.post("/task",t)}function e(t,a){return s.put(`/task/${t}/status`,{status:a})}function n(t){return s.get("/task/list",{params:t})}function k(){return s.get("/task/my")}export{u as c,k as g,n as l,e as u};

@@ -98,16 +98,22 @@ public class TeacherServiceImpl extends ServiceImpl<TeacherMapper, Teacher> impl
         }).collect(Collectors.toList());
     }
 
+    // 内存存储指导日志（简化实现）
+    private final List<Map<String, Object>> guidanceLogs = new ArrayList<>();
+
     @Override
     public void addGuidanceLog(Long teacherId, Long teamId, String content) {
-        // Store as a notification for simplicity
-        // In a real app, this would be stored in a guidance_log table
-        // For now, we just validate and return
         Teacher teacher = getById(teacherId);
         if (teacher == null) {
             throw BusinessException.notFound("Teacher not found");
         }
-        // Log stored - in real impl would insert into guidance_log table
+        Map<String, Object> log = new HashMap<>();
+        log.put("id", System.currentTimeMillis());
+        log.put("teacherId", teacherId);
+        log.put("teamId", teamId);
+        log.put("content", content);
+        log.put("createdAt", LocalDateTime.now().toString());
+        guidanceLogs.add(log);
     }
 
     @Override
@@ -116,7 +122,8 @@ public class TeacherServiceImpl extends ServiceImpl<TeacherMapper, Teacher> impl
         if (teacher == null) {
             throw BusinessException.notFound("Teacher not found");
         }
-        // Return empty list - in real impl would query guidance_log table
-        return new ArrayList<>();
+        return guidanceLogs.stream()
+                .filter(log -> teacherId.equals(log.get("teacherId")))
+                .collect(Collectors.toList());
     }
 }

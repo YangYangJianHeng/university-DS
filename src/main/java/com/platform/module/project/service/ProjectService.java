@@ -23,4 +23,8 @@ public interface ProjectService extends IService<Project> {
     Map<String, Object> getRiskAssessment(Long projectId);
 
     List<Project> getMyProjects(Long userId);
+
+    void addProjectMember(Long projectId, Long userId);
+
+    List<Map<String, Object>> getProjectMembers(Long projectId);
 }
