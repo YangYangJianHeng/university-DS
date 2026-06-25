@@ -1,0 +1,1 @@
+import{r as t}from"./request-DxApAtjI.js";function e(){return t.get("/dashboard")}function a(){return t.get("/profile/skill-radar")}function s(){return t.get("/profile/statistics")}function i(){return t.get("/profile/badges")}export{s as a,a as b,i as c,e as g};

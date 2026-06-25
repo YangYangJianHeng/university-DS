@@ -1,0 +1,81 @@
+package com.platform.module.competition.controller;
+
+import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.platform.common.result.Result;
+import com.platform.common.util.UserContext;
+import com.platform.module.competition.entity.Competition;
+import com.platform.module.competition.service.CompetitionService;
+import com.platform.module.user.entity.User;
+import com.platform.module.user.mapper.UserMapper;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+import java.util.Map;
+
+@Tag(name = "Competition Management")
+@RestController
+@RequestMapping("/api/competition")
+public class CompetitionController {
+
+    private final CompetitionService competitionService;
+    private final UserMapper userMapper;
+
+    public CompetitionController(CompetitionService competitionService, UserMapper userMapper) {
+        this.competitionService = competitionService;
+        this.userMapper = userMapper;
+    }
+
+    @PostMapping
+    @Operation(summary = "Create competition (admin)")
+    public Result<Competition> create(@RequestBody Competition competition) {
+        competitionService.save(competition);
+        return Result.success(competition);
+    }
+
+    @GetMapping("/list")
+    @Operation(summary = "List competitions with filters")
+    public Result<IPage<Competition>> list(@RequestParam(required = false) String level,
+                                           @RequestParam(required = false) String category,
+                                           @RequestParam(required = false) String status,
+                                           @RequestParam(defaultValue = "1") int page,
+                                           @RequestParam(defaultValue = "10") int size) {
+        return Result.success(competitionService.listByPage(level, category, status, page, size));
+    }
+
+    @GetMapping("/{id}")
+    @Operation(summary = "Get competition detail")
+    public Result<Competition> detail(@PathVariable Long id) {
+        Competition competition = competitionService.getById(id);
+        if (competition == null) {
+            return Result.notFound("Competition not found");
+        }
+        // Increment view count
+        competition.setViewCount(competition.getViewCount() != null ? competition.getViewCount() + 1 : 1);
+        competitionService.updateById(competition);
+        return Result.success(competition);
+    }
+
+    @GetMapping("/recommend")
+    @Operation(summary = "Recommend competitions by user major")
+    public Result<List<Competition>> recommend() {
+        Long userId = UserContext.getCurrentUserId();
+        User user = userMapper.selectById(userId);
+        String major = user != null ? user.getMajor() : "";
+        return Result.success(competitionService.getRecommendByMajor(major));
+    }
+
+    @PostMapping("/{id}/collect")
+    @Operation(summary = "Toggle collect competition")
+    public Result<Boolean> toggleCollect(@PathVariable Long id) {
+        Long userId = UserContext.getCurrentUserId();
+        return Result.success(competitionService.toggleCollect(id, userId));
+    }
+
+    @GetMapping("/calendar")
+    @Operation(summary = "Get competition calendar events")
+    public Result<List<Map<String, Object>>> calendar() {
+        return Result.success(competitionService.getCalendarEvents());
+    }
+}

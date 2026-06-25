@@ -1,0 +1,27 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(java -version)",
+      "Bash(mvn -version)",
+      "Bash(npm -v)",
+      "Bash(mvn compile *)",
+      "Bash(npm install *)",
+      "Bash(echo \"---exit:$?\")",
+      "Bash(npx vite *)",
+      "Bash(mvn spring-boot:run -Dspring-boot.run.profiles=default)",
+      "Bash(timeout 45 mvn spring-boot:run)",
+      "Bash(timeout 45 mvn spring-boot:run -Dspring-boot.run.arguments=\"--server.port=8081\")",
+      "Bash(curl *)",
+      "Bash(nohup mvn spring-boot:run -Dspring-boot.run.arguments=\"--server.port=8081\")",
+      "Bash(echo \"PID=$!\")",
+      "Bash(python3 -c ' *)",
+      "Bash(python -c ' *)",
+      "Bash(kill -9 469)",
+      "Bash(nohup mvn spring-boot:run -Dspring-boot.run.arguments=\"--server.port=8082\")",
+      "Bash(echo \"Started PID=$!\")",
+      "Bash(mvn spring-boot:run -q)",
+      "Bash(python3 -m json.tool)",
+      "Bash(python3 *)"
+    ]
+  }
+}
