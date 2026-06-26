@@ -12,8 +12,8 @@ export function getTeacher(id: number) {
   return request.get(`/teacher/${id}`)
 }
 
-export function inviteTeacher(teamId: number, teacherId: number) {
-  return request.post(`/team/${teamId}/teacher/invite`, { teacherId })
+export function inviteTeacher(teamId: number, teacherId: number, message?: string) {
+  return request.post(`/team/${teamId}/teacher/invite`, { teacherId, message })
 }
 
 export function getMyTeams() {

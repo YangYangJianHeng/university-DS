@@ -16,5 +16,7 @@ public class UserVO {
     private String avatar;
     private String bio;
     private String role;
+    private Integer status;
+    private java.time.LocalDateTime createdAt;
     private List<UserSkill> skills;
 }

@@ -35,6 +35,11 @@ spring:
     hibernate:
       ddl-auto: none
 
+  jackson:
+    date-format: yyyy-MM-dd HH:mm:ss
+    time-zone: Asia/Shanghai
+    serialization:
+      write-dates-as-timestamps: false
   servlet:
     multipart:
       max-file-size: 50MB

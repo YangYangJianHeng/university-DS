@@ -14,6 +14,7 @@ public class Project {
     private Long teamId;
     private Long leaderId;
     private String name;
+    private String icon;
     private String description;
     private String status;
     private LocalDate startedAt;

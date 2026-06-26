@@ -22,7 +22,12 @@
       "Bash(mvn spring-boot:run -q)",
       "Bash(python3 -m json.tool)",
       "Bash(python3 *)",
-      "Bash(mvn clean *)"
+      "Bash(mvn clean *)",
+      "Bash(node -e \"const bcrypt = require\\('bcryptjs'\\); console.log\\(bcrypt.hashSync\\('admin123', 10\\)\\);\")",
+      "Bash(mvn -q dependency:resolve -DincludeScope=compile -DexcludeTransitive)",
+      "Bash(mysql -u root -p7500 university_platform -e 'UPDATE user SET password='\\\\''$2b$10$CXpskqn3Fs0si5iTblLRQeAbHXzoYq9fGEipaRMvP6ItAAJLSQ1ca'\\\\'' WHERE phone='\\\\''13800000000'\\\\'';')",
+      "Bash(mysql -u root -p7500 university_platform -e 'UPDATE user SET password='\\\\''$2a$10$CXpskqn3Fs0si5iTblLRQeAbHXzoYq9fGEipaRMvP6ItAAJLSQ1ca'\\\\'' WHERE phone='\\\\''13800000000'\\\\'';')",
+      "Bash(mysql *)"
     ]
   }
 }

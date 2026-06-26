@@ -52,15 +52,25 @@ public class TeacherServiceImpl extends ServiceImpl<TeacherMapper, Teacher> impl
     }
 
     @Override
-    public void inviteTeacher(Long teamId, Long teacherId) {
+    public void inviteTeacher(Long teamId, Long teacherId, String message) {
         Teacher teacher = getById(teacherId);
         if (teacher == null) {
             throw BusinessException.notFound("Teacher not found");
+        }
+        // 检查是否已有待处理的邀请
+        Long existing = teamTeacherMapper.selectCount(
+                new LambdaQueryWrapper<TeamTeacher>()
+                        .eq(TeamTeacher::getTeamId, teamId)
+                        .eq(TeamTeacher::getTeacherId, teacherId)
+                        .eq(TeamTeacher::getStatus, "PENDING"));
+        if (existing > 0) {
+            throw BusinessException.conflict("已向该导师发送过邀请，请等待回复");
         }
         TeamTeacher teamTeacher = new TeamTeacher();
         teamTeacher.setTeamId(teamId);
         teamTeacher.setTeacherId(teacherId);
         teamTeacher.setStatus("PENDING");
+        teamTeacher.setMessage(message);
         teamTeacherMapper.insert(teamTeacher);
     }
 

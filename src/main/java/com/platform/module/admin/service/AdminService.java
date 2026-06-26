@@ -6,17 +6,20 @@ import com.platform.module.collaboration.entity.Task;
 import com.platform.module.project.entity.Project;
 import com.platform.module.recruit.entity.Recruit;
 import com.platform.module.achievement.entity.Achievement;
+import com.platform.module.badge.entity.Badge;
+import com.platform.module.badge.entity.Certificate;
 import com.platform.module.competition.entity.Competition;
 import com.platform.module.teacher.entity.Teacher;
 import com.platform.module.team.entity.Team;
 import com.platform.module.user.entity.User;
+import com.platform.module.user.vo.UserVO;
 
 import java.util.List;
 import java.util.Map;
 
 public interface AdminService {
 
-    IPage<User> listUsers(int page, int size);
+    IPage<UserVO> listUsers(int page, int size);
 
     void updateUserStatus(Long userId, Integer status);
 
@@ -64,6 +67,7 @@ public interface AdminService {
 
     // Competition management
     IPage<Competition> listAllCompetitions(int page, int size);
+    Competition createCompetition(Competition competition);
     Competition updateCompetition(Long id, Competition competition);
     void deleteCompetition(Long id);
 
@@ -71,4 +75,17 @@ public interface AdminService {
     IPage<Achievement> listAllAchievements(int page, int size);
     Achievement updateAchievement(Long id, Achievement achievement);
     void deleteAchievement(Long id);
+
+    // Badge management
+    IPage<Badge> listAllBadges(int page, int size);
+    Badge createBadge(Badge badge);
+    Badge updateBadge(Long id, Badge badge);
+    void deleteBadge(Long id);
+
+    // Certificate management
+    List<Certificate> syncCertificates(Long badgeId);
+    List<Certificate> listAllCertificates(int page, int size);
+    long countAllCertificates();
+    void deleteCertificate(Long id);
+    List<Certificate> regenerateAllCertificates();
 }

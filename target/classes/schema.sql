@@ -56,6 +56,8 @@ CREATE TABLE IF NOT EXISTS `recruit` (
     `id` BIGINT AUTO_INCREMENT PRIMARY KEY,
     `publisher_id` BIGINT NOT NULL,
     `title` VARCHAR(200) NOT NULL,
+    `project_icon` VARCHAR(500) COMMENT '项目图标URL',
+    `project_name` VARCHAR(200) COMMENT '项目名称',
     `description` TEXT,
     `project_type` VARCHAR(50),
     `required_skills` JSON,
@@ -87,6 +89,7 @@ CREATE TABLE IF NOT EXISTS `application` (
 CREATE TABLE IF NOT EXISTS `team` (
     `id` BIGINT AUTO_INCREMENT PRIMARY KEY,
     `name` VARCHAR(100) NOT NULL,
+    `description` TEXT COMMENT '团队描述',
     `leader_id` BIGINT NOT NULL,
     `recruit_id` BIGINT,
     `status` VARCHAR(20) DEFAULT 'ACTIVE',
@@ -112,6 +115,7 @@ CREATE TABLE IF NOT EXISTS `team_teacher` (
     `team_id` BIGINT NOT NULL,
     `teacher_id` BIGINT NOT NULL,
     `status` VARCHAR(20) DEFAULT 'PENDING',
+    `message` VARCHAR(500) COMMENT '邀请留言信息',
     `invited_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
     `approved_at` DATETIME,
     FOREIGN KEY (`team_id`) REFERENCES `team`(`id`),
@@ -124,6 +128,7 @@ CREATE TABLE IF NOT EXISTS `project` (
     `team_id` BIGINT NOT NULL,
     `leader_id` BIGINT NOT NULL COMMENT '项目负责人',
     `name` VARCHAR(200) NOT NULL,
+    `icon` VARCHAR(500) COMMENT '项目图标URL',
     `description` TEXT,
     `status` VARCHAR(20) DEFAULT 'ONGOING',
     `started_at` DATE,
@@ -255,6 +260,7 @@ CREATE TABLE IF NOT EXISTS `achievement` (
 CREATE TABLE IF NOT EXISTS `file` (
     `id` BIGINT AUTO_INCREMENT PRIMARY KEY,
     `team_id` BIGINT,
+    `project_id` BIGINT COMMENT '关联项目ID',
     `parent_id` BIGINT,
     `name` VARCHAR(255) NOT NULL,
     `type` VARCHAR(10) DEFAULT 'FILE',
@@ -342,24 +348,49 @@ CREATE TABLE IF NOT EXISTS `system_config` (
     `updated_at` DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
+-- 21. 徽章定义表
+CREATE TABLE IF NOT EXISTS `badge` (
+    `id` BIGINT AUTO_INCREMENT PRIMARY KEY,
+    `name` VARCHAR(50) NOT NULL,
+    `description` VARCHAR(200),
+    `icon` VARCHAR(50) DEFAULT 'badge_default',
+    `condition_type` VARCHAR(30) COMMENT 'COMPLETED_TASKS / TEAM_COUNT / SKILL_COUNT / ACHIEVEMENT_COUNT / COMPETITION_COUNT / MASTER_SKILL / HAS_HONOR / RECRUIT_COUNT / PROJECT_COUNT / EXPERIENCE_COUNT / ALL_ROUNDER',
+    `condition_value` INT DEFAULT 0,
+    `category` VARCHAR(30) DEFAULT 'general',
+    `sort_order` INT DEFAULT 0,
+    `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 22. 奖状/证书表
+CREATE TABLE IF NOT EXISTS `certificate` (
+    `id` BIGINT AUTO_INCREMENT PRIMARY KEY,
+    `user_id` BIGINT NOT NULL COMMENT '获奖用户ID',
+    `badge_id` BIGINT NOT NULL COMMENT '对应徽章ID',
+    `badge_name` VARCHAR(50) NOT NULL COMMENT '徽章/奖项名称',
+    `user_name` VARCHAR(50) NOT NULL COMMENT '用户姓名（生成时快照）',
+    `student_id` VARCHAR(20) COMMENT '学号（生成时快照）',
+    `image_path` VARCHAR(500) COMMENT '奖状图片路径',
+    `awarded_at` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '获奖时间',
+    `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (`user_id`) REFERENCES `user`(`id`),
+    FOREIGN KEY (`badge_id`) REFERENCES `badge`(`id`),
+    UNIQUE KEY `uk_user_badge` (`user_id`, `badge_id`),
+    INDEX `idx_user_id` (`user_id`)
+);
+
 -- =============================================
--- 初始化示例数据
+-- 初始化示例数据（由 DataInitializer.java 统一管理，避免重复插入）
 -- =============================================
 
--- 管理员账户 - 密码在应用启动时通过BCrypt加密设置
--- INSERT INTO `user` ... will be done via DataInitializer
+-- 示例系统配置（config_key UNIQUE 约束确保不重复）
+INSERT INTO `system_config` (`config_key`, `config_value`, `description`)
+SELECT * FROM (SELECT 'platform.name' AS k, '大学生竞赛/科研项目组队匹配与过程管理平台' AS v, '平台名称' AS d) AS tmp
+WHERE NOT EXISTS (SELECT 1 FROM `system_config` WHERE `config_key` = tmp.k) LIMIT 1;
 
--- 示例竞赛信息
-INSERT INTO `competition` (`name`, `level`, `category`, `register_start`, `register_end`, `event_start`, `event_end`, `organizer`, `description`, `status`)
-VALUES ('中国国际"互联网+"大学生创新创业大赛', 'NATIONAL', 'INNOVATION', '2026-03-01', '2026-05-30', '2026-06-15', '2026-10-30', '教育部', '中国国际"互联网+"大学生创新创业大赛旨在深化高等教育综合改革，激发大学生的创造力。', 'REGISTERING');
+INSERT INTO `system_config` (`config_key`, `config_value`, `description`)
+SELECT * FROM (SELECT 'platform.version', '1.0.0', '平台版本号') AS tmp
+WHERE NOT EXISTS (SELECT 1 FROM `system_config` WHERE `config_key` = 'platform.version') LIMIT 1;
 
-INSERT INTO `competition` (`name`, `level`, `category`, `register_start`, `register_end`, `event_start`, `event_end`, `organizer`, `description`, `status`)
-VALUES ('"挑战杯"全国大学生课外学术科技作品竞赛', 'NATIONAL', 'ACADEMIC', '2026-02-01', '2026-04-30', '2026-05-01', '2026-11-30', '共青团中央', '"挑战杯"全国大学生课外学术科技作品竞赛是一项具有导向性、示范性和群众性的全国竞赛活动。', 'REGISTERING');
-
-INSERT INTO `competition` (`name`, `level`, `category`, `register_start`, `register_end`, `event_start`, `event_end`, `organizer`, `description`, `status`)
-VALUES ('全国大学生数学建模竞赛', 'NATIONAL', 'ACADEMIC', '2026-06-01', '2026-08-31', '2026-09-10', '2026-09-13', '中国工业与应用数学学会', '全国大学生数学建模竞赛是面向全国大学生的群众性科技活动。', 'UPCOMING');
-
--- 示例系统配置
-INSERT INTO `system_config` (`config_key`, `config_value`, `description`) VALUES ('platform.name', '大学生竞赛/科研项目组队匹配与过程管理平台', '平台名称');
-INSERT INTO `system_config` (`config_key`, `config_value`, `description`) VALUES ('platform.version', '1.0.0', '平台版本号');
-INSERT INTO `system_config` (`config_key`, `config_value`, `description`) VALUES ('audit.required', 'true', '是否需要审核');
+INSERT INTO `system_config` (`config_key`, `config_value`, `description`)
+SELECT * FROM (SELECT 'audit.required', 'true', '是否需要审核') AS tmp
+WHERE NOT EXISTS (SELECT 1 FROM `system_config` WHERE `config_key` = 'audit.required') LIMIT 1;

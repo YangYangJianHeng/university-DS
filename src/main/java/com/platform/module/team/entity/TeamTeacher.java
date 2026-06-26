@@ -13,6 +13,7 @@ public class TeamTeacher {
     private Long teamId;
     private Long teacherId;
     private String status;
+    private String message;
 
     @TableField(fill = FieldFill.INSERT)
     private LocalDateTime invitedAt;

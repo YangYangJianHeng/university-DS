@@ -24,7 +24,7 @@ public class FileServiceImpl extends ServiceImpl<FileMapper, FileEntity> impleme
     private static final String UPLOAD_DIR = "./uploads/";
 
     @Override
-    public FileEntity upload(MultipartFile file, Long teamId, Long parentId, Long uploaderId) {
+    public FileEntity upload(MultipartFile file, Long teamId, Long projectId, Long parentId, Long uploaderId) {
         // Ensure upload directory exists
         try {
             Files.createDirectories(Paths.get(UPLOAD_DIR));
@@ -51,7 +51,8 @@ public class FileServiceImpl extends ServiceImpl<FileMapper, FileEntity> impleme
         // Create file entity
         FileEntity fileEntity = new FileEntity();
         fileEntity.setTeamId(teamId);
-        fileEntity.setParentId(parentId);
+        fileEntity.setProjectId(projectId);
+        fileEntity.setParentId(parentId != null ? parentId : 0);
         fileEntity.setName(originalFilename);
         fileEntity.setType("FILE");
         fileEntity.setFileKey(fileKey);
@@ -66,12 +67,18 @@ public class FileServiceImpl extends ServiceImpl<FileMapper, FileEntity> impleme
     }
 
     @Override
-    public List<FileEntity> listFiles(Long teamId, Long parentId) {
-        return list(new LambdaQueryWrapper<FileEntity>()
-                .eq(FileEntity::getTeamId, teamId)
-                .eq(FileEntity::getParentId, parentId != null ? parentId : 0)
+    public List<FileEntity> listFiles(Long teamId, Long projectId, Long parentId) {
+        LambdaQueryWrapper<FileEntity> wrapper = new LambdaQueryWrapper<FileEntity>()
                 .eq(FileEntity::getIsDeleted, 0)
-                .orderByDesc(FileEntity::getCreatedAt));
+                .orderByDesc(FileEntity::getCreatedAt);
+        if (teamId != null) {
+            wrapper.eq(FileEntity::getTeamId, teamId);
+        }
+        if (projectId != null) {
+            wrapper.eq(FileEntity::getProjectId, projectId);
+        }
+        wrapper.eq(FileEntity::getParentId, parentId != null ? parentId : 0);
+        return list(wrapper);
     }
 
     @Override
@@ -139,9 +146,10 @@ public class FileServiceImpl extends ServiceImpl<FileMapper, FileEntity> impleme
     }
 
     @Override
-    public FileEntity createFolder(Long teamId, Long parentId, String name, Long uploaderId) {
+    public FileEntity createFolder(Long teamId, Long projectId, Long parentId, String name, Long uploaderId) {
         FileEntity folder = new FileEntity();
         folder.setTeamId(teamId);
+        folder.setProjectId(projectId);
         folder.setParentId(parentId != null ? parentId : 0);
         folder.setName(name);
         folder.setType("FOLDER");

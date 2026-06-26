@@ -58,7 +58,7 @@
       </el-col>
     </el-row>
 
-    <!-- Tabs: 招募审核 | 用户管理 | 审核日志 | 项目管理 | 任务管理 | 团队管理 | 导师管理 -->
+    <!-- Tabs: 招募审核 | 用户管理 | 审核日志 | 项目管理 | 任务管理 | 团队管理 | 导师管理 | 竞赛管理 | 成果展品管理 | 徽章管理 -->
     <el-card shadow="never" class="section-card">
       <el-tabs v-model="activeTab">
         <!-- Tab 1: Recruit Audit -->
@@ -127,6 +127,26 @@
                   @change="(val: boolean) => handleToggleReviewer(row, val)"
                 />
                 <span v-else style="color:#999;font-size:12px;">--</span>
+              </template>
+            </el-table-column>
+            <el-table-column label="管理员" width="110">
+              <template #default="{ row }">
+                <el-button
+                  v-if="row.role !== 'ADMIN'"
+                  type="warning" plain size="small"
+                  :loading="row._adminToggling"
+                  @click="handleToggleAdmin(row, true)"
+                >
+                  设为管理员
+                </el-button>
+                <el-button
+                  v-else
+                  type="info" plain size="small"
+                  :loading="row._adminToggling"
+                  @click="handleToggleAdmin(row, false)"
+                >
+                  取消管理员
+                </el-button>
               </template>
             </el-table-column>
             <el-table-column label="状态" width="90">
@@ -329,7 +349,7 @@
             <el-table-column prop="leaderId" label="队长ID" width="80" />
             <el-table-column label="状态" width="100">
               <template #default="{ row }">
-                <el-tag :type="row.status === 'ACTIVE' ? 'success' : 'info'" size="small">{{ row.status === 'ACTIVE' ? '正常' : '已解散' }}</el-tag>
+                <el-tag :type="teamStatusType(row.status)" size="small">{{ teamStatusLabel(row.status) }}</el-tag>
               </template>
             </el-table-column>
             <el-table-column prop="createdAt" label="创建时间" width="120">
@@ -364,17 +384,24 @@
         <el-tab-pane label="竞赛管理" name="competitions">
           <div class="section-header">
             <span>所有竞赛</span>
-            <el-button size="small" type="primary" @click="refreshCompetitions">刷新</el-button>
+            <div style="display:flex;gap:8px;">
+              <el-button size="small" type="primary" @click="openAddCompetition">添加竞赛</el-button>
+              <el-button size="small" @click="refreshCompetitions">刷新</el-button>
+            </div>
           </div>
           <el-table :data="allCompetitions" v-loading="competitionLoading" stripe size="small">
             <el-table-column prop="id" label="ID" width="60" />
             <el-table-column prop="name" label="竞赛名称" min-width="160" show-overflow-tooltip />
             <el-table-column prop="level" label="级别" width="90">
               <template #default="{ row }">
-                <el-tag size="small">{{ row.level || '--' }}</el-tag>
+                <el-tag :type="levelType(row.level)" size="small">{{ levelLabel(row.level) }}</el-tag>
               </template>
             </el-table-column>
-            <el-table-column prop="category" label="类别" width="100" show-overflow-tooltip />
+            <el-table-column label="类别" width="100">
+              <template #default="{ row }">
+                <el-tag size="small">{{ categoryLabel(row.category) }}</el-tag>
+              </template>
+            </el-table-column>
             <el-table-column label="状态" width="100">
               <template #default="{ row }">
                 <el-tag :type="competitionStatusType(row.status)" size="small">{{ competitionStatusLabel(row.status) }}</el-tag>
@@ -420,7 +447,17 @@
             <el-table-column prop="id" label="ID" width="60" />
             <el-table-column prop="department" label="院系" min-width="120" show-overflow-tooltip />
             <el-table-column prop="title" label="职称" width="100" />
-            <el-table-column prop="researchFields" label="研究方向" min-width="140" show-overflow-tooltip />
+            <el-table-column label="研究方向" min-width="160">
+              <template #default="{ row }">
+                <el-tag
+                  v-for="f in parseTeacherFields(row.researchFields)"
+                  :key="f"
+                  size="small" type="success" effect="plain"
+                  class="teacher-field-tag"
+                >{{ f }}</el-tag>
+                <span v-if="parseTeacherFields(row.researchFields).length === 0" style="color:#c0c4cc;font-size:12px;">--</span>
+              </template>
+            </el-table-column>
             <el-table-column prop="currentTeams" label="指导团队数" width="100" />
             <el-table-column label="认证状态" width="100">
               <template #default="{ row }">
@@ -513,6 +550,91 @@
             @current-change="loadAllAchievements"
           />
         </el-tab-pane>
+
+        <!-- Tab 10: Badge Management -->
+        <el-tab-pane label="徽章管理" name="badges">
+          <!-- Section 1: Badge Definitions -->
+          <div class="section-header">
+            <span>徽章定义（{{ badgeTotal }}）</span>
+            <el-button size="small" type="primary" @click="openAddBadge">添加徽章</el-button>
+          </div>
+          <el-table :data="allBadges" v-loading="badgeLoading" stripe size="small">
+            <el-table-column prop="id" label="ID" width="60" />
+            <el-table-column prop="name" label="徽章名称" width="120" />
+            <el-table-column prop="description" label="描述" min-width="180" show-overflow-tooltip />
+            <el-table-column prop="icon" label="图标标识" width="140" />
+            <el-table-column label="条件类型" width="130">
+              <template #default="{ row }">
+                <el-tag size="small">{{ conditionTypeLabel(row.conditionType) }}</el-tag>
+              </template>
+            </el-table-column>
+            <el-table-column prop="conditionValue" label="阈值" width="70" />
+            <el-table-column prop="category" label="分类" width="80" />
+            <el-table-column prop="sortOrder" label="排序" width="70" />
+            <el-table-column label="操作" width="220" fixed="right">
+              <template #default="{ row }">
+                <el-button size="small" type="primary" @click="openEditBadge(row)">编辑</el-button>
+                <el-button size="small" type="warning" @click="handleSyncCertForBadge(row)">同步奖项</el-button>
+                <el-popconfirm title="确定删除该徽章？" @confirm="handleDeleteBadge(row)">
+                  <template #reference>
+                    <el-button size="small" type="danger">删除</el-button>
+                  </template>
+                </el-popconfirm>
+              </template>
+            </el-table-column>
+          </el-table>
+
+          <!-- Section 2: Certificate Management -->
+          <el-divider />
+          <div class="section-header" style="margin-top:24px;">
+            <span>奖项管理（已生成奖状 {{ certTotal }} 张）</span>
+            <div style="display:flex; gap:8px;">
+              <el-button size="small" type="warning" :loading="certRegenLoading" @click="handleRegenerateAllCerts">
+                重新生成全部奖状
+              </el-button>
+              <el-button size="small" type="success" :loading="certSyncAllLoading" @click="handleSyncAllCerts">
+                一键同步全部奖项
+              </el-button>
+            </div>
+          </div>
+          <el-table :data="allCertificates" v-loading="certLoading" stripe size="small">
+            <el-table-column prop="id" label="ID" width="60" />
+            <el-table-column prop="userName" label="获奖人" width="120" />
+            <el-table-column prop="studentId" label="学号" width="120" />
+            <el-table-column prop="badgeName" label="奖项名称" width="140" />
+            <el-table-column label="奖状图片" width="100">
+              <template #default="{ row }">
+                <el-button size="small" type="primary" link @click="previewCertImage(row)">
+                  查看奖状
+                </el-button>
+              </template>
+            </el-table-column>
+            <el-table-column prop="awardedAt" label="获奖时间" width="160">
+              <template #default="{ row }">
+                {{ row.awardedAt ? dayjs(row.awardedAt).format('YYYY-MM-DD HH:mm') : '-' }}
+              </template>
+            </el-table-column>
+            <el-table-column label="操作" width="100" fixed="right">
+              <template #default="{ row }">
+                <el-popconfirm title="确定删除该奖状？将同时删除图片文件" @confirm="handleDeleteCert(row)">
+                  <template #reference>
+                    <el-button size="small" type="danger">删除</el-button>
+                  </template>
+                </el-popconfirm>
+              </template>
+            </el-table-column>
+          </el-table>
+          <el-pagination
+            v-if="certTotal > 20"
+            layout="prev, pager, next"
+            :total="certTotal"
+            :page-size="20"
+            v-model:current-page="certPage"
+            @current-change="loadAllCertificates"
+            style="margin-top:12px;justify-content:flex-end;"
+            small
+          />
+        </el-tab-pane>
       </el-tabs>
     </el-card>
 
@@ -592,44 +714,73 @@
       </template>
     </el-dialog>
 
-    <!-- Competition Edit Dialog -->
-    <el-dialog v-model="competitionEditVisible" title="编辑竞赛" width="600px">
+    <!-- Competition Edit / Create Dialog -->
+    <el-dialog v-model="competitionEditVisible" :title="isCompetitionAdd ? '添加竞赛' : '编辑竞赛'" width="620px">
       <el-form :model="competitionEditForm" label-width="90px">
         <el-form-item label="竞赛名称">
-          <el-input v-model="competitionEditForm.name" />
+          <el-input v-model="competitionEditForm.name" placeholder="请输入竞赛名称" />
         </el-form-item>
         <el-form-item label="级别">
-          <el-select v-model="competitionEditForm.level">
-            <el-option label="国家级" value="国家级" />
-            <el-option label="省级" value="省级" />
-            <el-option label="市级" value="市级" />
-            <el-option label="校级" value="校级" />
+          <el-select v-model="competitionEditForm.level" placeholder="请选择级别">
+            <el-option label="国家级" value="NATIONAL" />
+            <el-option label="省级" value="PROVINCIAL" />
+            <el-option label="市级" value="CITY" />
+            <el-option label="校级" value="SCHOOL" />
           </el-select>
         </el-form-item>
         <el-form-item label="类别">
-          <el-input v-model="competitionEditForm.category" />
+          <el-select v-model="competitionEditForm.category" placeholder="请选择类别">
+            <el-option label="学科竞赛" value="ACADEMIC" />
+            <el-option label="创新创业" value="INNOVATION" />
+            <el-option label="文体艺术" value="ART" />
+            <el-option label="其他" value="OTHER" />
+          </el-select>
         </el-form-item>
         <el-form-item label="主办方">
-          <el-input v-model="competitionEditForm.organizer" />
+          <el-input v-model="competitionEditForm.organizer" placeholder="请输入主办方" />
         </el-form-item>
         <el-form-item label="描述">
-          <el-input v-model="competitionEditForm.description" type="textarea" :rows="3" />
+          <el-input v-model="competitionEditForm.description" type="textarea" :rows="3" placeholder="请输入竞赛描述" />
         </el-form-item>
+        <el-row :gutter="12">
+          <el-col :span="12">
+            <el-form-item label="报名开始">
+              <el-date-picker v-model="competitionEditForm.registerStart" type="date" placeholder="选择日期" value-format="YYYY-MM-DD" style="width:100%" />
+            </el-form-item>
+          </el-col>
+          <el-col :span="12">
+            <el-form-item label="报名截止">
+              <el-date-picker v-model="competitionEditForm.registerEnd" type="date" placeholder="选择日期" value-format="YYYY-MM-DD" style="width:100%" />
+            </el-form-item>
+          </el-col>
+        </el-row>
+        <el-row :gutter="12">
+          <el-col :span="12">
+            <el-form-item label="赛事开始">
+              <el-date-picker v-model="competitionEditForm.eventStart" type="date" placeholder="选择日期" value-format="YYYY-MM-DD" style="width:100%" />
+            </el-form-item>
+          </el-col>
+          <el-col :span="12">
+            <el-form-item label="赛事结束">
+              <el-date-picker v-model="competitionEditForm.eventEnd" type="date" placeholder="选择日期" value-format="YYYY-MM-DD" style="width:100%" />
+            </el-form-item>
+          </el-col>
+        </el-row>
         <el-form-item label="状态">
           <el-select v-model="competitionEditForm.status">
             <el-option label="报名中" value="REGISTERING" />
+            <el-option label="即将开始" value="UPCOMING" />
             <el-option label="进行中" value="ONGOING" />
             <el-option label="已结束" value="ENDED" />
-            <el-option label="已关闭" value="CLOSED" />
           </el-select>
         </el-form-item>
         <el-form-item label="官网链接">
-          <el-input v-model="competitionEditForm.officialUrl" />
+          <el-input v-model="competitionEditForm.officialUrl" placeholder="输入官网URL（选填）" />
         </el-form-item>
       </el-form>
       <template #footer>
         <el-button @click="competitionEditVisible = false">取消</el-button>
-        <el-button type="primary" @click="saveCompetitionEdit">保存</el-button>
+        <el-button type="primary" @click="saveCompetitionEdit" :loading="competitionSaving">{{ isCompetitionAdd ? '添加' : '保存' }}</el-button>
       </template>
     </el-dialog>
 
@@ -695,6 +846,61 @@
         <el-button type="primary" @click="saveAchievementEdit">保存</el-button>
       </template>
     </el-dialog>
+
+    <!-- Badge Edit / Create Dialog -->
+    <el-dialog v-model="badgeEditVisible" :title="isBadgeAdd ? '添加徽章' : '编辑徽章'" width="520px">
+      <el-form :model="badgeEditForm" label-width="90px">
+        <el-form-item label="徽章名称" required>
+          <el-input v-model="badgeEditForm.name" placeholder="如：任务达人" />
+        </el-form-item>
+        <el-form-item label="描述">
+          <el-input v-model="badgeEditForm.description" placeholder="如：累计完成5个以上任务" />
+        </el-form-item>
+        <el-form-item label="图标标识">
+          <el-input v-model="badgeEditForm.icon" placeholder="如：badge_task" />
+        </el-form-item>
+        <el-form-item label="条件类型" required>
+          <el-select v-model="badgeEditForm.conditionType" placeholder="选择解锁条件类型">
+            <el-option label="新手入门" value="NEWBIE" />
+            <el-option label="完成任务数" value="COMPLETED_TASKS" />
+            <el-option label="参与团队数" value="TEAM_COUNT" />
+            <el-option label="技能数量" value="SKILL_COUNT" />
+            <el-option label="成果数量" value="ACHIEVEMENT_COUNT" />
+            <el-option label="竞赛成果数" value="COMPETITION_COUNT" />
+            <el-option label="拥有大师技能" value="MASTER_SKILL" />
+            <el-option label="获得荣誉" value="HAS_HONOR" />
+            <el-option label="发布招募数" value="RECRUIT_COUNT" />
+            <el-option label="参与项目数" value="PROJECT_COUNT" />
+            <el-option label="项目经历数" value="EXPERIENCE_COUNT" />
+            <el-option label="全能选手" value="ALL_ROUNDER" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="阈值">
+          <el-input-number v-model="badgeEditForm.conditionValue" :min="0" :max="100" />
+          <span style="margin-left:8px;color:#909399;font-size:12px;">NEWBIE/MASTER_SKILL/HAS_HONOR/ALL_ROUNDER 类型忽略此值</span>
+        </el-form-item>
+        <el-form-item label="分类">
+          <el-input v-model="badgeEditForm.category" placeholder="如：任务、团队、技能" />
+        </el-form-item>
+        <el-form-item label="排序">
+          <el-input-number v-model="badgeEditForm.sortOrder" :min="0" :max="999" />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="badgeEditVisible = false">取消</el-button>
+        <el-button type="primary" :loading="badgeSaving" @click="saveBadge">保存</el-button>
+      </template>
+    </el-dialog>
+
+    <!-- Certificate Preview Dialog -->
+    <el-dialog v-model="certPreviewVisible" title="奖状预览" width="950px" destroy-on-close center>
+      <div style="text-align:center;" v-if="certPreviewImageUrl">
+        <img :src="certPreviewImageUrl" alt="奖状" style="width:100%; border-radius:8px; box-shadow:0 4px 20px rgba(0,0,0,0.15);" />
+      </div>
+      <template #footer>
+        <el-button @click="certPreviewVisible = false">关闭</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -703,8 +909,10 @@ import { ref, onMounted, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import dayjs from 'dayjs'
 import request from '@/api/request'
-import { adminListCompetitions, adminUpdateCompetition, adminDeleteCompetition } from '@/api/competition'
+import { adminListCompetitions, adminCreateCompetition, adminUpdateCompetition, adminDeleteCompetition } from '@/api/competition'
 import { adminListAchievements, adminUpdateAchievement, adminDeleteAchievement } from '@/api/achievement'
+import { adminListBadges, adminCreateBadge, adminUpdateBadge, adminDeleteBadge } from '@/api/badge'
+import { adminSyncCertificates, adminListCertificates, adminDeleteCertificate, adminRegenerateCertificates } from '@/api/certificate'
 
 const activeTab = ref('recruit')
 
@@ -783,9 +991,11 @@ const teamEditVisible = ref(false)
 const teamEditForm = ref<any>({})
 const editingTeamId = ref<number | null>(null)
 
-// Competition Edit
+// Competition Edit / Create
 const competitionEditVisible = ref(false)
 const competitionEditForm = ref<any>({})
+const isCompetitionAdd = ref(false)
+const competitionSaving = ref(false)
 const editingCompetitionId = ref<number | null>(null)
 
 // Teacher Edit
@@ -797,6 +1007,25 @@ const editingTeacherId = ref<number | null>(null)
 const achievementEditVisible = ref(false)
 const achievementEditForm = ref<any>({})
 const editingAchievementId = ref<number | null>(null)
+
+// Badge Management
+const allBadges = ref<any[]>([])
+const badgeLoading = ref(false)
+const badgeTotal = ref(0)
+const badgeEditVisible = ref(false)
+const badgeEditForm = ref<any>({})
+const isBadgeAdd = ref(false)
+const badgeSaving = ref(false)
+
+// Certificate Management (in badge tab)
+const allCertificates = ref<any[]>([])
+const certLoading = ref(false)
+const certTotal = ref(0)
+const certPage = ref(1)
+const certSyncAllLoading = ref(false)
+const certRegenLoading = ref(false)
+const certPreviewVisible = ref(false)
+const certPreviewImageUrl = ref('')
 
 onMounted(async () => {
   await loadStats()
@@ -815,6 +1044,7 @@ watch(activeTab, async (tab) => {
   if (tab === 'competitions') await loadAllCompetitions()
   if (tab === 'teachers') await loadAllTeachers()
   if (tab === 'achievements') await loadAllAchievements()
+  if (tab === 'badges') { await loadAllBadges(); await loadAllCertificates() }
 })
 
 watch(auditTab, () => {
@@ -920,6 +1150,28 @@ async function handleToggleReviewer(row: any, val: boolean) {
     row.role = role
     ElMessage.success(val ? '已授予审核权限' : '已撤销审核权限')
   } catch (_) {}
+}
+
+async function handleToggleAdmin(row: any, makeAdmin: boolean) {
+  const actionText = makeAdmin ? '设为管理员' : '取消管理员权限'
+  try {
+    await ElMessageBox.confirm(
+      `确认${actionText}用户「${row.username}」(${row.phone})？`,
+      '操作确认',
+      { confirmButtonText: '确认', cancelButtonText: '取消', type: 'warning' }
+    )
+  } catch { return }
+
+  row._adminToggling = true
+  try {
+    const role = makeAdmin ? 'ADMIN' : 'USER'
+    await request.put(`/admin/users/${row.id}/role`, null, { params: { role } })
+    row.role = role
+    ElMessage.success(`${actionText}成功`)
+  } catch (_) {
+  } finally {
+    row._adminToggling = false
+  }
 }
 
 function roleType(role: string) {
@@ -1212,6 +1464,21 @@ async function loadAllTeachers(page = 1) {
   }
 }
 
+/** 解析研究方向字段：支持 JSON数组字符串 / 逗号分隔字符串 / 数组 */
+function parseTeacherFields(val: any): string[] {
+  if (!val) return []
+  if (Array.isArray(val)) return val
+  if (typeof val !== 'string') return []
+  const trimmed = val.trim()
+  if (trimmed.startsWith('[')) {
+    try {
+      const parsed = JSON.parse(trimmed)
+      return Array.isArray(parsed) ? parsed : [trimmed]
+    } catch {}
+  }
+  return trimmed.split(/[,，]/).map(s => s.trim()).filter(Boolean)
+}
+
 function openEditTeacher(row: any) {
   editingTeacherId.value = row.id
   teacherEditForm.value = {
@@ -1269,8 +1536,48 @@ function competitionStatusLabel(s: string) {
   const map: Record<string, string> = { REGISTERING: '报名中', ONGOING: '进行中', ENDED: '已结束', CLOSED: '已关闭' }
   return map[s] || s
 }
+function levelType(l: string) {
+  const map: Record<string, string> = { NATIONAL: 'danger', PROVINCIAL: 'warning', SCHOOL: 'primary' }
+  return map[l] || 'info'
+}
+function levelLabel(l: string) {
+  const map: Record<string, string> = { NATIONAL: '国家级', PROVINCIAL: '省级', SCHOOL: '校级' }
+  return map[l] || l
+}
+function categoryLabel(c: string) {
+  const map: Record<string, string> = { ACADEMIC: '学科竞赛', INNOVATION: '创新创业', SPORTS: '体育竞技', ART: '文体艺术', OTHER: '其他' }
+  return map[c] || c || '--'
+}
+function teamStatusType(s: string) {
+  const map: Record<string, string> = { ACTIVE: 'success', NORMAL: 'success', INACTIVE: 'warning', DISBANDED: 'info', CLOSED: 'danger' }
+  return map[s] || 'info'
+}
+function teamStatusLabel(s: string) {
+  const map: Record<string, string> = { ACTIVE: '活跃中', NORMAL: '正常', INACTIVE: '已停用', DISBANDED: '已解散', CLOSED: '已关闭' }
+  return map[s] || s
+}
+
+function openAddCompetition() {
+  isCompetitionAdd.value = true
+  editingCompetitionId.value = null
+  competitionEditForm.value = {
+    name: '',
+    level: '',
+    category: '',
+    organizer: '',
+    description: '',
+    registerStart: '',
+    registerEnd: '',
+    eventStart: '',
+    eventEnd: '',
+    status: 'REGISTERING',
+    officialUrl: '',
+  }
+  competitionEditVisible.value = true
+}
 
 function openEditCompetition(row: any) {
+  isCompetitionAdd.value = false
   editingCompetitionId.value = row.id
   competitionEditForm.value = {
     name: row.name || '',
@@ -1278,6 +1585,10 @@ function openEditCompetition(row: any) {
     category: row.category || '',
     organizer: row.organizer || '',
     description: row.description || '',
+    registerStart: row.registerStart || '',
+    registerEnd: row.registerEnd || '',
+    eventStart: row.eventStart || '',
+    eventEnd: row.eventEnd || '',
     status: row.status || 'REGISTERING',
     officialUrl: row.officialUrl || '',
   }
@@ -1285,12 +1596,22 @@ function openEditCompetition(row: any) {
 }
 
 async function saveCompetitionEdit() {
+  competitionSaving.value = true
   try {
-    await adminUpdateCompetition(editingCompetitionId.value!, competitionEditForm.value)
-    ElMessage.success('竞赛已更新')
+    if (isCompetitionAdd.value) {
+      await adminCreateCompetition(competitionEditForm.value)
+      ElMessage.success('竞赛已添加')
+    } else {
+      await adminUpdateCompetition(editingCompetitionId.value!, competitionEditForm.value)
+      ElMessage.success('竞赛已更新')
+    }
     competitionEditVisible.value = false
     await loadAllCompetitions(competitionPage.value)
-  } catch (_) {}
+    await loadStats()
+  } catch (_) {
+  } finally {
+    competitionSaving.value = false
+  }
 }
 
 async function handleDeleteCompetition(row: any) {
@@ -1378,6 +1699,184 @@ async function handleDeleteAchievement(row: any) {
 function refreshAchievements() {
   loadAllAchievements(1)
 }
+
+// ---- Badge Management ----
+
+async function loadAllBadges() {
+  badgeLoading.value = true
+  try {
+    const res = await adminListBadges({ page: 1, size: 50 })
+    const data = res.data
+    allBadges.value = data?.records || []
+    badgeTotal.value = data?.total ?? allBadges.value.length
+  } catch (_) {
+    allBadges.value = []
+    badgeTotal.value = 0
+  } finally {
+    badgeLoading.value = false
+  }
+}
+
+function openAddBadge() {
+  isBadgeAdd.value = true
+  badgeEditForm.value = {
+    name: '',
+    description: '',
+    icon: 'badge_default',
+    conditionType: '',
+    conditionValue: 0,
+    category: '',
+    sortOrder: 999,
+  }
+  badgeEditVisible.value = true
+}
+
+function openEditBadge(row: any) {
+  isBadgeAdd.value = false
+  badgeEditForm.value = {
+    name: row.name,
+    description: row.description,
+    icon: row.icon,
+    conditionType: row.conditionType,
+    conditionValue: row.conditionValue,
+    category: row.category,
+    sortOrder: row.sortOrder,
+    editingId: row.id,
+  }
+  badgeEditVisible.value = true
+}
+
+async function saveBadge() {
+  badgeSaving.value = true
+  try {
+    const data = {
+      name: badgeEditForm.value.name,
+      description: badgeEditForm.value.description,
+      icon: badgeEditForm.value.icon,
+      conditionType: badgeEditForm.value.conditionType,
+      conditionValue: badgeEditForm.value.conditionValue,
+      category: badgeEditForm.value.category,
+      sortOrder: badgeEditForm.value.sortOrder,
+    }
+    if (isBadgeAdd.value) {
+      await adminCreateBadge(data)
+      ElMessage.success('徽章已添加')
+    } else {
+      await adminUpdateBadge(badgeEditForm.value.editingId, data)
+      ElMessage.success('徽章已更新')
+    }
+    badgeEditVisible.value = false
+    await loadAllBadges()
+  } catch (_) {} finally {
+    badgeSaving.value = false
+  }
+}
+
+async function handleDeleteBadge(row: any) {
+  try {
+    await adminDeleteBadge(row.id)
+    ElMessage.success('徽章已删除')
+    await loadAllBadges()
+  } catch (_) {}
+}
+
+function conditionTypeLabel(type: string) {
+  const map: Record<string, string> = {
+    'NEWBIE': '新手入门',
+    'COMPLETED_TASKS': '完成任务数',
+    'TEAM_COUNT': '参与团队数',
+    'SKILL_COUNT': '技能数量',
+    'ACHIEVEMENT_COUNT': '成果数量',
+    'COMPETITION_COUNT': '竞赛成果数',
+    'MASTER_SKILL': '大师技能',
+    'HAS_HONOR': '获得荣誉',
+    'RECRUIT_COUNT': '招募数',
+    'PROJECT_COUNT': '项目数',
+    'EXPERIENCE_COUNT': '经历数',
+    'ALL_ROUNDER': '全能选手',
+  }
+  return map[type] || type
+}
+
+// ---- Certificate Management ----
+
+async function loadAllCertificates() {
+  certLoading.value = true
+  try {
+    const res = await adminListCertificates({ page: certPage.value, size: 20 })
+    const data = res.data
+    allCertificates.value = data?.records || []
+    certTotal.value = data?.total || 0
+  } catch (_) {
+    allCertificates.value = []
+    certTotal.value = 0
+  } finally {
+    certLoading.value = false
+  }
+}
+
+/** 为单个徽章同步奖项 */
+async function handleSyncCertForBadge(row: any) {
+  try {
+    const res = await adminSyncCertificates(row.id)
+    const data = res.data
+    const count = data?.generatedCount || 0
+    ElMessage.success(`已为「${row.name}」同步生成 ${count} 张奖状`)
+    await loadAllCertificates()
+  } catch (_) {}
+}
+
+/** 一键同步全部徽章奖项 */
+async function handleSyncAllCerts() {
+  certSyncAllLoading.value = true
+  try {
+    const res = await adminSyncCertificates()
+    const data = res.data
+    const count = data?.generatedCount || 0
+    ElMessage.success(`全部同步完成，共生成 ${count} 张新奖状`)
+    await loadAllCertificates()
+  } catch (_) {} finally {
+    certSyncAllLoading.value = false
+  }
+}
+
+/** 重新生成全部奖状（使用新模板） */
+async function handleRegenerateAllCerts() {
+  try {
+    await ElMessageBox.confirm(
+      '此操作将删除所有现有奖状并重新生成（使用新的证书背景模板），确定继续？',
+      '确认重新生成',
+      { confirmButtonText: '确定', cancelButtonText: '取消', type: 'warning' }
+    )
+  } catch (_) {
+    return
+  }
+  certRegenLoading.value = true
+  try {
+    const res = await adminRegenerateCertificates()
+    const data = res.data
+    const count = data?.generatedCount || 0
+    ElMessage.success(`奖状已全部重新生成，共 ${count} 张`)
+    await loadAllCertificates()
+  } catch (_) {} finally {
+    certRegenLoading.value = false
+  }
+}
+
+/** 预览奖状图片 */
+function previewCertImage(row: any) {
+  certPreviewImageUrl.value = row.imagePath
+  certPreviewVisible.value = true
+}
+
+/** 删除证书 */
+async function handleDeleteCert(row: any) {
+  try {
+    await adminDeleteCertificate(row.id)
+    ElMessage.success('奖状已删除')
+    await loadAllCertificates()
+  } catch (_) {}
+}
 </script>
 
 <style scoped>
@@ -1458,5 +1957,9 @@ function refreshAchievements() {
   display: flex;
   align-items: center;
   gap: 8px;
+}
+
+.teacher-field-tag {
+  margin: 1px 2px;
 }
 </style>

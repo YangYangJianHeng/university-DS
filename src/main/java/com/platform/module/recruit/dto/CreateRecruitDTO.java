@@ -13,6 +13,10 @@ public class CreateRecruitDTO {
     @NotBlank(message = "标题不能为空")
     private String title;
 
+    private String projectIcon;
+
+    private String projectName;
+
     private String description;
 
     private String projectType;

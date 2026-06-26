@@ -10,6 +10,10 @@ public class UpdateRecruitDTO {
 
     private String title;
 
+    private String projectIcon;
+
+    private String projectName;
+
     private String description;
 
     private String projectType;

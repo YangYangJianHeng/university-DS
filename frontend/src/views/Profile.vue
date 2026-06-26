@@ -143,30 +143,89 @@
             <h3 class="tab-title">我的徽章</h3>
             <div v-if="badges.length === 0" class="empty-hint">暂无成就徽章，继续努力吧！</div>
             <div v-else class="badges-grid">
-              <div v-for="badge in badges" :key="badge.id" class="badge-item">
-                <div class="badge-icon-wrapper">
-                  <el-icon :size="36" :color="'#4a6b7e'"><Trophy /></el-icon>
+              <div v-for="badge in badges" :key="badge.id" class="badge-item" :class="{ 'badge-locked': !badge.unlocked }">
+                <div class="badge-icon-wrapper" :class="{ 'badge-icon-locked': !badge.unlocked }" :style="{ background: badge.unlocked ? iconColor(badge.icon) + '20' : '#f0f2f5' }">
+                  <el-icon :size="36" :color="badge.unlocked ? iconColor(badge.icon) : '#c0c4cc'">
+                    <component :is="badgeIcon(badge.icon)" />
+                  </el-icon>
                 </div>
                 <div class="badge-name">{{ badge.name }}</div>
                 <div class="badge-desc">{{ badge.description || '' }}</div>
-                <div class="badge-date" v-if="badge.earnedAt">获得于 {{ formatDate(badge.earnedAt) }}</div>
+                <div class="badge-date">
+                  <el-tag :type="badge.unlocked ? 'success' : 'info'" size="small" effect="plain">
+                    {{ badge.unlocked ? '已解锁' : '未解锁' }}
+                  </el-tag>
+                  <el-button v-if="badge.unlocked" size="small" type="warning" link @click="viewBadgeCertificate(badge)">
+                    查看奖状
+                  </el-button>
+                </div>
               </div>
+            </div>
+          </div>
+        </el-tab-pane>
+
+        <!-- Tab 5: My Certificates -->
+        <el-tab-pane label="我的奖状" name="certificates">
+          <div class="tab-content">
+            <h3 class="tab-title">我的奖状</h3>
+            <div v-if="userCertificates.length === 0" class="empty-hint">暂未获得奖状，解锁徽章后将自动生成</div>
+            <div v-else class="certificates-grid">
+              <el-card v-for="cert in userCertificates" :key="cert.id" shadow="hover" class="cert-card">
+                <div class="cert-preview" @click="previewCertificate(cert)">
+                  <img :src="cert.imagePath" alt="奖状" class="cert-thumb" />
+                  <div class="cert-overlay">
+                    <el-icon :size="32"><ZoomIn /></el-icon>
+                    <span>点击查看大图</span>
+                  </div>
+                </div>
+                <div class="cert-info">
+                  <div class="cert-badge-name">{{ cert.badgeName }}</div>
+                  <div class="cert-date">{{ formatDate(cert.awardedAt) }}</div>
+                </div>
+              </el-card>
             </div>
           </div>
         </el-tab-pane>
       </el-tabs>
     </el-card>
+
+    <!-- Certificate Preview Dialog -->
+    <el-dialog v-model="certDialogVisible" title="奖状" width="950px" destroy-on-close center>
+      <div class="cert-full-preview" v-if="certPreviewUrl">
+        <img :src="certPreviewUrl" alt="奖状大图" style="width:100%; border-radius:8px; box-shadow:0 4px 20px rgba(0,0,0,0.15);" />
+      </div>
+      <template #footer>
+        <el-button @click="certDialogVisible = false">关闭</el-button>
+      </template>
+    </el-dialog>
+
+    <!-- New Certificate Popup Notification -->
+    <el-dialog v-model="newCertPopupVisible" title="🎉 恭喜获得新奖状！" width="750px" destroy-on-close center
+      :close-on-click-modal="false" :close-on-press-escape="false">
+      <div class="new-cert-content" v-if="newCertData">
+        <div class="new-cert-congrats">
+          <p class="congrats-text">你在平台上的出色表现为你赢得了荣誉！</p>
+        </div>
+        <div class="new-cert-image-wrapper">
+          <img :src="newCertData.imagePath" alt="奖状" style="width:100%; border-radius:8px; box-shadow:0 4px 20px rgba(0,0,0,0.15);" />
+        </div>
+      </div>
+      <template #footer>
+        <el-button type="primary" size="large" @click="newCertPopupVisible = false">太棒了！</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted, watch } from 'vue'
 import { useUserStore } from '@/stores/user'
 import { getProfile, updateProfile, addSkill, deleteSkill, uploadAvatar, changePassword } from '@/api/user'
 import { getStatistics, getSkillRadar, getBadges } from '@/api/dashboard'
+import { checkNewCertificates, getUserCertificates } from '@/api/certificate'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import type { FormInstance, FormRules } from 'element-plus'
-import { Plus, Delete, Trophy, Camera, Lock } from '@element-plus/icons-vue'
+import { Plus, Delete, Trophy, Camera, Lock, Medal, Star, Aim, Stamp, Flag, Connection, Monitor, DataLine, Collection, Promotion, ZoomIn } from '@element-plus/icons-vue'
 
 import { use } from 'echarts/core'
 import { CanvasRenderer } from 'echarts/renderers'
@@ -220,11 +279,62 @@ function levelType(level: string): 'info' | 'success' | 'warning' | 'danger' | '
   return map[level] || 'info'
 }
 
+/** 根据徽章icon字符串返回对应的Element Plus图标组件 */
+function badgeIcon(icon: string) {
+  const map: Record<string, any> = {
+    'badge_newbie': Trophy,
+    'badge_task': Aim,
+    'badge_task_master': Medal,
+    'badge_team': Connection,
+    'badge_social': Star,
+    'badge_skill': Monitor,
+    'badge_skill_master': DataLine,
+    'badge_achievement': Collection,
+    'badge_achievement_senior': Stamp,
+    'badge_competition': Promotion,
+    'badge_honor': Medal,
+    'badge_recruit': Flag,
+    'badge_project': DataLine,
+    'badge_experience': Star,
+    'badge_all_rounder': Trophy,
+  }
+  return map[icon] || Trophy
+}
+
+/** 根据徽章icon返回主题色 */
+function iconColor(icon: string) {
+  const map: Record<string, string> = {
+    'badge_newbie': '#67c23a',
+    'badge_task': '#409eff',
+    'badge_task_master': '#6366f1',
+    'badge_team': '#e6a23c',
+    'badge_social': '#f39c12',
+    'badge_skill': '#909399',
+    'badge_skill_master': '#f56c6c',
+    'badge_achievement': '#67c23a',
+    'badge_achievement_senior': '#2ecc71',
+    'badge_competition': '#e04040',
+    'badge_honor': '#ffd700',
+    'badge_recruit': '#409eff',
+    'badge_project': '#e6a23c',
+    'badge_experience': '#3498db',
+    'badge_all_rounder': '#8b5cf6',
+  }
+  return map[icon] || '#4a6b7e'
+}
+
 const radarData = ref<any[]>([])
 const statsLabels = ref<string[]>([])
 const statsValues = ref<number[]>([])
 const statSummary = ref<any[]>([])
 const badges = ref<any[]>([])
+
+// Certificate
+const userCertificates = ref<any[]>([])
+const certDialogVisible = ref(false)
+const certPreviewUrl = ref('')
+const newCertPopupVisible = ref(false)
+const newCertData = ref<any>(null)
 
 const radarOption = computed(() => ({
   tooltip: { trigger: 'item' as const },
@@ -277,8 +387,9 @@ async function handleAvatarChange(e: Event) {
     const res = await uploadAvatar(formData)
     const avatarUrl = res.data?.avatar || res.data?.url || res.data
     userInfo.avatar = avatarUrl
+    // 同步刷新 store 中的用户信息，确保顶部栏头像也更新
+    await userStore.fetchProfile()
     ElMessage.success('头像更新成功')
-    userStore.fetchProfile()
   } catch (err: any) {
     ElMessage.error(err?.message || '头像上传失败')
   } finally {
@@ -320,7 +431,56 @@ async function fetchStatsData() {
       { label: '成果数', value: stats.totalAchievements ?? stats.achievementCount ?? 0 },
     ]
     const badgeData = badgesRes.data || []; badges.value = Array.isArray(badgeData) ? badgeData : []
+    // 检查新证书
+    await checkAndShowNewCertificates()
   } catch (_) {}
+}
+
+/** 检查并弹出新证书 */
+async function checkAndShowNewCertificates() {
+  try {
+    const res = await checkNewCertificates()
+    const data = res.data || {}
+    const newCerts = data.newCertificates || []
+    if (newCerts.length > 0) {
+      // 只显示第一个新证书的弹窗
+      newCertData.value = newCerts[0]
+      newCertPopupVisible.value = true
+    }
+  } catch (_) {}
+}
+
+/** 查看徽章对应的奖状 */
+async function viewBadgeCertificate(badge: any) {
+  try {
+    const res = await getUserCertificates()
+    const certs = res.data || []
+    const cert = certs.find((c: any) => c.badgeId === badge.id)
+    if (cert) {
+      certPreviewUrl.value = cert.imagePath
+      certDialogVisible.value = true
+    } else {
+      ElMessage.info('该徽章的奖状尚未生成，请稍后刷新或联系管理员同步')
+    }
+  } catch (_) {
+    ElMessage.error('获取奖状失败')
+  }
+}
+
+/** 预览证书图片 */
+function previewCertificate(cert: any) {
+  certPreviewUrl.value = cert.imagePath
+  certDialogVisible.value = true
+}
+
+/** 加载用户证书列表 */
+async function loadUserCertificates() {
+  try {
+    const res = await getUserCertificates()
+    userCertificates.value = res.data || []
+  } catch (_) {
+    userCertificates.value = []
+  }
 }
 
 async function handleUpdateProfile() {
@@ -367,7 +527,13 @@ function handleResetPasswordForm() {
   passwordFormRef.value?.resetFields()
 }
 
-onMounted(() => { fetchProfileData(); fetchStatsData() })
+onMounted(() => { fetchProfileData(); fetchStatsData(); loadUserCertificates() })
+
+// 监听tab切换，加载对应数据
+watch(activeTab, (tab) => {
+  if (tab === 'certificates') loadUserCertificates()
+  if (tab === 'badges') { fetchStatsData() }
+})
 </script>
 
 <style scoped>
@@ -498,6 +664,8 @@ onMounted(() => { fetchProfileData(); fetchStatsData() })
   transition: all 0.2s;
 }
 .badge-item:hover { transform: translateY(-4px); box-shadow: var(--shadow-md); }
+.badge-locked { opacity: 0.55; }
+.badge-locked:hover { transform: none; box-shadow: none; }
 
 .badge-icon-wrapper {
   width: 64px; height: 64px;
@@ -508,8 +676,40 @@ onMounted(() => { fetchProfileData(); fetchStatsData() })
   align-items: center;
   justify-content: center;
 }
+.badge-icon-locked { background: #f0f2f5; }
 
 .badge-name { font-size: 14px; font-weight: 600; color: var(--color-text-primary); margin-bottom: 4px; }
 .badge-desc { font-size: 12px; color: var(--color-text-muted); line-height: 1.4; margin-bottom: 4px; }
-.badge-date { font-size: 11px; color: var(--color-text-placeholder); margin-top: 4px; }
+.badge-date { font-size: 11px; color: var(--color-text-placeholder); margin-top: 4px; display: flex; flex-direction: column; align-items: center; gap: 6px; }
+
+/* Certificate styles */
+.certificates-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 16px; }
+
+.cert-card { border-radius: var(--radius-sm); cursor: pointer; transition: transform 0.2s; }
+.cert-card:hover { transform: translateY(-4px); }
+
+.cert-preview { position: relative; border-radius: 4px; overflow: hidden; }
+.cert-thumb { width: 100%; height: 140px; object-fit: cover; border-radius: 4px; }
+.cert-overlay {
+  position: absolute; inset: 0;
+  background: rgba(0,0,0,0.45);
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  gap: 8px; color: #fff; opacity: 0;
+  transition: opacity 0.2s;
+  font-size: 14px;
+}
+.cert-preview:hover .cert-overlay { opacity: 1; }
+
+.cert-info { padding: 10px 0 0; text-align: center; }
+.cert-badge-name { font-size: 14px; font-weight: 600; color: var(--color-text-primary); }
+.cert-date { font-size: 12px; color: var(--color-text-muted); margin-top: 4px; }
+
+/* New cert popup */
+.new-cert-content { text-align: center; }
+.new-cert-congrats { margin-bottom: 16px; }
+.congrats-text { font-size: 18px; color: var(--color-primary); font-weight: 600; margin: 0; }
+.new-cert-image-wrapper { border-radius: 8px; overflow: hidden; }
+
+.cert-full-preview { text-align: center; }
 </style>

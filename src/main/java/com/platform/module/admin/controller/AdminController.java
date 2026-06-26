@@ -7,6 +7,8 @@ import com.platform.common.util.UserContext;
 import com.platform.module.achievement.entity.Achievement;
 import com.platform.module.admin.entity.AuditLog;
 import com.platform.module.admin.service.AdminService;
+import com.platform.module.badge.entity.Badge;
+import com.platform.module.badge.entity.Certificate;
 import com.platform.module.collaboration.entity.Task;
 import com.platform.module.competition.entity.Competition;
 import com.platform.module.project.entity.Project;
@@ -14,11 +16,13 @@ import com.platform.module.recruit.entity.Recruit;
 import com.platform.module.teacher.entity.Teacher;
 import com.platform.module.team.entity.Team;
 import com.platform.module.user.entity.User;
+import com.platform.module.user.vo.UserVO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -36,8 +40,8 @@ public class AdminController {
 
     @GetMapping("/users")
     @Operation(summary = "List users")
-    public Result<IPage<User>> listUsers(@RequestParam(defaultValue = "1") int page,
-                                         @RequestParam(defaultValue = "10") int size) {
+    public Result<IPage<UserVO>> listUsers(@RequestParam(defaultValue = "1") int page,
+                                             @RequestParam(defaultValue = "10") int size) {
         return Result.success(adminService.listUsers(page, size));
     }
 
@@ -222,6 +226,12 @@ public class AdminController {
         return Result.success(adminService.listAllCompetitions(page, size));
     }
 
+    @PostMapping("/competitions")
+    @Operation(summary = "Create competition")
+    public Result<Competition> createCompetition(@RequestBody Competition competition) {
+        return Result.success(adminService.createCompetition(competition));
+    }
+
     @PutMapping("/competitions/{id}")
     @Operation(summary = "Update competition")
     public Result<Competition> updateCompetition(@PathVariable Long id, @RequestBody Competition competition) {
@@ -263,5 +273,74 @@ public class AdminController {
     public Result<Void> deleteAchievement(@PathVariable Long id) {
         adminService.deleteAchievement(id);
         return Result.success();
+    }
+
+    // ---- Badge Management ----
+
+    @GetMapping("/badges")
+    @Operation(summary = "List all badges")
+    public Result<IPage<Badge>> listAllBadges(@RequestParam(defaultValue = "1") int page,
+                                               @RequestParam(defaultValue = "50") int size) {
+        return Result.success(adminService.listAllBadges(page, size));
+    }
+
+    @PostMapping("/badges")
+    @Operation(summary = "Create badge")
+    public Result<Badge> createBadge(@RequestBody Badge badge) {
+        return Result.success(adminService.createBadge(badge));
+    }
+
+    @PutMapping("/badges/{id}")
+    @Operation(summary = "Update badge")
+    public Result<Badge> updateBadge(@PathVariable Long id, @RequestBody Badge badge) {
+        return Result.success(adminService.updateBadge(id, badge));
+    }
+
+    @DeleteMapping("/badges/{id}")
+    @Operation(summary = "Delete badge")
+    public Result<Void> deleteBadge(@PathVariable Long id) {
+        adminService.deleteBadge(id);
+        return Result.success();
+    }
+
+    // ---- Certificate Management ----
+
+    @PostMapping("/certificates/sync")
+    @Operation(summary = "Sync certificates for badge earners")
+    public Result<Map<String, Object>> syncCertificates(@RequestParam(required = false) Long badgeId) {
+        List<Certificate> generated = adminService.syncCertificates(badgeId);
+        Map<String, Object> result = new HashMap<>();
+        result.put("generatedCount", generated.size());
+        result.put("certificates", generated);
+        return Result.success(result);
+    }
+
+    @GetMapping("/certificates")
+    @Operation(summary = "List all certificates")
+    public Result<Map<String, Object>> listAllCertificates(@RequestParam(defaultValue = "1") int page,
+                                                            @RequestParam(defaultValue = "20") int size) {
+        List<Certificate> list = adminService.listAllCertificates(page, size);
+        long total = adminService.countAllCertificates();
+        Map<String, Object> result = new HashMap<>();
+        result.put("records", list);
+        result.put("total", total);
+        return Result.success(result);
+    }
+
+    @DeleteMapping("/certificates/{id}")
+    @Operation(summary = "Delete certificate")
+    public Result<Void> deleteCertificate(@PathVariable Long id) {
+        adminService.deleteCertificate(id);
+        return Result.success();
+    }
+
+    @PostMapping("/certificates/regenerate")
+    @Operation(summary = "Regenerate all certificates with new template")
+    public Result<Map<String, Object>> regenerateAllCertificates() {
+        List<Certificate> generated = adminService.regenerateAllCertificates();
+        Map<String, Object> result = new HashMap<>();
+        result.put("generatedCount", generated.size());
+        result.put("certificates", generated);
+        return Result.success(result);
     }
 }

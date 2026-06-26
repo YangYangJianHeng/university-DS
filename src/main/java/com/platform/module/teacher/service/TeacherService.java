@@ -12,7 +12,7 @@ public interface TeacherService extends IService<Teacher> {
 
     Teacher updateTeacher(Long id, String department, String title, String researchFields, Integer maxTeams);
 
-    void inviteTeacher(Long teamId, Long teacherId);
+    void inviteTeacher(Long teamId, Long teacherId, String message);
 
     void approveInvitation(Long invitationId);
 

@@ -61,6 +61,8 @@ public class RecruitServiceImpl implements RecruitService {
         Recruit recruit = new Recruit();
         recruit.setPublisherId(UserContext.getCurrentUserId());
         recruit.setTitle(dto.getTitle());
+        recruit.setProjectIcon(dto.getProjectIcon());
+        recruit.setProjectName(dto.getProjectName());
         recruit.setDescription(dto.getDescription());
         recruit.setProjectType(dto.getProjectType());
 
@@ -126,6 +128,12 @@ public class RecruitServiceImpl implements RecruitService {
 
         if (dto.getTitle() != null) {
             recruit.setTitle(dto.getTitle());
+        }
+        if (dto.getProjectIcon() != null) {
+            recruit.setProjectIcon(dto.getProjectIcon());
+        }
+        if (dto.getProjectName() != null) {
+            recruit.setProjectName(dto.getProjectName());
         }
         if (dto.getDescription() != null) {
             recruit.setDescription(dto.getDescription());
@@ -344,6 +352,8 @@ public class RecruitServiceImpl implements RecruitService {
         vo.setId(recruit.getId());
         vo.setPublisherId(recruit.getPublisherId());
         vo.setTitle(recruit.getTitle());
+        vo.setProjectIcon(recruit.getProjectIcon());
+        vo.setProjectName(recruit.getProjectName());
         vo.setDescription(recruit.getDescription());
         vo.setProjectType(recruit.getProjectType());
         vo.setMaxMembers(recruit.getMaxMembers());
@@ -494,6 +504,10 @@ public class RecruitServiceImpl implements RecruitService {
         project.setTeamId(teamId);
         project.setLeaderId(recruit.getPublisherId());
         project.setName(projectName);
+        // 如果招募时有项目图标，携带过去
+        if (recruit.getProjectIcon() != null && !recruit.getProjectIcon().isEmpty()) {
+            project.setIcon(recruit.getProjectIcon());
+        }
         project.setDescription(projectDescription);
         project.setStatus("PLANNING");
         project.setStartedAt(LocalDate.now());
@@ -569,5 +583,48 @@ public class RecruitServiceImpl implements RecruitService {
                 recruitId, projectId, teamId, dto.getContinueRecruit());
 
         return projectId;
+    }
+
+    @Override
+    @Transactional
+    public void toggleContinueRecruit(Long recruitId, Integer continueRecruit) {
+        Recruit recruit = recruitMapper.selectById(recruitId);
+        if (recruit == null) {
+            throw BusinessException.notFound("招募信息不存在");
+        }
+
+        // 权限检查：只有发布者或管理员可以切换
+        if (!recruit.getPublisherId().equals(UserContext.getCurrentUserId()) && !isAdmin()) {
+            throw BusinessException.forbidden("只有招募发布者或管理员可以切换招募状态");
+        }
+
+        // 检查是否已经转为项目
+        if (recruit.getProjectId() == null && recruit.getTeamId() == null) {
+            throw BusinessException.badRequest("该招募尚未转为项目，无法切换继续招募状态");
+        }
+
+        if (continueRecruit != 0 && continueRecruit != 1) {
+            throw BusinessException.badRequest("无效的招募状态: " + continueRecruit + "，请使用 0（停止）或 1（继续）");
+        }
+
+        recruit.setContinueRecruit(continueRecruit);
+
+        if (continueRecruit == 0) {
+            // 停止招募
+            recruit.setStatus("CLOSED");
+        } else {
+            // 继续招募：检查是否已满员
+            if (recruit.getMaxMembers() != null && recruit.getCurrentMembers() != null
+                    && recruit.getCurrentMembers() >= recruit.getMaxMembers()) {
+                recruit.setStatus("FULL");
+            } else {
+                recruit.setStatus("OPEN");
+            }
+        }
+
+        recruitMapper.updateById(recruit);
+
+        log.info("Recruit {} continueRecruit toggled to {} by user {}",
+                recruitId, continueRecruit, UserContext.getCurrentUserId());
     }
 }

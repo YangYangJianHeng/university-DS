@@ -5,6 +5,7 @@ import com.platform.common.util.UserContext;
 import com.platform.module.collaboration.dto.*;
 import com.platform.module.collaboration.entity.*;
 import com.platform.module.collaboration.service.TaskService;
+import com.platform.module.project.entity.Project;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.web.bind.annotation.*;
@@ -38,16 +39,22 @@ public class TaskController {
     }
 
     @PutMapping("/task/{id}")
-    @Operation(summary = "更新任务")
-    public Result<Task> updateTask(@PathVariable Long id, @RequestBody Task task) {
-        task.setId(id);
-        return Result.success(taskService.updateTask(task));
+    @Operation(summary = "更新任务（支持执行人调整/换人）")
+    public Result<Task> updateTask(@PathVariable Long id, @RequestBody TaskUpdateRequest request) {
+        return Result.success(taskService.updateTask(id, request));
     }
 
     @PutMapping("/task/{id}/status")
     @Operation(summary = "更新任务状态")
     public Result<Void> updateStatus(@PathVariable Long id, @RequestBody Map<String, String> request) {
         taskService.updateStatus(id, request.get("status"));
+        return Result.success();
+    }
+
+    @PutMapping("/task/{id}/complete")
+    @Operation(summary = "完成任务（验收中→已完成）")
+    public Result<Void> completeTask(@PathVariable Long id) {
+        taskService.completeTask(id);
         return Result.success();
     }
 
@@ -70,6 +77,30 @@ public class TaskController {
     @Operation(summary = "我管理的任务（负责人视角，支持多项目管理）")
     public Result<List<Task>> managedTasks() {
         return Result.success(taskService.getManagedTasks(UserContext.getCurrentUserId()));
+    }
+
+    @GetMapping("/task/team")
+    @Operation(summary = "团队任务（所在团队所有项目任务，全员可见）")
+    public Result<List<Task>> teamTasks() {
+        return Result.success(taskService.getTeamTasks(UserContext.getCurrentUserId()));
+    }
+
+    @GetMapping("/task/team-grouped")
+    @Operation(summary = "团队任务按项目分组")
+    public Result<List<ProjectTasksVO>> teamTasksGrouped() {
+        return Result.success(taskService.getTeamTasksGrouped(UserContext.getCurrentUserId()));
+    }
+
+    @GetMapping("/teacher/tasks")
+    @Operation(summary = "导师任务（所指导团队的所有任务）")
+    public Result<List<Task>> teacherTasks() {
+        return Result.success(taskService.getTeacherTeamTasks(UserContext.getCurrentUserId()));
+    }
+
+    @GetMapping("/teacher/projects")
+    @Operation(summary = "导师可管理的项目列表（所指导团队的项目）")
+    public Result<List<Project>> teacherProjects() {
+        return Result.success(taskService.getTeacherProjects(UserContext.getCurrentUserId()));
     }
 
     // ==================== 人员指派 ====================

@@ -3,10 +3,14 @@ package com.platform.common.config;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.platform.module.achievement.entity.Achievement;
 import com.platform.module.achievement.mapper.AchievementMapper;
+import com.platform.module.badge.entity.Badge;
+import com.platform.module.badge.mapper.BadgeMapper;
 import com.platform.module.admin.entity.AuditLog;
 import com.platform.module.admin.mapper.AuditLogMapper;
 import com.platform.module.collaboration.entity.Task;
 import com.platform.module.collaboration.mapper.TaskMapper;
+import com.platform.module.competition.entity.Competition;
+import com.platform.module.competition.mapper.CompetitionMapper;
 import com.platform.module.notification.entity.Notification;
 import com.platform.module.notification.mapper.NotificationMapper;
 import com.platform.module.project.entity.Project;
@@ -49,6 +53,8 @@ public class DataInitializer implements CommandLineRunner {
     private final TeacherMapper teacherMapper;
     private final AchievementMapper achievementMapper;
     private final AuditLogMapper auditLogMapper;
+    private final CompetitionMapper competitionMapper;
+    private final BadgeMapper badgeMapper;
     private final PasswordEncoder passwordEncoder;
 
     public DataInitializer(UserMapper userMapper, UserSkillMapper userSkillMapper,
@@ -59,6 +65,8 @@ public class DataInitializer implements CommandLineRunner {
                            TeacherMapper teacherMapper,
                            AchievementMapper achievementMapper,
                            AuditLogMapper auditLogMapper,
+                           CompetitionMapper competitionMapper,
+                           BadgeMapper badgeMapper,
                            PasswordEncoder passwordEncoder) {
         this.userMapper = userMapper;
         this.userSkillMapper = userSkillMapper;
@@ -72,6 +80,8 @@ public class DataInitializer implements CommandLineRunner {
         this.teacherMapper = teacherMapper;
         this.achievementMapper = achievementMapper;
         this.auditLogMapper = auditLogMapper;
+        this.competitionMapper = competitionMapper;
+        this.badgeMapper = badgeMapper;
         this.passwordEncoder = passwordEncoder;
     }
 
@@ -104,6 +114,12 @@ public class DataInitializer implements CommandLineRunner {
 
         // ---- 9. 初始化审核日志 ----
         initAuditLogs();
+
+        // ---- 10. 初始化竞赛数据 ----
+        initCompetitions();
+
+        // ---- 11. 初始化徽章数据 ----
+        initBadges();
     }
 
     private void initUsers() {
@@ -602,6 +618,154 @@ public class DataInitializer implements CommandLineRunner {
         System.out.println("Seed audit logs created: 3 records");
     }
 
+    private void initCompetitions() {
+        if (competitionMapper.selectCount(new LambdaQueryWrapper<>()) > 0) return;
+
+        // ---- 国家级竞赛 ----
+        addCompetition("中国国际\"互联网+\"大学生创新创业大赛", "NATIONAL", "INNOVATION",
+                "教育部", "https://cy.ncss.cn",
+                "2026年中国国际\"互联网+\"大学生创新创业大赛由教育部等多部委联合主办，围绕\"更中国、更国际、更教育、更全面、更创新、更协同\"的目标，以赛促教、以赛促学、以赛促创，旨在深化高校创新创业教育改革，激发大学生创造力，培养造就\"大众创业、万众创新\"的生力军。",
+                LocalDate.of(2026, 3, 1), LocalDate.of(2026, 5, 30),
+                LocalDate.of(2026, 6, 15), LocalDate.of(2026, 11, 30),
+                "REGISTERING");
+
+        addCompetition("\"挑战杯\"全国大学生课外学术科技作品竞赛", "NATIONAL", "ACADEMIC",
+                "共青团中央、中国科协、教育部", "https://www.tiaozhanbei.net",
+                "\"挑战杯\"竞赛被誉为中国大学生科技的\"奥林匹克\"盛会，每两年举办一届。竞赛旨在引导和激励学生实事求是、刻苦钻研、勇于创新，培养学生创新精神和实践能力，并在此基础上促进高校学生课外学术科技活动的蓬勃开展。",
+                LocalDate.of(2025, 9, 1), LocalDate.of(2026, 1, 15),
+                LocalDate.of(2026, 3, 1), LocalDate.of(2026, 5, 30),
+                "ENDED");
+
+        addCompetition("全国大学生数学建模竞赛（CUMCM）", "NATIONAL", "ACADEMIC",
+                "中国工业与应用数学学会", "http://www.mcm.edu.cn",
+                "全国大学生数学建模竞赛创办于1992年，每年一届，是首批列入\"高校学科竞赛排行榜\"的19项竞赛之一。竞赛题目一般来源于科学与工程技术、人文与社会科学等领域经过适当简化加工的实际问题。",
+                LocalDate.of(2026, 6, 1), LocalDate.of(2026, 8, 31),
+                LocalDate.of(2026, 9, 10), LocalDate.of(2026, 9, 13),
+                "UPCOMING");
+
+        addCompetition("ACM-ICPC国际大学生程序设计竞赛（亚洲区域赛）", "NATIONAL", "ACADEMIC",
+                "ACM（国际计算机学会）", "https://icpc.global",
+                "ACM-ICPC是世界上公认的规模最大、水平最高的国际大学生程序设计竞赛，旨在展示大学生创新能力、团队精神和在压力下编写程序、分析和解决问题能力。每年吸引来自全球100多个国家的3000多所高校参赛。",
+                LocalDate.of(2026, 8, 1), LocalDate.of(2026, 10, 15),
+                LocalDate.of(2026, 11, 1), LocalDate.of(2026, 12, 31),
+                "UPCOMING");
+
+        addCompetition("蓝桥杯全国软件和信息技术专业人才大赛", "NATIONAL", "ACADEMIC",
+                "工业和信息化部人才交流中心", "https://dasai.lanqiao.cn",
+                "蓝桥杯大赛是由工业和信息化部人才交流中心主办的全国性IT学科竞赛。大赛覆盖Java、C/C++、Python、Web、嵌入式、单片机等多个技术方向，是国内规模最大的IT类专业赛事之一。",
+                LocalDate.of(2026, 2, 1), LocalDate.of(2026, 4, 30),
+                LocalDate.of(2026, 5, 10), LocalDate.of(2026, 6, 30),
+                "ONGOING");
+
+        addCompetition("全国大学生电子设计竞赛", "NATIONAL", "ACADEMIC",
+                "教育部、工业和信息化部", "https://www.nuedc-training.com.cn",
+                "全国大学生电子设计竞赛是教育部和工信部共同发起的大学生学科竞赛，是面向大学生的群众性科技活动。竞赛内容既有理论设计，又有实际制作，全面检验参赛学生的理论基础和实践创新能力。",
+                LocalDate.of(2026, 7, 1), LocalDate.of(2026, 8, 15),
+                LocalDate.of(2026, 9, 1), LocalDate.of(2026, 9, 4),
+                "UPCOMING");
+
+        addCompetition("全国大学生英语竞赛（NECCS）", "NATIONAL", "ACADEMIC",
+                "高等学校大学外语教学指导委员会", "https://www.chinaneccs.cn",
+                "全国大学生英语竞赛是全国性大学英语学科竞赛，旨在促进大学英语教学改革，全面提高大学生英语综合运用能力。竞赛分为A、B、C、D四个类别，覆盖研究生、英语专业、非英语专业本科生等各类学生群体。",
+                LocalDate.of(2026, 1, 1), LocalDate.of(2026, 4, 15),
+                LocalDate.of(2026, 5, 10), LocalDate.of(2026, 5, 20),
+                "ONGOING");
+
+        addCompetition("全国大学生机器人大赛（RoboMaster）", "NATIONAL", "ACADEMIC",
+                "共青团中央、大疆创新", "https://www.robomaster.com",
+                "RoboMaster机甲大师赛是由大疆创新发起并承办的机器人竞技比赛。大赛充分融合\"机器视觉\"\"嵌入式系统设计\"\"机械控制\"\"惯性导航\"\"人机交互\"等众多机器人相关技术学科，同时创新性地将电竞呈现方式与机器人竞技相结合。",
+                LocalDate.of(2025, 11, 1), LocalDate.of(2026, 2, 28),
+                LocalDate.of(2026, 4, 1), LocalDate.of(2026, 6, 30),
+                "ENDED");
+
+        addCompetition("全国大学生广告艺术大赛（大广赛）", "NATIONAL", "INNOVATION",
+                "教育部高等教育司指导", "http://www.sun-ada.net",
+                "全国大学生广告艺术大赛是迄今为止全国规模大、覆盖高等院校广、参与师生人数多的国家级大学生赛事。参赛作品分为平面类、视频类、动画类、互动类、广播类、策划案类、文案类、公益类等八大类。",
+                LocalDate.of(2026, 3, 1), LocalDate.of(2026, 6, 30),
+                LocalDate.of(2026, 7, 15), LocalDate.of(2026, 10, 30),
+                "REGISTERING");
+
+        addCompetition("全国大学生化学实验创新设计大赛", "NATIONAL", "ACADEMIC",
+                "教育部高等学校化学类专业教学指导委员会", "https://cid.nju.edu.cn",
+                "全国大学生化学实验创新设计大赛旨在夯实大学生的化学基础知识、基本理论和基本技能，强化大学生发现问题、分析问题和解决问题的能力，培养大学生的创新意识、创新精神和创新能力。",
+                LocalDate.of(2026, 4, 1), LocalDate.of(2026, 7, 31),
+                LocalDate.of(2026, 9, 15), LocalDate.of(2026, 11, 15),
+                "REGISTERING");
+
+        addCompetition("全国大学生物理实验竞赛（创新赛）", "NATIONAL", "ACADEMIC",
+                "教育部高等学校大学物理课程教学指导委员会", "https://wlsycx.moocollege.com",
+                "竞赛涵盖命题类创新作品、自选课题类创新作品和大学生物理实验讲课比赛三个类别，旨在激发大学生对物理实验的兴趣与潜能，培养学生的创新能力、实践能力和团队协作意识。",
+                LocalDate.of(2026, 5, 1), LocalDate.of(2026, 8, 31),
+                LocalDate.of(2026, 10, 1), LocalDate.of(2026, 12, 31),
+                "UPCOMING");
+
+        addCompetition("全国大学生结构设计竞赛", "NATIONAL", "ACADEMIC",
+                "全国大学生结构设计竞赛委员会", "https://www.structure-contest.com",
+                "全国大学生结构设计竞赛是由教育部、财政部首次联合批准发文的全国性学科竞赛项目。竞赛遵循\"3C\"精神（Creation, Cooperation, Communication），培养大学生创新意识、合作精神和工程实践能力。",
+                LocalDate.of(2026, 7, 1), LocalDate.of(2026, 9, 30),
+                LocalDate.of(2026, 10, 15), LocalDate.of(2026, 12, 31),
+                "UPCOMING");
+
+        // ---- 省级竞赛 ----
+        addCompetition("省级大学生创新创业训练计划项目", "PROVINCIAL", "INNOVATION",
+                "省教育厅", "",
+                "省级大学生创新创业训练计划项目包括创新训练项目、创业训练项目和创业实践项目三类，旨在促进高校转变教育思想观念，改革人才培养模式，强化创新创业能力训练，培养适应创新型国家建设需要的高水平创新人才。",
+                LocalDate.of(2026, 2, 1), LocalDate.of(2026, 6, 30),
+                LocalDate.of(2026, 7, 1), LocalDate.of(2027, 6, 30),
+                "REGISTERING");
+
+        addCompetition("省级高等数学竞赛", "PROVINCIAL", "ACADEMIC",
+                "省数学学会", "",
+                "省级高等数学竞赛旨在激发大学生学习数学的兴趣，培养学生分析问题和解决问题的能力，发现和选拔数学创新人才，为青年学子提供一个展示数学基础知识和思维能力的舞台。",
+                LocalDate.of(2026, 5, 1), LocalDate.of(2026, 6, 15),
+                LocalDate.of(2026, 7, 5), LocalDate.of(2026, 7, 6),
+                "ONGOING");
+
+        // ---- 校级竞赛 ----
+        addCompetition("校级程序设计竞赛", "SCHOOL", "ACADEMIC",
+                "校团委 / 计算机学院", "",
+                "校级程序设计竞赛面向全校本科生，采用ACM-ICPC赛制，考察选手的算法设计、程序实现和团队协作能力。优秀选手将代表学校参加省级和国家级比赛。",
+                LocalDate.of(2026, 5, 1), LocalDate.of(2026, 6, 30),
+                LocalDate.of(2026, 7, 10), LocalDate.of(2026, 7, 10),
+                "REGISTERING");
+
+        System.out.println("Seed competitions created: 15 entries (12 national + 2 provincial + 1 school)");
+    }
+
+    private void initBadges() {
+        if (badgeMapper.selectCount(new LambdaQueryWrapper<>()) > 0) return;
+
+        addBadge("新手入门", "完成第一个任务或加入第一个团队", "badge_newbie", "NEWBIE", 0, "入门", 1);
+        addBadge("任务达人", "累计完成5个以上任务", "badge_task", "COMPLETED_TASKS", 4, "任务", 2);
+        addBadge("任务终结者", "累计完成20个以上任务", "badge_task_master", "COMPLETED_TASKS", 19, "任务", 3);
+        addBadge("团队之星", "参与3个以上团队", "badge_team", "TEAM_COUNT", 3, "团队", 4);
+        addBadge("社交达人", "参与5个以上团队", "badge_social", "TEAM_COUNT", 5, "团队", 5);
+        addBadge("技能先锋", "掌握5个以上技能", "badge_skill", "SKILL_COUNT", 5, "技能", 6);
+        addBadge("技能专精", "至少一项技能达到大师等级", "badge_skill_master", "MASTER_SKILL", 0, "技能", 7);
+        addBadge("成果贡献者", "在项目中提交过成果", "badge_achievement", "ACHIEVEMENT_COUNT", 0, "成果", 8);
+        addBadge("资深贡献者", "提交3个以上成果", "badge_achievement_senior", "ACHIEVEMENT_COUNT", 2, "成果", 9);
+        addBadge("竞赛达人", "获得竞赛类成果", "badge_competition", "COMPETITION_COUNT", 0, "竞赛", 10);
+        addBadge("荣誉之星", "获得过带奖项等级的成果", "badge_honor", "HAS_HONOR", 0, "竞赛", 11);
+        addBadge("招新能手", "发布过团队招募信息", "badge_recruit", "RECRUIT_COUNT", 0, "社交", 12);
+        addBadge("项目老手", "参与5个以上项目", "badge_project", "PROJECT_COUNT", 5, "项目", 13);
+        addBadge("经验丰富", "拥有3条以上项目经历", "badge_experience", "EXPERIENCE_COUNT", 3, "项目", 14);
+        addBadge("全能选手", "同时满足多项平台参与条件", "badge_all_rounder", "ALL_ROUNDER", 0, "综合", 15);
+
+        System.out.println("Seed badges created: 15 entries");
+    }
+
+    private void addBadge(String name, String description, String icon, String conditionType, int conditionValue, String category, int sortOrder) {
+        Badge badge = new Badge();
+        badge.setName(name);
+        badge.setDescription(description);
+        badge.setIcon(icon);
+        badge.setConditionType(conditionType);
+        badge.setConditionValue(conditionValue);
+        badge.setCategory(category);
+        badge.setSortOrder(sortOrder);
+        badgeMapper.insert(badge);
+    }
+
     // ---- 辅助方法 ----
 
     private User findUserByPhone(String phone) {
@@ -630,5 +794,26 @@ public class DataInitializer implements CommandLineRunner {
         skill.setSkillName(skillName);
         skill.setLevel(level);
         userSkillMapper.insert(skill);
+    }
+
+    private void addCompetition(String name, String level, String category,
+                                String organizer, String officialUrl, String description,
+                                LocalDate registerStart, LocalDate registerEnd,
+                                LocalDate eventStart, LocalDate eventEnd, String status) {
+        Competition c = new Competition();
+        c.setName(name);
+        c.setLevel(level);
+        c.setCategory(category);
+        c.setOrganizer(organizer);
+        c.setOfficialUrl(officialUrl);
+        c.setDescription(description);
+        c.setRegisterStart(registerStart);
+        c.setRegisterEnd(registerEnd);
+        c.setEventStart(eventStart);
+        c.setEventEnd(eventEnd);
+        c.setStatus(status);
+        c.setViewCount(0);
+        c.setCollectCount(0);
+        competitionMapper.insert(c);
     }
 }

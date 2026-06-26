@@ -283,6 +283,7 @@ public class UserServiceImpl implements UserService {
         vo.setAvatar(user.getAvatar());
         vo.setBio(user.getBio());
         vo.setRole(user.getRole());
+        vo.setStatus(user.getStatus());
 
         // Fetch skills for this user
         List<UserSkill> skills = userSkillMapper.selectList(

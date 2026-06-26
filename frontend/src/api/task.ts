@@ -18,6 +18,10 @@ export function updateTaskStatus(id: number, status: string) {
   return request.put(`/task/${id}/status`, { status })
 }
 
+export function completeTask(id: number) {
+  return request.put(`/task/${id}/complete`)
+}
+
 export function listTasks(params: any) {
   return request.get('/task/list', { params })
 }
@@ -28,6 +32,22 @@ export function getMyTasks() {
 
 export function getManagedTasks() {
   return request.get('/task/managed')
+}
+
+export function getTeamTasks() {
+  return request.get('/task/team')
+}
+
+export function getTeamTasksGrouped() {
+  return request.get('/task/team-grouped')
+}
+
+export function getTeacherTasks() {
+  return request.get('/teacher/tasks')
+}
+
+export function getTeacherProjects() {
+  return request.get('/teacher/projects')
 }
 
 // ========== 人员指派 ==========

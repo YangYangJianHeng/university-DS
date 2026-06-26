@@ -11,6 +11,7 @@ public class Team {
     @TableId(type = IdType.AUTO)
     private Long id;
     private String name;
+    private String description;
     private Long leaderId;
     private Long recruitId;
     private String status;

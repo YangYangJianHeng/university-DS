@@ -24,12 +24,18 @@ public class JwtAuthenticationInterceptor implements HandlerInterceptor {
             return true;
         }
 
+        // 优先从 Header 读取 token，其次从 query 参数读取（兼容 img/iframe 等浏览器直接加载场景）
         String token = request.getHeader("Authorization");
-        if (token == null || !token.startsWith("Bearer ")) {
+        if (token != null && token.startsWith("Bearer ")) {
+            token = token.substring(7);
+        } else {
+            token = request.getParameter("token");
+        }
+
+        if (token == null || token.isEmpty()) {
             throw BusinessException.unauthorized("未登录");
         }
 
-        token = token.substring(7);
         if (!jwtUtil.validateToken(token)) {
             throw BusinessException.unauthorized("Token已过期或无效");
         }

@@ -29,9 +29,8 @@ export function deleteSkill(id: number) {
 }
 
 export function uploadAvatar(formData: FormData) {
-  return request.post('/user/avatar', formData, {
-    headers: { 'Content-Type': 'multipart/form-data' }
-  })
+  // 不要手动设置 Content-Type，axios 会自动检测 FormData 并生成包含 boundary 的 multipart/form-data
+  return request.post('/user/avatar', formData)
 }
 
 export function changePassword(data: { oldPassword: string; newPassword: string }) {

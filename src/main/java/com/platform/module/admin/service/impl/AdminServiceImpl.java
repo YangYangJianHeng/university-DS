@@ -11,6 +11,10 @@ import com.platform.module.admin.mapper.AuditLogMapper;
 import com.platform.module.admin.service.AdminService;
 import com.platform.module.achievement.entity.Achievement;
 import com.platform.module.achievement.mapper.AchievementMapper;
+import com.platform.module.badge.entity.Badge;
+import com.platform.module.badge.entity.Certificate;
+import com.platform.module.badge.mapper.BadgeMapper;
+import com.platform.module.badge.service.CertificateService;
 import com.platform.module.collaboration.entity.Task;
 import com.platform.module.collaboration.mapper.TaskMapper;
 import com.platform.module.project.entity.Project;
@@ -26,6 +30,8 @@ import com.platform.module.user.entity.User;
 import com.platform.module.user.mapper.UserMapper;
 import com.platform.module.competition.mapper.CompetitionMapper;
 import org.springframework.stereotype.Service;
+
+import com.platform.module.user.vo.UserVO;
 
 import java.time.LocalDateTime;
 import java.util.*;
@@ -44,13 +50,17 @@ public class AdminServiceImpl implements AdminService {
     private final TeacherMapper teacherMapper;
     private final AnnouncementMapper announcementMapper;
     private final AchievementMapper achievementMapper;
+    private final BadgeMapper badgeMapper;
+    private final CertificateService certificateService;
 
     public AdminServiceImpl(UserMapper userMapper, AuditLogMapper auditLogMapper,
                             RecruitMapper recruitMapper, TeamMapper teamMapper,
                             ProjectMapper projectMapper, CompetitionMapper competitionMapper,
                             TaskMapper taskMapper, TeacherMapper teacherMapper,
                             AnnouncementMapper announcementMapper,
-                            AchievementMapper achievementMapper) {
+                            AchievementMapper achievementMapper,
+                            BadgeMapper badgeMapper,
+                            CertificateService certificateService) {
         this.userMapper = userMapper;
         this.auditLogMapper = auditLogMapper;
         this.recruitMapper = recruitMapper;
@@ -61,11 +71,36 @@ public class AdminServiceImpl implements AdminService {
         this.teacherMapper = teacherMapper;
         this.announcementMapper = announcementMapper;
         this.achievementMapper = achievementMapper;
+        this.badgeMapper = badgeMapper;
+        this.certificateService = certificateService;
     }
 
     @Override
-    public IPage<User> listUsers(int page, int size) {
-        return userMapper.selectPage(new Page<>(page, size), new LambdaQueryWrapper<User>().orderByDesc(User::getCreatedAt));
+    public IPage<UserVO> listUsers(int page, int size) {
+        IPage<User> userPage = userMapper.selectPage(
+                new Page<>(page, size),
+                new LambdaQueryWrapper<User>().orderByDesc(User::getCreatedAt));
+
+        // 转换为 UserVO，不暴露密码字段
+        IPage<UserVO> voPage = new Page<>(userPage.getCurrent(), userPage.getSize(), userPage.getTotal());
+        voPage.setRecords(userPage.getRecords().stream().map(this::toUserVO).collect(Collectors.toList()));
+        return voPage;
+    }
+
+    private UserVO toUserVO(User user) {
+        UserVO vo = new UserVO();
+        vo.setId(user.getId());
+        vo.setPhone(user.getPhone());
+        vo.setStudentId(user.getStudentId());
+        vo.setUsername(user.getUsername());
+        vo.setMajor(user.getMajor());
+        vo.setGrade(user.getGrade());
+        vo.setAvatar(user.getAvatar());
+        vo.setBio(user.getBio());
+        vo.setRole(user.getRole());
+        vo.setStatus(user.getStatus());
+        vo.setCreatedAt(user.getCreatedAt());
+        return vo;
     }
 
     @Override
@@ -388,6 +423,14 @@ public class AdminServiceImpl implements AdminService {
     }
 
     @Override
+    public Competition createCompetition(Competition competition) {
+        competition.setViewCount(0);
+        competition.setCollectCount(0);
+        competitionMapper.insert(competition);
+        return competition;
+    }
+
+    @Override
     public Competition updateCompetition(Long id, Competition competition) {
         Competition existing = competitionMapper.selectById(id);
         if (existing == null) {
@@ -449,5 +492,73 @@ public class AdminServiceImpl implements AdminService {
             throw BusinessException.notFound("成果不存在");
         }
         achievementMapper.deleteById(id);
+    }
+
+    // ---- Badge Management ----
+
+    @Override
+    public IPage<Badge> listAllBadges(int page, int size) {
+        return badgeMapper.selectPage(new Page<>(page, size),
+                new LambdaQueryWrapper<Badge>().orderByAsc(Badge::getSortOrder));
+    }
+
+    @Override
+    public Badge createBadge(Badge badge) {
+        if (badge.getSortOrder() == null) badge.setSortOrder(999);
+        badgeMapper.insert(badge);
+        return badge;
+    }
+
+    @Override
+    public Badge updateBadge(Long id, Badge badge) {
+        Badge existing = badgeMapper.selectById(id);
+        if (existing == null) {
+            throw BusinessException.notFound("徽章不存在");
+        }
+        if (badge.getName() != null) existing.setName(badge.getName());
+        if (badge.getDescription() != null) existing.setDescription(badge.getDescription());
+        if (badge.getIcon() != null) existing.setIcon(badge.getIcon());
+        if (badge.getConditionType() != null) existing.setConditionType(badge.getConditionType());
+        if (badge.getConditionValue() != null) existing.setConditionValue(badge.getConditionValue());
+        if (badge.getCategory() != null) existing.setCategory(badge.getCategory());
+        if (badge.getSortOrder() != null) existing.setSortOrder(badge.getSortOrder());
+        badgeMapper.updateById(existing);
+        return existing;
+    }
+
+    @Override
+    public void deleteBadge(Long id) {
+        Badge badge = badgeMapper.selectById(id);
+        if (badge == null) {
+            throw BusinessException.notFound("徽章不存在");
+        }
+        badgeMapper.deleteById(id);
+    }
+
+    // ---- Certificate Management ----
+
+    @Override
+    public List<Certificate> syncCertificates(Long badgeId) {
+        return certificateService.syncCertificates(badgeId);
+    }
+
+    @Override
+    public List<Certificate> listAllCertificates(int page, int size) {
+        return certificateService.listAllCertificates(page, size);
+    }
+
+    @Override
+    public long countAllCertificates() {
+        return certificateService.countAllCertificates();
+    }
+
+    @Override
+    public void deleteCertificate(Long id) {
+        certificateService.deleteCertificate(id);
+    }
+
+    @Override
+    public List<Certificate> regenerateAllCertificates() {
+        return certificateService.regenerateAllCertificates();
     }
 }

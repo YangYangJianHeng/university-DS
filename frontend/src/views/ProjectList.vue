@@ -26,8 +26,8 @@
             </div>
             <div class="project-info">
               <div class="project-name">{{ item.name }}</div>
-              <el-tag :type="item.status === 'ARCHIVED' ? 'warning' : 'success'" size="small" effect="plain">
-                {{ item.status === 'ARCHIVED' ? '已归档' : '进行中' }}
+              <el-tag :type="projectStatusType(item.status)" size="small" effect="plain">
+                {{ projectStatusLabel(item.status) }}
               </el-tag>
             </div>
           </div>
@@ -109,6 +109,29 @@ const avatarColors = [
   'linear-gradient(135deg,#a18cd1,#fbc2eb)',
   'linear-gradient(135deg,#f093fb,#f5576c)',
 ]
+
+function projectStatusType(status: string): 'success' | 'warning' | 'danger' | 'info' {
+  switch (status) {
+    case 'PLANNING': case 'IN_PROGRESS': return 'success'
+    case 'REVIEW': return ''
+    case 'COMPLETED': return ''
+    case 'ARCHIVED': return 'warning'
+    case 'CLOSED': return 'danger'
+    default: return 'info'
+  }
+}
+
+function projectStatusLabel(status: string): string {
+  switch (status) {
+    case 'PLANNING': return '规划中'
+    case 'IN_PROGRESS': return '进行中'
+    case 'REVIEW': return '评审中'
+    case 'COMPLETED': return '已完成'
+    case 'ARCHIVED': return '已归档'
+    case 'CLOSED': return '已关闭'
+    default: return status || '未知'
+  }
+}
 
 function projectAvatarStyle(item: any) {
   const idx = (item.id || 0) % avatarColors.length

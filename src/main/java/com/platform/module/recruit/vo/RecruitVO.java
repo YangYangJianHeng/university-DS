@@ -12,6 +12,8 @@ public class RecruitVO {
     private Long publisherId;
     private String publisherName;
     private String title;
+    private String projectIcon;
+    private String projectName;
     private String description;
     private String projectType;
     private List<String> requiredSkills;

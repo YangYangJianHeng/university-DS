@@ -12,6 +12,8 @@ public class Recruit {
     private Long id;
     private Long publisherId;
     private String title;
+    private String projectIcon;
+    private String projectName;
     private String description;
     private String projectType;
     private String requiredSkills;

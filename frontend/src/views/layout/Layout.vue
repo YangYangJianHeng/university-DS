@@ -121,7 +121,7 @@
 
     <!-- Notification Drawer -->
     <el-drawer v-model="showNotifications" title="通知消息" size="400px" @open="loadNotifications">
-      <template #title>
+      <template #header>
         <div class="drawer-title">
           <el-icon :size="20"><Bell /></el-icon>
           <span>通知消息</span>

@@ -37,4 +37,11 @@ public interface RecruitService {
      * @return 返回新创建的 projectId
      */
     Long convertToProject(Long recruitId, ConvertToProjectDTO dto);
+
+    /**
+     * 切换继续招募状态（转为项目后，发布者/管理员可切换）
+     * @param recruitId 招募ID
+     * @param continueRecruit 0=停止招募，1=继续招募
+     */
+    void toggleContinueRecruit(Long recruitId, Integer continueRecruit);
 }

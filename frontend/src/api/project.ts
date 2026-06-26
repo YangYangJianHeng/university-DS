@@ -20,6 +20,18 @@ export function archiveProject(id: number) {
   return request.post(`/project/${id}/archive`)
 }
 
+export function closeProject(id: number) {
+  return request.post(`/project/${id}/close`)
+}
+
+export function reopenProject(id: number) {
+  return request.post(`/project/${id}/reopen`)
+}
+
+export function deleteProject(id: number) {
+  return request.delete(`/project/${id}`)
+}
+
 export function getGanttData(id: number) {
   return request.get(`/project/${id}/gantt`)
 }

@@ -174,6 +174,14 @@
                 <el-tag :type="recruit.continueRecruit === 1 ? 'success' : 'info'" size="small">
                   {{ recruit.continueRecruit === 1 ? '继续招募中' : '招募已停止' }}
                 </el-tag>
+                <el-button
+                  v-if="canToggleContinueRecruit"
+                  type="warning" plain size="small" style="margin-left:8px"
+                  :loading="togglingContinue"
+                  @click="handleToggleContinueRecruit"
+                >
+                  {{ recruit.continueRecruit === 1 ? '停止招募' : '开启招募' }}
+                </el-button>
               </p>
               <el-button type="primary" plain size="small" @click="router.push('/project/' + recruit.projectId)">
                 查看项目
@@ -320,10 +328,20 @@ import { ref, reactive, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import dayjs from 'dayjs'
-import { getRecruit, applyRecruit, matchRecruit, getApplications, approveApplication, convertRecruitToProject } from '@/api/recruit'
+import { getRecruit, applyRecruit, matchRecruit, getApplications, approveApplication, convertRecruitToProject, toggleContinueRecruit } from '@/api/recruit'
 
 const route = useRoute()
 const router = useRouter()
+
+/** 校验并获取路由ID，无效时返回 NaN（调用方需自行处理） */
+function getRouteId(): number {
+  const id = Number(route.params.id)
+  if (isNaN(id) || id <= 0) {
+    ElMessage.error('无效的招新ID')
+    router.replace('/recruit')
+  }
+  return id
+}
 
 const loading = ref(false)
 const recruit = ref<any>(null)
@@ -354,10 +372,46 @@ const memberStatusClass = computed(() => {
   return recruit.value.currentMembers >= recruit.value.maxMembers ? 'status-full' : 'status-open'
 })
 
+// 是否允许切换继续招募状态（已转化项目 + 发布者或管理员）
+const canToggleContinueRecruit = computed(() => {
+  if (!recruit.value) return false
+  const hasProject = recruit.value.projectId != null
+  if (!hasProject) return false
+  const userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}')
+  return recruit.value.publisherId === Number(userInfo.id || '0') || userInfo.role === 'ADMIN'
+})
+
+const togglingContinue = ref(false)
+
+async function handleToggleContinueRecruit() {
+  const newStatus = recruit.value.continueRecruit === 1 ? 0 : 1
+  const actionText = newStatus === 1 ? '开启招募' : '停止招募'
+  try {
+    await ElMessageBox.confirm(`确认${actionText}？`, '操作确认', {
+      confirmButtonText: '确认', cancelButtonText: '取消', type: 'warning',
+    })
+  } catch { return }
+
+  togglingContinue.value = true
+  try {
+    const id = getRouteId()
+    if (isNaN(id)) return
+    await toggleContinueRecruit(id, newStatus)
+    recruit.value.continueRecruit = newStatus
+    recruit.value.status = newStatus === 0 ? 'CLOSED' : 'OPEN'
+    ElMessage.success(`已${actionText}`)
+  } catch (_) {
+    // 错误已在拦截器中处理
+  } finally {
+    togglingContinue.value = false
+  }
+}
+
 async function fetchDetail() {
   loading.value = true
+  const id = getRouteId()
+  if (isNaN(id)) { loading.value = false; return }
   try {
-    const id = Number(route.params.id)
     const res = await getRecruit(id)
     recruit.value = res.data
   } catch (_) {
@@ -376,7 +430,8 @@ async function handleApply() {
 
   applying.value = true
   try {
-    const id = Number(route.params.id)
+    const id = getRouteId()
+    if (isNaN(id)) return
     await applyRecruit(id)
     ElMessage.success('申请已提交，请等待审核')
   } catch (_) {} finally {
@@ -385,8 +440,8 @@ async function handleApply() {
 }
 
 async function loadApplications() {
-  const id = Number(route.params.id)
-  if (!id) return
+  const id = getRouteId()
+  if (isNaN(id)) return
   try {
     const res = await getApplications(id)
     const data = res.data || []
@@ -418,8 +473,8 @@ async function handleRejectApp(app: any) {
 }
 
 async function loadMatches() {
-  const id = Number(route.params.id)
-  if (!id) return
+  const id = getRouteId()
+  if (isNaN(id)) return
   matchingLoading.value = true
   try {
     const res = await matchRecruit(id)
@@ -504,7 +559,8 @@ async function handleConvertToProject() {
 
   converting.value = true
   try {
-    const id = Number(route.params.id)
+    const id = getRouteId()
+    if (isNaN(id)) return
     const payload = {
       projectName: convertForm.projectName || undefined,
       projectDescription: convertForm.projectDescription || undefined,

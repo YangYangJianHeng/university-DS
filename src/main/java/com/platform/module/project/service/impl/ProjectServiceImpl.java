@@ -7,6 +7,16 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.platform.common.exception.BusinessException;
 import com.platform.common.util.UserContext;
+import com.platform.module.collaboration.entity.Task;
+import com.platform.module.collaboration.entity.TaskAssignee;
+import com.platform.module.collaboration.entity.TaskComment;
+import com.platform.module.collaboration.entity.TaskSubmission;
+import com.platform.module.collaboration.mapper.TaskAssigneeMapper;
+import com.platform.module.collaboration.mapper.TaskCommentMapper;
+import com.platform.module.collaboration.mapper.TaskMapper;
+import com.platform.module.collaboration.mapper.TaskSubmissionMapper;
+import com.platform.module.file.entity.FileEntity;
+import com.platform.module.file.mapper.FileMapper;
 import com.platform.module.project.entity.Project;
 import com.platform.module.project.mapper.ProjectMapper;
 import com.platform.module.project.service.ProjectService;
@@ -14,10 +24,14 @@ import com.platform.module.recruit.entity.Recruit;
 import com.platform.module.recruit.mapper.RecruitMapper;
 import com.platform.module.team.entity.Team;
 import com.platform.module.team.entity.TeamMember;
+import com.platform.module.team.entity.TeamTeacher;
 import com.platform.module.team.mapper.TeamMapper;
 import com.platform.module.team.mapper.TeamMemberMapper;
+import com.platform.module.team.mapper.TeamTeacherMapper;
 import com.platform.module.user.entity.User;
+import com.platform.module.user.entity.UserSkill;
 import com.platform.module.user.mapper.UserMapper;
+import com.platform.module.user.mapper.UserSkillMapper;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
@@ -29,14 +43,33 @@ public class ProjectServiceImpl extends ServiceImpl<ProjectMapper, Project> impl
 
     private final TeamMapper teamMapper;
     private final TeamMemberMapper teamMemberMapper;
+    private final TeamTeacherMapper teamTeacherMapper;
+    private final TaskMapper taskMapper;
+    private final TaskAssigneeMapper taskAssigneeMapper;
+    private final TaskSubmissionMapper taskSubmissionMapper;
+    private final TaskCommentMapper taskCommentMapper;
+    private final FileMapper fileMapper;
     private final UserMapper userMapper;
+    private final UserSkillMapper userSkillMapper;
     private final RecruitMapper recruitMapper;
 
     public ProjectServiceImpl(TeamMapper teamMapper, TeamMemberMapper teamMemberMapper,
-                              UserMapper userMapper, RecruitMapper recruitMapper) {
+                              TeamTeacherMapper teamTeacherMapper,
+                              TaskMapper taskMapper, TaskAssigneeMapper taskAssigneeMapper,
+                              TaskSubmissionMapper taskSubmissionMapper, TaskCommentMapper taskCommentMapper,
+                              FileMapper fileMapper,
+                              UserMapper userMapper, UserSkillMapper userSkillMapper,
+                              RecruitMapper recruitMapper) {
         this.teamMapper = teamMapper;
         this.teamMemberMapper = teamMemberMapper;
+        this.teamTeacherMapper = teamTeacherMapper;
+        this.taskMapper = taskMapper;
+        this.taskAssigneeMapper = taskAssigneeMapper;
+        this.taskSubmissionMapper = taskSubmissionMapper;
+        this.taskCommentMapper = taskCommentMapper;
+        this.fileMapper = fileMapper;
         this.userMapper = userMapper;
+        this.userSkillMapper = userSkillMapper;
         this.recruitMapper = recruitMapper;
     }
 
@@ -99,6 +132,10 @@ public class ProjectServiceImpl extends ServiceImpl<ProjectMapper, Project> impl
         if (project == null) {
             throw BusinessException.notFound("Project not found");
         }
+        // 已关闭的项目不允许任何编辑
+        if ("CLOSED".equals(project.getStatus())) {
+            throw BusinessException.badRequest("项目已关闭，无法编辑。请先重新开启项目");
+        }
         // 权限校验：只有团队队长或ADMIN可以更新项目
         if (!isProjectMemberOrAdmin(project)) {
             throw BusinessException.forbidden("无权限修改此项目");
@@ -120,6 +157,9 @@ public class ProjectServiceImpl extends ServiceImpl<ProjectMapper, Project> impl
         if (project == null) {
             throw BusinessException.notFound("Project not found");
         }
+        if ("CLOSED".equals(project.getStatus())) {
+            throw BusinessException.badRequest("项目已关闭，无法添加里程碑");
+        }
         if (!isProjectMemberOrAdmin(project)) {
             throw BusinessException.forbidden("无权限操作此项目");
         }
@@ -140,6 +180,9 @@ public class ProjectServiceImpl extends ServiceImpl<ProjectMapper, Project> impl
         Project project = getById(projectId);
         if (project == null) {
             throw BusinessException.notFound("Project not found");
+        }
+        if ("CLOSED".equals(project.getStatus())) {
+            throw BusinessException.badRequest("项目已关闭，无法更新里程碑");
         }
         if (!isProjectMemberOrAdmin(project)) {
             throw BusinessException.forbidden("无权限操作此项目");
@@ -165,11 +208,125 @@ public class ProjectServiceImpl extends ServiceImpl<ProjectMapper, Project> impl
         if (project == null) {
             throw BusinessException.notFound("Project not found");
         }
+        if ("CLOSED".equals(project.getStatus())) {
+            throw BusinessException.badRequest("项目已关闭，无法归档");
+        }
         if (!isProjectMemberOrAdmin(project)) {
             throw BusinessException.forbidden("无权限归档此项目");
         }
         project.setStatus("ARCHIVED");
         updateById(project);
+    }
+
+    @Override
+    @org.springframework.transaction.annotation.Transactional(rollbackFor = Exception.class)
+    public void closeProject(Long projectId) {
+        Project project = getById(projectId);
+        if (project == null) {
+            throw BusinessException.notFound("Project not found");
+        }
+        if ("CLOSED".equals(project.getStatus())) {
+            throw BusinessException.badRequest("项目已经处于关闭状态");
+        }
+        if (!isProjectMemberOrAdmin(project)) {
+            throw BusinessException.forbidden("无权限关闭此项目");
+        }
+
+        // 1. 关闭项目
+        project.setStatus("CLOSED");
+        updateById(project);
+
+        // 2. 同步关闭关联团队
+        Team team = teamMapper.selectById(project.getTeamId());
+        if (team != null && !"CLOSED".equals(team.getStatus())) {
+            team.setStatus("CLOSED");
+            teamMapper.updateById(team);
+        }
+    }
+
+    @Override
+    @org.springframework.transaction.annotation.Transactional(rollbackFor = Exception.class)
+    public void reopenProject(Long projectId) {
+        Project project = getById(projectId);
+        if (project == null) {
+            throw BusinessException.notFound("Project not found");
+        }
+        if (!"CLOSED".equals(project.getStatus())) {
+            throw BusinessException.badRequest("只有已关闭的项目可以重新开启");
+        }
+        if (!isProjectMemberOrAdmin(project)) {
+            throw BusinessException.forbidden("无权限开启此项目");
+        }
+
+        // 1. 开启项目
+        project.setStatus("IN_PROGRESS");
+        updateById(project);
+
+        // 2. 同步开启关联团队
+        Team team = teamMapper.selectById(project.getTeamId());
+        if (team != null && "CLOSED".equals(team.getStatus())) {
+            team.setStatus("ACTIVE");
+            teamMapper.updateById(team);
+        }
+    }
+
+    @Override
+    @org.springframework.transaction.annotation.Transactional(rollbackFor = Exception.class)
+    public void deleteProject(Long projectId) {
+        Project project = getById(projectId);
+        if (project == null) {
+            throw BusinessException.notFound("Project not found");
+        }
+
+        // 权限校验：只有项目创建者或ADMIN可以删除
+        Long currentUserId = UserContext.getCurrentUserId();
+        String role = UserContext.getCurrentUserRole();
+        if (!"ADMIN".equals(role) && !project.getLeaderId().equals(currentUserId)) {
+            throw BusinessException.forbidden("只有项目创建者或管理员可以删除项目");
+        }
+
+        Long teamId = project.getTeamId();
+
+        // 1. 级联删除任务相关数据（按项目ID）
+        List<Task> tasks = taskMapper.selectList(
+                new LambdaQueryWrapper<Task>().eq(Task::getProjectId, projectId));
+        List<Long> taskIds = tasks.stream().map(Task::getId).collect(Collectors.toList());
+        if (!taskIds.isEmpty()) {
+            // 删除任务执行人关联
+            taskAssigneeMapper.delete(
+                    new LambdaQueryWrapper<TaskAssignee>().in(TaskAssignee::getTaskId, taskIds));
+            // 删除任务提交记录
+            taskSubmissionMapper.delete(
+                    new LambdaQueryWrapper<TaskSubmission>().in(TaskSubmission::getTaskId, taskIds));
+            // 删除任务评论
+            taskCommentMapper.delete(
+                    new LambdaQueryWrapper<TaskComment>().in(TaskComment::getTaskId, taskIds));
+            // 删除任务
+            taskMapper.delete(
+                    new LambdaQueryWrapper<Task>().eq(Task::getProjectId, projectId));
+        }
+
+        // 2. 删除项目关联文件
+        fileMapper.delete(
+                new LambdaQueryWrapper<FileEntity>().eq(FileEntity::getProjectId, projectId));
+
+        // 3. 删除项目本身
+        removeById(projectId);
+
+        // 4. 级联删除关联团队相关数据
+        if (teamId != null) {
+            // 删除团队成员
+            teamMemberMapper.delete(
+                    new LambdaQueryWrapper<TeamMember>().eq(TeamMember::getTeamId, teamId));
+            // 删除团队导师关联
+            teamTeacherMapper.delete(
+                    new LambdaQueryWrapper<TeamTeacher>().eq(TeamTeacher::getTeamId, teamId));
+            // 删除团队关联文件
+            fileMapper.delete(
+                    new LambdaQueryWrapper<FileEntity>().eq(FileEntity::getTeamId, teamId));
+            // 删除团队
+            teamMapper.deleteById(teamId);
+        }
     }
 
     @Override
@@ -252,7 +409,7 @@ public class ProjectServiceImpl extends ServiceImpl<ProjectMapper, Project> impl
         }
 
         // 状态风险
-        int statusScore = "ARCHIVED".equals(project.getStatus()) ? 0 :
+        int statusScore = "ARCHIVED".equals(project.getStatus()) || "CLOSED".equals(project.getStatus()) ? 0 :
                 "PLANNING".equals(project.getStatus()) ? 15 : 5;
         totalScore += statusScore;
         items.add(Map.of(
@@ -316,7 +473,7 @@ public class ProjectServiceImpl extends ServiceImpl<ProjectMapper, Project> impl
             case "COMPLETED" -> 100;
             case "IN_PROGRESS" -> 50;
             case "REVIEW" -> 80;
-            case "ARCHIVED" -> 100;
+            case "ARCHIVED", "CLOSED" -> 100;
             default -> 0;
         };
     }
@@ -327,6 +484,9 @@ public class ProjectServiceImpl extends ServiceImpl<ProjectMapper, Project> impl
         Project project = getById(projectId);
         if (project == null) {
             throw BusinessException.notFound("Project not found");
+        }
+        if ("CLOSED".equals(project.getStatus())) {
+            throw BusinessException.badRequest("项目已关闭，无法添加成员");
         }
         if (!isProjectMemberOrAdmin(project)) {
             throw BusinessException.forbidden("无权限添加成员");
@@ -360,27 +520,46 @@ public class ProjectServiceImpl extends ServiceImpl<ProjectMapper, Project> impl
                 new LambdaQueryWrapper<TeamMember>()
                         .eq(TeamMember::getTeamId, project.getTeamId()));
 
-        // 批量查询用户名
+        // 批量查询用户信息
         List<Long> userIds = members.stream()
                 .map(TeamMember::getUserId)
                 .distinct()
                 .collect(Collectors.toList());
-        Map<Long, String> userNameMap = new HashMap<>();
+
+        Map<Long, User> userMap = new HashMap<>();
+        Map<Long, List<Map<String, Object>>> skillsMap = new HashMap<>();
         if (!userIds.isEmpty()) {
             List<User> users = userMapper.selectBatchIds(userIds);
             for (User user : users) {
-                userNameMap.put(user.getId(), user.getUsername());
+                userMap.put(user.getId(), user);
+            }
+            // 批量查询技能
+            List<UserSkill> allSkills = userSkillMapper.selectList(
+                    new LambdaQueryWrapper<UserSkill>().in(UserSkill::getUserId, userIds));
+            for (UserSkill skill : allSkills) {
+                Map<String, Object> skillMap = new HashMap<>();
+                skillMap.put("id", skill.getId());
+                skillMap.put("skillName", skill.getSkillName());
+                skillMap.put("level", skill.getLevel());
+                skillsMap.computeIfAbsent(skill.getUserId(), k -> new ArrayList<>()).add(skillMap);
             }
         }
 
-        Map<Long, String> finalUserNameMap = userNameMap;
         return members.stream().map(m -> {
             Map<String, Object> map = new HashMap<>();
+            User user = userMap.get(m.getUserId());
             map.put("id", m.getId());
             map.put("userId", m.getUserId());
-            map.put("userName", finalUserNameMap.getOrDefault(m.getUserId(), "Unknown"));
+            map.put("userName", user != null ? user.getUsername() : "Unknown");
+            map.put("avatar", user != null ? user.getAvatar() : null);
+            map.put("major", user != null ? user.getMajor() : null);
+            map.put("grade", user != null ? user.getGrade() : null);
+            map.put("phone", user != null ? user.getPhone() : null);
+            map.put("studentId", user != null ? user.getStudentId() : null);
+            map.put("bio", user != null ? user.getBio() : null);
             map.put("role", m.getRole());
             map.put("joinedAt", m.getJoinedAt());
+            map.put("skills", skillsMap.getOrDefault(m.getUserId(), new ArrayList<>()));
             return map;
         }).collect(Collectors.toList());
     }

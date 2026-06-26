@@ -37,16 +37,18 @@ public class FileController {
     @Operation(summary = "Upload file")
     public Result<FileEntity> upload(@RequestParam("file") MultipartFile file,
                                      @RequestParam(required = false) Long teamId,
+                                     @RequestParam(required = false) Long projectId,
                                      @RequestParam(required = false) Long parentId) {
         Long userId = UserContext.getCurrentUserId();
-        return Result.success(fileService.upload(file, teamId, parentId, userId));
+        return Result.success(fileService.upload(file, teamId, projectId, parentId, userId));
     }
 
     @GetMapping("/list")
     @Operation(summary = "List files")
     public Result<List<FileEntity>> list(@RequestParam(required = false) Long teamId,
+                                         @RequestParam(required = false) Long projectId,
                                          @RequestParam(required = false) Long parentId) {
-        return Result.success(fileService.listFiles(teamId, parentId));
+        return Result.success(fileService.listFiles(teamId, projectId, parentId));
     }
 
     @GetMapping("/{id}/download")
@@ -70,6 +72,25 @@ public class FileController {
             // ignore
         }
         return ResponseEntity.notFound().build();
+    }
+
+    @GetMapping("/{id}")
+    @Operation(summary = "Get file info")
+    public Result<java.util.Map<String, Object>> fileInfo(@PathVariable Long id) {
+        FileEntity fileEntity = fileService.getById(id);
+        if (fileEntity == null || fileEntity.getIsDeleted() == 1) {
+            return Result.error("文件不存在");
+        }
+        java.util.Map<String, Object> info = new java.util.LinkedHashMap<>();
+        info.put("id", fileEntity.getId());
+        info.put("name", fileEntity.getName());
+        info.put("fileKey", fileEntity.getFileKey());
+        info.put("fileSize", fileEntity.getFileSize());
+        info.put("mimeType", fileEntity.getMimeType());
+        info.put("previewUrl", "/api/file/" + id + "/preview");
+        info.put("downloadUrl", "/api/file/" + id + "/download");
+        info.put("createdAt", fileEntity.getCreatedAt());
+        return Result.success(info);
     }
 
     @GetMapping("/{id}/preview")
@@ -124,9 +145,10 @@ public class FileController {
     @Operation(summary = "Create folder")
     public Result<FileEntity> createFolder(@RequestBody Map<String, Object> request) {
         Long teamId = request.get("teamId") != null ? Long.valueOf(request.get("teamId").toString()) : null;
+        Long projectId = request.get("projectId") != null ? Long.valueOf(request.get("projectId").toString()) : null;
         Long parentId = request.get("parentId") != null ? Long.valueOf(request.get("parentId").toString()) : null;
         String name = (String) request.get("name");
         Long userId = UserContext.getCurrentUserId();
-        return Result.success(fileService.createFolder(teamId, parentId, name, userId));
+        return Result.success(fileService.createFolder(teamId, projectId, parentId, name, userId));
     }
 }

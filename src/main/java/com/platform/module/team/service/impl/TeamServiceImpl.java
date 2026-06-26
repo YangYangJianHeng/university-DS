@@ -85,6 +85,10 @@ public class TeamServiceImpl implements TeamService {
         if (team == null) {
             throw BusinessException.notFound("Team not found");
         }
+        // 已关闭的团队不允许编辑
+        if ("CLOSED".equals(team.getStatus())) {
+            throw BusinessException.badRequest("团队已关闭，无法编辑。请先重新开启关联项目");
+        }
         if (!team.getLeaderId().equals(currentUserId)) {
             throw BusinessException.forbidden("Only team leader can update the team");
         }
@@ -146,6 +150,9 @@ public class TeamServiceImpl implements TeamService {
         // 检查团队状态
         if ("DISBANDED".equals(team.getStatus())) {
             throw BusinessException.badRequest("团队已解散，无法加入");
+        }
+        if ("CLOSED".equals(team.getStatus())) {
+            throw BusinessException.badRequest("团队已关闭，无法加入");
         }
 
         // Check if user is already a member (包括PENDING状态)

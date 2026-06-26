@@ -60,10 +60,11 @@ public class TeacherController {
     }
 
     @PostMapping("/team/{teamId}/teacher/invite")
-    @Operation(summary = "Invite teacher to team")
+    @Operation(summary = "Invite teacher to team (支持邀请留言)")
     public Result<Void> invite(@PathVariable Long teamId, @RequestBody Map<String, Object> request) {
         Long teacherId = Long.valueOf(request.get("teacherId").toString());
-        teacherService.inviteTeacher(teamId, teacherId);
+        String message = (String) request.getOrDefault("message", null);
+        teacherService.inviteTeacher(teamId, teacherId, message);
         return Result.success();
     }
 

@@ -109,6 +109,11 @@ function categoryLabel(c: string) { if (c === 'ACADEMIC') return '学科竞赛';
 onMounted(async () => await loadCompetition())
 
 async function loadCompetition() {
+  if (isNaN(compId) || compId <= 0) {
+    ElMessage.error('无效的竞赛ID')
+    router.replace('/competitions')
+    return
+  }
   loading.value = true
   try { const res = await getCompetition(compId); competition.value = res.data || {}; collected.value = !!res.data?.isCollected }
   catch (_) { competition.value = {} }

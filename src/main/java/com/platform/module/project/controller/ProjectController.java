@@ -73,6 +73,27 @@ public class ProjectController {
         return Result.success();
     }
 
+    @PostMapping("/{id}/close")
+    @Operation(summary = "Close project (also close associated team)")
+    public Result<String> close(@PathVariable Long id) {
+        projectService.closeProject(id);
+        return Result.success("项目已关闭，关联团队同步关闭");
+    }
+
+    @PostMapping("/{id}/reopen")
+    @Operation(summary = "Reopen a closed project (also reopen associated team)")
+    public Result<String> reopen(@PathVariable Long id) {
+        projectService.reopenProject(id);
+        return Result.success("项目已重新开启，关联团队同步开启");
+    }
+
+    @DeleteMapping("/{id}")
+    @Operation(summary = "Delete project (cascade delete team, tasks and files)")
+    public Result<String> delete(@PathVariable Long id) {
+        projectService.deleteProject(id);
+        return Result.success("项目及关联团队、任务已全部删除");
+    }
+
     @GetMapping("/{id}/gantt")
     @Operation(summary = "Get gantt chart data")
     public Result<List<Map<String, Object>>> gantt(@PathVariable Long id) {

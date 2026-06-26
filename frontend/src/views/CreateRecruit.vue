@@ -20,6 +20,30 @@
           <el-input v-model="form.title" placeholder="请输入招募标题，例如：2024 挑战杯参赛团队招募" maxlength="100" show-word-limit />
         </el-form-item>
 
+        <el-form-item label="项目名称" prop="projectName">
+          <el-input v-model="form.projectName" placeholder="请输入项目名称" maxlength="100" />
+        </el-form-item>
+
+        <el-form-item label="项目图标">
+          <div class="icon-upload-area">
+            <div class="icon-preview" v-if="form.projectIcon">
+              <el-avatar :size="64" :src="form.projectIcon" shape="square" />
+              <el-button text type="danger" size="small" @click="form.projectIcon = ''">移除</el-button>
+            </div>
+            <div class="icon-placeholder" v-else>
+              <el-icon :size="32" color="#c0c4cc"><Picture /></el-icon>
+              <span class="icon-hint">设置项目图标（可选）</span>
+            </div>
+            <el-input v-model="form.projectIcon" placeholder="输入图标URL，或使用下方上传" size="small" style="margin-top:8px" />
+            <div class="icon-upload-btn">
+              <input ref="iconInputRef" type="file" accept="image/*" style="display:none" @change="handleIconUpload" />
+              <el-button size="small" :loading="iconUploading" @click="iconInputRef?.click()">
+                <el-icon><Upload /></el-icon>上传图标
+              </el-button>
+            </div>
+          </div>
+        </el-form-item>
+
         <el-form-item label="项目类型" prop="projectType">
           <el-select v-model="form.projectType" placeholder="请选择项目类型" style="width:100%">
             <el-option label="竞赛" value="竞赛" />
@@ -101,6 +125,8 @@ import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import type { FormInstance, FormRules } from 'element-plus'
 import { createRecruit } from '@/api/recruit'
+import { uploadFile } from '@/api/file'
+import { withToken } from '@/utils/url'
 
 const router = useRouter()
 const formRef = ref<FormInstance>()
@@ -109,12 +135,35 @@ const newSkill = ref('')
 
 const form = reactive({
   title: '',
+  projectName: '',
+  projectIcon: '',
   description: '',
   projectType: '',
   requiredSkills: [] as string[],
   maxMembers: 5,
   deadline: '',
 })
+
+// 图标上传
+const iconInputRef = ref<HTMLInputElement>()
+const iconUploading = ref(false)
+
+async function handleIconUpload(e: Event) {
+  const input = e.target as HTMLInputElement
+  const file = input.files?.[0]
+  if (!file) return
+  iconUploading.value = true
+  try {
+    const res = await uploadFile(file, 0) // teamId=0 表示临时上传
+    // 使用预览URL作为图标路径
+    const fileData = res.data
+    form.projectIcon = withToken(`/api/file/${fileData.id}/preview`)
+    ElMessage.success('图标上传成功')
+  } catch (_) {} finally {
+    iconUploading.value = false
+    if (iconInputRef.value) iconInputRef.value.value = ''
+  }
+}
 
 const rules: FormRules = {
   title: [
@@ -159,6 +208,8 @@ async function handleSubmit() {
     const deadlineStr = form.deadline ? form.deadline + 'T23:59:59' : null
     const res = await createRecruit({
       title: form.title,
+      projectName: form.projectName,
+      projectIcon: form.projectIcon,
       description: form.description,
       projectType: form.projectType,
       requiredSkills: form.requiredSkills,
@@ -243,4 +294,16 @@ async function handleSubmit() {
   box-shadow: 0 4px 20px rgba(102,126,234,0.4);
   transform: translateY(-1px);
 }
+
+/* 图标上传 */
+.icon-upload-area { width: 100%; }
+.icon-upload-area :deep(.el-input__wrapper) { border-radius: 10px; }
+.icon-preview { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
+.icon-preview :deep(.el-avatar) { border-radius: 12px; }
+.icon-placeholder {
+  display: flex; flex-direction: column; align-items: center; gap: 4px;
+  padding: 20px; border: 2px dashed #e4e7ed; border-radius: 12px; background: #fafbfc;
+}
+.icon-hint { font-size: 13px; color: #909399; }
+.icon-upload-btn { margin-top: 8px; }
 </style>

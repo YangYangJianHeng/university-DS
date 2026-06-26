@@ -179,7 +179,9 @@ async function fetchJoinedTeams() {
 function teamStatusType(status: string): 'success' | 'info' | 'warning' | 'danger' {
   switch (status) {
     case 'ACTIVE': case 'NORMAL': return 'success'
-    case 'INACTIVE': case 'DISBANDED': return 'info'
+    case 'INACTIVE': return 'warning'
+    case 'DISBANDED': return 'info'
+    case 'CLOSED': return 'danger'
     default: return 'info'
   }
 }
@@ -189,6 +191,7 @@ function teamStatusLabel(status: string): string {
     case 'ACTIVE': case 'NORMAL': return '活跃中'
     case 'INACTIVE': return '已停用'
     case 'DISBANDED': return '已解散'
+    case 'CLOSED': return '已关闭'
     default: return status || '未知'
   }
 }

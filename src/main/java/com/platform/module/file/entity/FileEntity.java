@@ -11,6 +11,7 @@ public class FileEntity {
     @TableId(type = IdType.AUTO)
     private Long id;
     private Long teamId;
+    private Long projectId;
     private Long parentId;
     private String name;
     private String type;

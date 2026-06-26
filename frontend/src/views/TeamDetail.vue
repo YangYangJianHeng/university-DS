@@ -28,13 +28,13 @@
                 </div>
               </div>
               <div class="team-actions">
-                <el-button type="primary" class="action-primary" @click="router.push(`/project/create?teamId=${team.id}`)">
+                <el-button v-if="team.status !== 'CLOSED'" type="primary" class="action-primary" @click="router.push('/projects')">
                   <el-icon><FolderOpened /></el-icon> 创建项目
                 </el-button>
-                <el-button @click="handleInviteTeacher">
+                <el-button v-if="team.status !== 'CLOSED'" @click="handleInviteTeacher">
                   <el-icon><Reading /></el-icon> 邀请导师
                 </el-button>
-                <el-button v-if="isMember" type="danger" plain @click="handleQuitTeam">
+                <el-button v-if="isMember && team.status !== 'CLOSED'" type="danger" plain @click="handleQuitTeam">
                   退出团队
                 </el-button>
               </div>
@@ -162,10 +162,18 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import {
+  ArrowLeft,
+  FolderOpened,
+  Reading,
+  UserFilled,
+  Clock,
+  Timer,
+  InfoFilled,
+} from '@element-plus/icons-vue'
 import dayjs from 'dayjs'
 import { useUserStore } from '@/stores/user'
 import { getTeam, quitTeam, removeMember } from '@/api/team'
-import { getMyProjects } from '@/api/project'
 import axios from 'axios'
 
 const SKIP_TOAST = { skipErrorToast: true }
@@ -194,6 +202,12 @@ const isLeader = computed(() => {
 async function fetchTeam() {
   loading.value = true
   const id = Number(route.params.id)
+  if (isNaN(id) || id <= 0) {
+    ElMessage.error('无效的团队ID')
+    router.replace('/teams')
+    loading.value = false
+    return
+  }
   try {
     // 主数据：团队信息必须成功
     const teamRes = await getTeam(id)
@@ -231,11 +245,11 @@ async function handleRemoveMember(member: any) {
 function handleInviteTeacher() { router.push(`/teachers?teamId=${team.value?.id}`) }
 
 function teamStatusType(status: string): 'success' | 'info' | 'warning' | 'danger' {
-  switch (status) { case 'ACTIVE': case 'NORMAL': return 'success'; case 'INACTIVE': return 'warning'; case 'DISBANDED': return 'info'; default: return 'info' }
+  switch (status) { case 'ACTIVE': case 'NORMAL': return 'success'; case 'INACTIVE': return 'warning'; case 'DISBANDED': return 'info'; case 'CLOSED': return 'danger'; default: return 'info' }
 }
 
 function teamStatusLabel(status: string): string {
-  switch (status) { case 'ACTIVE': case 'NORMAL': return '活跃中'; case 'INACTIVE': return '已停用'; case 'DISBANDED': return '已解散'; default: return status || '未知' }
+  switch (status) { case 'ACTIVE': case 'NORMAL': return '活跃中'; case 'INACTIVE': return '已停用'; case 'DISBANDED': return '已解散'; case 'CLOSED': return '已关闭（项目已关闭）'; default: return status || '未知' }
 }
 
 onMounted(() => fetchTeam())

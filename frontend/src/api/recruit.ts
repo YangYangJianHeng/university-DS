@@ -54,3 +54,8 @@ export function convertRecruitToProject(recruitId: number, data: {
 }) {
   return request.post(`/recruit/${recruitId}/convert-to-project`, data)
 }
+
+// 切换继续招募状态（转为项目后）
+export function toggleContinueRecruit(recruitId: number, continueRecruit: number) {
+  return request.put(`/recruit/${recruitId}/continue-recruit`, null, { params: { continueRecruit } })
+}

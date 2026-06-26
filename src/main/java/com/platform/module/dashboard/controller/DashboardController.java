@@ -12,13 +12,19 @@ import com.platform.module.collaboration.entity.Task;
 import com.platform.module.collaboration.entity.TaskAssignee;
 import com.platform.module.collaboration.mapper.TaskAssigneeMapper;
 import com.platform.module.collaboration.mapper.TaskMapper;
+import com.platform.module.achievement.entity.Achievement;
+import com.platform.module.achievement.mapper.AchievementMapper;
 import com.platform.module.notification.entity.Notification;
 import com.platform.module.notification.mapper.NotificationMapper;
+import com.platform.module.project.entity.Project;
+import com.platform.module.project.mapper.ProjectMapper;
 import com.platform.module.user.mapper.UserMapper;
 import com.platform.module.user.entity.UserExperience;
 import com.platform.module.user.entity.UserSkill;
 import com.platform.module.user.mapper.UserExperienceMapper;
 import com.platform.module.user.mapper.UserSkillMapper;
+import com.platform.module.badge.service.BadgeService;
+import com.platform.module.badge.service.CertificateService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.web.bind.annotation.*;
@@ -40,6 +46,10 @@ public class DashboardController {
     private final UserMapper userMapper;
     private final UserExperienceMapper userExperienceMapper;
     private final UserSkillMapper userSkillMapper;
+    private final ProjectMapper projectMapper;
+    private final AchievementMapper achievementMapper;
+    private final BadgeService badgeService;
+    private final CertificateService certificateService;
 
     public DashboardController(TeamMemberMapper teamMemberMapper,
                                TaskMapper taskMapper,
@@ -49,7 +59,11 @@ public class DashboardController {
                                TeamMapper teamMapper,
                                UserMapper userMapper,
                                UserExperienceMapper userExperienceMapper,
-                               UserSkillMapper userSkillMapper) {
+                               UserSkillMapper userSkillMapper,
+                               ProjectMapper projectMapper,
+                               AchievementMapper achievementMapper,
+                               BadgeService badgeService,
+                               CertificateService certificateService) {
         this.teamMemberMapper = teamMemberMapper;
         this.taskMapper = taskMapper;
         this.taskAssigneeMapper = taskAssigneeMapper;
@@ -59,6 +73,10 @@ public class DashboardController {
         this.userMapper = userMapper;
         this.userExperienceMapper = userExperienceMapper;
         this.userSkillMapper = userSkillMapper;
+        this.projectMapper = projectMapper;
+        this.achievementMapper = achievementMapper;
+        this.badgeService = badgeService;
+        this.certificateService = certificateService;
     }
 
     @GetMapping("/dashboard")
@@ -116,17 +134,28 @@ public class DashboardController {
         List<UserSkill> skills = userSkillMapper.selectList(
                 new LambdaQueryWrapper<UserSkill>().eq(UserSkill::getUserId, userId));
 
-        Map<String, Long> skillCounts = skills.stream()
-                .collect(Collectors.groupingBy(UserSkill::getSkillName, Collectors.counting()));
-
-        List<Map<String, Object>> radarData = skillCounts.entrySet().stream().map(entry -> {
+        List<Map<String, Object>> radarData = skills.stream().map(skill -> {
             Map<String, Object> item = new HashMap<>();
-            item.put("name", entry.getKey());
-            item.put("value", entry.getValue().intValue() * 20); // scale to 0-100
+            item.put("name", skill.getSkillName());
+            item.put("value", skillLevelToValue(skill.getLevel()));
+            item.put("level", skill.getLevel());
             return item;
         }).collect(Collectors.toList());
 
         return Result.success(radarData);
+    }
+
+    /** 将技能等级字符串映射为 0-100 的数值 */
+    private int skillLevelToValue(String level) {
+        if (level == null) return 10;
+        return switch (level) {
+            case "入门" -> 20;
+            case "熟练" -> 40;
+            case "掌握" -> 60;
+            case "精通" -> 80;
+            case "大师" -> 100;
+            default -> 20;
+        };
     }
 
     @PostMapping("/profile/resume/export")
@@ -145,54 +174,92 @@ public class DashboardController {
         Long userId = UserContext.getCurrentUserId();
         Map<String, Object> stats = new HashMap<>();
 
-        long teamCount = teamMemberMapper.selectCount(
-                new LambdaQueryWrapper<TeamMember>().eq(TeamMember::getUserId, userId));
+        // 用户所在的团队
+        List<Long> userTeamIds = teamMemberMapper.selectList(
+                new LambdaQueryWrapper<TeamMember>().eq(TeamMember::getUserId, userId))
+                .stream().map(TeamMember::getTeamId).distinct().collect(Collectors.toList());
+
+        long teamCount = userTeamIds.size();
         stats.put("totalTeams", teamCount);
 
+        // 用户所在团队的项目数
+        long projectCount = userTeamIds.isEmpty() ? 0 : projectMapper.selectCount(
+                new LambdaQueryWrapper<Project>().in(Project::getTeamId, userTeamIds));
+        stats.put("totalProjects", projectCount);
+
+        // 用户参与的任务数
         long taskCount = taskAssigneeMapper.selectCount(
                 new LambdaQueryWrapper<TaskAssignee>().eq(TaskAssignee::getUserId, userId));
         stats.put("totalTasks", taskCount);
 
-        // 查询任务表中关联的已完成任务
+        // 已完成任务数
         List<Long> userTaskIds = taskAssigneeMapper.selectList(
                         new LambdaQueryWrapper<TaskAssignee>()
                                 .eq(TaskAssignee::getUserId, userId))
-                .stream().map(TaskAssignee::getTaskId).collect(java.util.stream.Collectors.toList());
+                .stream().map(TaskAssignee::getTaskId).collect(Collectors.toList());
         long completedTasks = userTaskIds.isEmpty() ? 0 : taskMapper.selectCount(
                 new LambdaQueryWrapper<Task>()
                         .in(Task::getId, userTaskIds)
                         .eq(Task::getStatus, "DONE"));
         stats.put("completedTasks", completedTasks);
 
+        // 用户提交的成果数
+        long achievementCount = achievementMapper.selectCount(
+                new LambdaQueryWrapper<Achievement>().eq(Achievement::getSubmitterId, userId));
+        stats.put("totalAchievements", achievementCount);
+
+        // 图表数据：labels + values
+        List<String> categories = List.of("参与团队", "参与项目", "分配任务", "完成任务", "成果提交");
+        List<Long> values = List.of(teamCount, projectCount, taskCount, completedTasks, achievementCount);
+        stats.put("categories", categories);
+        stats.put("values", values);
+
         return Result.success(stats);
     }
 
     @GetMapping("/profile/badges")
-    @Operation(summary = "Get achievement badges (mock)")
+    @Operation(summary = "Get achievement badges (database-driven)")
     public Result<List<Map<String, Object>>> badges() {
-        List<Map<String, Object>> badgeList = new ArrayList<>();
+        Long userId = UserContext.getCurrentUserId();
+        return Result.success(badgeService.getUserBadges(userId));
+    }
 
-        Map<String, Object> badge1 = new HashMap<>();
-        badge1.put("name", "新手入门");
-        badge1.put("description", "完成第一个项目");
-        badge1.put("icon", "badge_newbie");
-        badge1.put("unlocked", true);
-        badgeList.add(badge1);
+    @GetMapping("/profile/certificates")
+    @Operation(summary = "Get user certificates")
+    public Result<List<com.platform.module.badge.entity.Certificate>> certificates() {
+        Long userId = UserContext.getCurrentUserId();
+        return Result.success(certificateService.getUserCertificates(userId));
+    }
 
-        Map<String, Object> badge2 = new HashMap<>();
-        badge2.put("name", "团队之星");
-        badge2.put("description", "参与3个以上团队");
-        badge2.put("icon", "badge_team");
-        badge2.put("unlocked", false);
-        badgeList.add(badge2);
-
-        Map<String, Object> badge3 = new HashMap<>();
-        badge3.put("name", "竞赛达人");
-        badge3.put("description", "获得省级以上竞赛奖项");
-        badge3.put("icon", "badge_competition");
-        badge3.put("unlocked", false);
-        badgeList.add(badge3);
-
-        return Result.success(badgeList);
+    @GetMapping("/profile/certificates/check-new")
+    @Operation(summary = "Check and auto-generate certificates for newly unlocked badges")
+    public Result<Map<String, Object>> checkNewCertificates() {
+        Long userId = UserContext.getCurrentUserId();
+        List<Map<String, Object>> badges = badgeService.getUserBadges(userId);
+        Map<String, Object> result = new HashMap<>();
+        result.put("newCertificates", new java.util.ArrayList<>());
+        result.put("totalUnlocked", badges.stream().filter(b -> Boolean.TRUE.equals(b.get("unlocked"))).count());
+        
+        // 自动为每个已解锁但未生成证书的徽章生成证书
+        List<Map<String, Object>> newCerts = new java.util.ArrayList<>();
+        for (Map<String, Object> badge : badges) {
+            if (Boolean.TRUE.equals(badge.get("unlocked"))) {
+                Long badgeId = Long.valueOf(badge.get("id").toString());
+                // 检查是否已有证书
+                List<com.platform.module.badge.entity.Certificate> existingCerts =
+                        certificateService.getUserCertificates(userId);
+                boolean hasCert = existingCerts.stream()
+                        .anyMatch(c -> c.getBadgeId().equals(badgeId));
+                if (!hasCert) {
+                    var newCert = certificateService.generateCertificate(userId, badgeId);
+                    if (newCert != null) {
+                        Map<String, Object> certMap = certificateService.getCertificateViewData(newCert.getId());
+                        newCerts.add(certMap);
+                    }
+                }
+            }
+        }
+        result.put("newCertificates", newCerts);
+        return Result.success(result);
     }
 }

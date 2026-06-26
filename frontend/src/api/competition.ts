@@ -33,6 +33,10 @@ export function adminListCompetitions(params: any) {
   return request.get('/admin/competitions', { params })
 }
 
+export function adminCreateCompetition(data: any) {
+  return request.post('/admin/competitions', data)
+}
+
 export function adminUpdateCompetition(id: number, data: any) {
   return request.put(`/admin/competitions/${id}`, data)
 }

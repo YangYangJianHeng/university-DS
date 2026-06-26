@@ -8,9 +8,9 @@ import java.util.List;
 
 public interface FileService extends IService<FileEntity> {
 
-    FileEntity upload(MultipartFile file, Long teamId, Long parentId, Long uploaderId);
+    FileEntity upload(MultipartFile file, Long teamId, Long projectId, Long parentId, Long uploaderId);
 
-    List<FileEntity> listFiles(Long teamId, Long parentId);
+    List<FileEntity> listFiles(Long teamId, Long projectId, Long parentId);
 
     String getDownloadUrl(Long id);
 
@@ -24,5 +24,5 @@ public interface FileService extends IService<FileEntity> {
 
     void rename(Long id, String name);
 
-    FileEntity createFolder(Long teamId, Long parentId, String name, Long uploaderId);
+    FileEntity createFolder(Long teamId, Long projectId, Long parentId, String name, Long uploaderId);
 }

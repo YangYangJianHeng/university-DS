@@ -8,12 +8,18 @@ import com.platform.module.collaboration.dto.*;
 import com.platform.module.collaboration.entity.*;
 import com.platform.module.collaboration.mapper.*;
 import com.platform.module.collaboration.service.TaskService;
+import com.platform.module.file.entity.FileEntity;
+import com.platform.module.file.mapper.FileMapper;
 import com.platform.module.notification.entity.Notification;
 import com.platform.module.notification.mapper.NotificationMapper;
 import com.platform.module.project.entity.Project;
 import com.platform.module.project.mapper.ProjectMapper;
+import com.platform.module.teacher.entity.Teacher;
+import com.platform.module.teacher.mapper.TeacherMapper;
 import com.platform.module.team.entity.TeamMember;
+import com.platform.module.team.entity.TeamTeacher;
 import com.platform.module.team.mapper.TeamMemberMapper;
+import com.platform.module.team.mapper.TeamTeacherMapper;
 import com.platform.module.user.entity.User;
 import com.platform.module.user.entity.UserSkill;
 import com.platform.module.user.mapper.UserMapper;
@@ -32,32 +38,41 @@ public class TaskServiceImpl extends ServiceImpl<TaskMapper, Task> implements Ta
 
     private final ProjectMapper projectMapper;
     private final TeamMemberMapper teamMemberMapper;
+    private final TeamTeacherMapper teamTeacherMapper;
+    private final TeacherMapper teacherMapper;
     private final UserMapper userMapper;
     private final UserSkillMapper userSkillMapper;
     private final TaskAssigneeMapper taskAssigneeMapper;
     private final TaskSubmissionMapper taskSubmissionMapper;
     private final TaskCommentMapper taskCommentMapper;
     private final NotificationMapper notificationMapper;
+    private final FileMapper fileMapper;
 
     private static final Set<String> VALID_STATUSES = Set.of("TODO", "IN_PROGRESS", "SUBMITTED", "REVIEWING", "DONE", "OVERDUE");
     private static final Set<String> VALID_PRIORITIES = Set.of("HIGH", "MEDIUM", "LOW");
 
     public TaskServiceImpl(ProjectMapper projectMapper,
                            TeamMemberMapper teamMemberMapper,
+                           TeamTeacherMapper teamTeacherMapper,
+                           TeacherMapper teacherMapper,
                            UserMapper userMapper,
                            UserSkillMapper userSkillMapper,
                            TaskAssigneeMapper taskAssigneeMapper,
                            TaskSubmissionMapper taskSubmissionMapper,
                            TaskCommentMapper taskCommentMapper,
-                           NotificationMapper notificationMapper) {
+                           NotificationMapper notificationMapper,
+                           FileMapper fileMapper) {
         this.projectMapper = projectMapper;
         this.teamMemberMapper = teamMemberMapper;
+        this.teamTeacherMapper = teamTeacherMapper;
+        this.teacherMapper = teacherMapper;
         this.userMapper = userMapper;
         this.userSkillMapper = userSkillMapper;
         this.taskAssigneeMapper = taskAssigneeMapper;
         this.taskSubmissionMapper = taskSubmissionMapper;
         this.taskCommentMapper = taskCommentMapper;
         this.notificationMapper = notificationMapper;
+        this.fileMapper = fileMapper;
     }
 
     // ==================== 任务管理 ====================
@@ -79,10 +94,14 @@ public class TaskServiceImpl extends ServiceImpl<TaskMapper, Task> implements Ta
             throw BusinessException.notFound("所属项目不存在");
         }
 
-        // 权限校验：只有项目负责人可以创建任务
+        // 权限校验：项目负责人 或 该团队已审核通过的导师 可以创建任务
         Long currentUserId = UserContext.getCurrentUserId();
         if (currentUserId != null && !currentUserId.equals(project.getLeaderId())) {
-            throw BusinessException.forbidden("只有项目负责人可以创建任务");
+            // 检查是否是团队的导师（需审核通过）
+            boolean isTeacher = isApprovedTeacher(project.getTeamId(), currentUserId);
+            if (!isTeacher) {
+                throw BusinessException.forbidden("只有项目负责人或已审核的导师可以创建任务");
+            }
         }
 
         // 优先级校验
@@ -102,7 +121,10 @@ public class TaskServiceImpl extends ServiceImpl<TaskMapper, Task> implements Ta
         task.setStatus("TODO");
         save(task);
 
-        // 指派执行人
+        // 通知项目所有团队成员：新任务发布
+        notifyProjectMembers(project, task, currentUserId);
+
+        // 指派执行人（内部有各自的指派通知）
         if (request.getAssignees() != null && !request.getAssignees().isEmpty()) {
             for (TaskCreateRequest.AssigneeInfo ai : request.getAssignees()) {
                 addAssignee(task.getId(), ai.getUserId(), ai.getAssignmentNote());
@@ -118,6 +140,41 @@ public class TaskServiceImpl extends ServiceImpl<TaskMapper, Task> implements Ta
         if (task == null) {
             throw BusinessException.notFound("任务不存在");
         }
+
+        Long currentUserId = UserContext.getCurrentUserId();
+
+        // ✨ 状态自动流转逻辑
+        // 1. 执行人首次查看 → 待处理→进行中
+        if (currentUserId != null && "TODO".equals(task.getStatus())) {
+            boolean isAssignee = taskAssigneeMapper.selectCount(
+                    new LambdaQueryWrapper<TaskAssignee>()
+                            .eq(TaskAssignee::getTaskId, taskId)
+                            .eq(TaskAssignee::getUserId, currentUserId)) > 0;
+            if (isAssignee) {
+                task.setStatus("IN_PROGRESS");
+                updateById(task);
+                // 同时标记执行人为已接受
+                TaskAssignee assignee = taskAssigneeMapper.selectOne(
+                        new LambdaQueryWrapper<TaskAssignee>()
+                                .eq(TaskAssignee::getTaskId, taskId)
+                                .eq(TaskAssignee::getUserId, currentUserId));
+                if (assignee != null && "ASSIGNED".equals(assignee.getStatus())) {
+                    assignee.setStatus("ACCEPTED");
+                    assignee.setAcceptedAt(LocalDateTime.now());
+                    taskAssigneeMapper.updateById(assignee);
+                }
+            }
+        }
+
+        // 2. 任务发布人查看已提交成果 → 待验收→验收中
+        if (currentUserId != null && "SUBMITTED".equals(task.getStatus())
+                && currentUserId.equals(task.getCreatorId())) {
+            task.setStatus("REVIEWING");
+            updateById(task);
+        }
+
+        // 重新获取任务以确保状态是最新的
+        task = getById(taskId);
 
         TaskDetailVO vo = new TaskDetailVO();
         vo.setId(task.getId());
@@ -156,10 +213,19 @@ public class TaskServiceImpl extends ServiceImpl<TaskMapper, Task> implements Ta
         }
         vo.setAssignees(assigneeVOs);
 
-        // 成果提交列表
+        // 成果提交列表（带可见性过滤）
         List<TaskSubmission> submissions = getSubmissions(taskId);
         List<TaskDetailVO.SubmissionVO> submissionVOs = new ArrayList<>();
         for (TaskSubmission s : submissions) {
+            // ✨ 可见性过滤：PENDING_REVIEW / REJECTED 仅提交者和创建者可见；APPROVED 全队可见
+            if ("PENDING_REVIEW".equals(s.getStatus()) || "REJECTED".equals(s.getStatus())) {
+                if (currentUserId != null
+                        && !currentUserId.equals(s.getSubmitterId())
+                        && !currentUserId.equals(task.getCreatorId())) {
+                    continue; // 跳过不可见的提交
+                }
+            }
+
             TaskDetailVO.SubmissionVO svo = new TaskDetailVO.SubmissionVO();
             svo.setId(s.getId());
             svo.setSubmitterId(s.getSubmitterId());
@@ -174,7 +240,11 @@ public class TaskServiceImpl extends ServiceImpl<TaskMapper, Task> implements Ta
             // 解析文件URL列表
             if (s.getFileUrls() != null) {
                 try {
-                    svo.setFileUrls(parseJsonArray(s.getFileUrls()));
+                    List<String> urls = parseJsonArray(s.getFileUrls());
+                    svo.setFileUrls(urls);
+                    // ✨ 构建文件元数据供前端展示（预览/下载地址、文件名、类型）
+                    List<TaskDetailVO.FileInfoVO> fileInfos = buildFileInfos(urls);
+                    svo.setFileInfos(fileInfos);
                 } catch (Exception ignored) {}
             }
 
@@ -220,38 +290,92 @@ public class TaskServiceImpl extends ServiceImpl<TaskMapper, Task> implements Ta
     }
 
     @Override
-    public Task updateTask(Task task) {
-        Task existing = getById(task.getId());
+    public Task updateTask(Long taskId, TaskUpdateRequest request) {
+        Task existing = getById(taskId);
         if (existing == null) {
             throw BusinessException.notFound("任务不存在");
         }
-        // 权限校验：只有任务创建者可以更新
+        // 权限校验：只有任务创建者可以更新（含导师）
         Long currentUserId = UserContext.getCurrentUserId();
         if (currentUserId != null && !currentUserId.equals(existing.getCreatorId())) {
             throw BusinessException.forbidden("只有任务创建者可以修改任务");
         }
-        if (task.getTitle() != null) {
-            if (task.getTitle().trim().isEmpty()) {
+
+        boolean changed = false;
+
+        if (request.getTitle() != null) {
+            if (request.getTitle().trim().isEmpty()) {
                 throw BusinessException.badRequest("任务标题不能为空");
             }
-            existing.setTitle(task.getTitle());
+            existing.setTitle(request.getTitle());
+            changed = true;
         }
-        if (task.getDescription() != null) existing.setDescription(task.getDescription());
-        if (task.getRequiredSkills() != null) existing.setRequiredSkills(task.getRequiredSkills());
-        if (task.getPriority() != null) {
-            if (!VALID_PRIORITIES.contains(task.getPriority())) {
-                throw BusinessException.badRequest("无效的优先级: " + task.getPriority());
+        if (request.getDescription() != null) {
+            existing.setDescription(request.getDescription());
+            changed = true;
+        }
+        if (request.getRequiredSkills() != null) {
+            existing.setRequiredSkills(request.getRequiredSkills());
+            changed = true;
+        }
+        if (request.getPriority() != null) {
+            if (!VALID_PRIORITIES.contains(request.getPriority())) {
+                throw BusinessException.badRequest("无效的优先级: " + request.getPriority());
             }
-            existing.setPriority(task.getPriority());
+            existing.setPriority(request.getPriority());
+            changed = true;
         }
-        if (task.getDeadline() != null) existing.setDeadline(task.getDeadline());
-        if (task.getStatus() != null) {
-            if (!VALID_STATUSES.contains(task.getStatus())) {
-                throw BusinessException.badRequest("无效的任务状态: " + task.getStatus());
+        if (request.getDeadline() != null && !request.getDeadline().isEmpty()) {
+            try {
+                LocalDateTime deadline = parseFlexibleDeadline(request.getDeadline());
+                existing.setDeadline(deadline);
+                changed = true;
+            } catch (Exception e) {
+                throw BusinessException.badRequest("截止日期格式错误，请使用：yyyy-MM-dd HH:mm:ss");
             }
-            existing.setStatus(task.getStatus());
         }
-        updateById(existing);
+        if (request.getStatus() != null) {
+            if (!VALID_STATUSES.contains(request.getStatus())) {
+                throw BusinessException.badRequest("无效的任务状态: " + request.getStatus());
+            }
+            existing.setStatus(request.getStatus());
+            changed = true;
+        }
+
+        if (changed) {
+            updateById(existing);
+        }
+
+        // ===== 处理执行人变更（换人功能）=====
+        // 先移除指定的执行人
+        if (request.getRemoveAssigneeIds() != null && !request.getRemoveAssigneeIds().isEmpty()) {
+            for (Long userId : request.getRemoveAssigneeIds()) {
+                removeAssignee(taskId, userId);
+            }
+        }
+
+        // 再添加新的执行人
+        if (request.getAddAssignees() != null && !request.getAddAssignees().isEmpty()) {
+            for (TaskUpdateRequest.AssigneeInfo info : request.getAddAssignees()) {
+                if (info.getUserId() != null) {
+                    // 检查是否已经是指派人
+                    Long count = taskAssigneeMapper.selectCount(
+                            new LambdaQueryWrapper<TaskAssignee>()
+                                    .eq(TaskAssignee::getTaskId, taskId)
+                                    .eq(TaskAssignee::getUserId, info.getUserId()));
+                    if (count == 0) {
+                        addAssignee(taskId, info.getUserId(), info.getAssignmentNote());
+                    }
+                }
+            }
+        }
+
+        // 通知所有执行人任务有更新
+        if (changed) {
+            notifyAssigneesAboutUpdate(existing, request.getTitle() != null ? request.getTitle() : null,
+                    request.getDescription() != null ? request.getDescription() : null);
+        }
+
         return existing;
     }
 
@@ -265,11 +389,43 @@ public class TaskServiceImpl extends ServiceImpl<TaskMapper, Task> implements Ta
             throw BusinessException.badRequest("无效的任务状态: " + status);
         }
         Long currentUserId = UserContext.getCurrentUserId();
+        // 只有任务创建者或管理员可以手动更新任务状态
         if (currentUserId != null && !currentUserId.equals(task.getCreatorId())) {
+            // 允许有管理员权限的用户通过
             throw BusinessException.forbidden("只有任务创建者可以更新任务状态");
         }
         task.setStatus(status);
         updateById(task);
+
+        // 通知所有执行人状态变更
+        notifyAssigneesStatusChange(task);
+    }
+
+    @Override
+    @Transactional
+    public void completeTask(Long taskId) {
+        Task task = getById(taskId);
+        if (task == null) {
+            throw BusinessException.notFound("任务不存在");
+        }
+        // 只有验收中状态可以完成
+        if (!"REVIEWING".equals(task.getStatus())) {
+            throw BusinessException.badRequest("只有验收中的任务可以标记为完成");
+        }
+        Long currentUserId = UserContext.getCurrentUserId();
+        // 只有任务创建者可以完成
+        if (currentUserId != null && !currentUserId.equals(task.getCreatorId())) {
+            throw BusinessException.forbidden("只有任务创建者可以完成验收");
+        }
+        task.setStatus("DONE");
+        updateById(task);
+
+        // 通知所有执行人
+        List<TaskAssignee> assignees = getAssignees(taskId);
+        for (TaskAssignee a : assignees) {
+            sendNotification(a.getUserId(), "任务已完成",
+                    "任务「" + task.getTitle() + "」已通过验收，标记为已完成");
+        }
     }
 
     @Override
@@ -287,17 +443,195 @@ public class TaskServiceImpl extends ServiceImpl<TaskMapper, Task> implements Ta
         if (assignments.isEmpty()) return Collections.emptyList();
 
         List<Long> taskIds = assignments.stream().map(TaskAssignee::getTaskId).collect(Collectors.toList());
-        return list(new LambdaQueryWrapper<Task>()
+        List<Task> tasks = list(new LambdaQueryWrapper<Task>()
                 .in(Task::getId, taskIds)
                 .orderByDesc(Task::getCreatedAt));
+
+        // 过滤掉已关闭项目的任务
+        tasks = filterOutClosedProjectTasks(tasks);
+
+        // 自动检测逾期：截止日期已过且状态为待处理或进行中
+        checkAndMarkOverdue(tasks);
+        return tasks;
     }
 
     @Override
     public List<Task> getManagedTasks(Long leaderId) {
         // 获取负责人创建的所有任务
-        return list(new LambdaQueryWrapper<Task>()
+        List<Task> tasks = list(new LambdaQueryWrapper<Task>()
                 .eq(Task::getCreatorId, leaderId)
                 .orderByDesc(Task::getCreatedAt));
+
+        // 过滤掉已关闭项目的任务
+        tasks = filterOutClosedProjectTasks(tasks);
+
+        // 自动检测逾期：截止日期已过且状态为待处理或进行中
+        checkAndMarkOverdue(tasks);
+        return tasks;
+    }
+
+    @Override
+    public List<Task> getTeamTasks(Long userId) {
+        // 1. 获取用户所在的所有团队（排除已关闭的团队）
+        List<TeamMember> memberships = teamMemberMapper.selectList(
+                new LambdaQueryWrapper<TeamMember>().eq(TeamMember::getUserId, userId));
+        if (memberships.isEmpty()) return Collections.emptyList();
+
+        List<Long> teamIds = memberships.stream()
+                .map(TeamMember::getTeamId)
+                .distinct()
+                .collect(Collectors.toList());
+
+        // 2. 获取这些团队的所有项目（排除已关闭的项目）
+        List<Project> projects = projectMapper.selectList(
+                new LambdaQueryWrapper<Project>()
+                        .in(Project::getTeamId, teamIds)
+                        .ne(Project::getStatus, "CLOSED"));
+        if (projects.isEmpty()) return Collections.emptyList();
+
+        List<Long> projectIds = projects.stream()
+                .map(Project::getId)
+                .collect(Collectors.toList());
+
+        // 3. 获取这些项目的所有任务
+        List<Task> tasks = list(new LambdaQueryWrapper<Task>()
+                .in(Task::getProjectId, projectIds)
+                .orderByDesc(Task::getCreatedAt));
+
+        // 4. 自动检测逾期
+        checkAndMarkOverdue(tasks);
+        return tasks;
+    }
+
+    @Override
+    public List<ProjectTasksVO> getTeamTasksGrouped(Long userId) {
+        // 1. 获取用户所在的所有团队
+        List<TeamMember> memberships = teamMemberMapper.selectList(
+                new LambdaQueryWrapper<TeamMember>().eq(TeamMember::getUserId, userId));
+        if (memberships.isEmpty()) return Collections.emptyList();
+
+        List<Long> teamIds = memberships.stream()
+                .map(TeamMember::getTeamId)
+                .distinct()
+                .collect(Collectors.toList());
+
+        // 2. 获取这些团队的所有项目（排除已关闭的项目）
+        List<Project> projects = projectMapper.selectList(
+                new LambdaQueryWrapper<Project>()
+                        .in(Project::getTeamId, teamIds)
+                        .ne(Project::getStatus, "CLOSED"));
+        if (projects.isEmpty()) return Collections.emptyList();
+
+        // 构建 projectId → Project 映射
+        Map<Long, Project> projectMap = projects.stream()
+                .collect(Collectors.toMap(Project::getId, p -> p));
+
+        List<Long> projectIds = projects.stream()
+                .map(Project::getId)
+                .collect(Collectors.toList());
+
+        // 3. 获取这些项目的所有任务
+        List<Task> tasks = list(new LambdaQueryWrapper<Task>()
+                .in(Task::getProjectId, projectIds)
+                .orderByDesc(Task::getCreatedAt));
+
+        // 4. 自动检测逾期
+        checkAndMarkOverdue(tasks);
+
+        // 5. 批量获取创建者名称
+        Map<Long, String> creatorNameMap = new HashMap<>();
+        if (!tasks.isEmpty()) {
+            List<Long> creatorIds = tasks.stream()
+                    .map(Task::getCreatorId)
+                    .distinct()
+                    .collect(Collectors.toList());
+            for (User u : userMapper.selectBatchIds(creatorIds)) {
+                creatorNameMap.put(u.getId(), u.getUsername());
+            }
+        }
+
+        // 6. 批量获取所有任务的执行人数
+        Map<Long, Integer> assigneeCountMap = new HashMap<>();
+        if (!tasks.isEmpty()) {
+            List<Long> taskIds = tasks.stream().map(Task::getId).collect(Collectors.toList());
+            List<TaskAssignee> allAssignees = taskAssigneeMapper.selectList(
+                    new LambdaQueryWrapper<TaskAssignee>().in(TaskAssignee::getTaskId, taskIds));
+            for (TaskAssignee a : allAssignees) {
+                assigneeCountMap.merge(a.getTaskId(), 1, Integer::sum);
+            }
+        }
+
+        // 7. 按项目分组
+        Map<Long, List<ProjectTasksVO.TaskVO>> grouped = tasks.stream()
+                .collect(Collectors.groupingBy(Task::getProjectId,
+                        Collectors.mapping(task -> {
+                            ProjectTasksVO.TaskVO vo = new ProjectTasksVO.TaskVO();
+                            vo.setId(task.getId());
+                            vo.setProjectId(task.getProjectId());
+                            vo.setCreatorId(task.getCreatorId());
+                            vo.setCreatorName(creatorNameMap.getOrDefault(task.getCreatorId(), null));
+                            vo.setTitle(task.getTitle());
+                            vo.setDescription(task.getDescription());
+                            vo.setRequiredSkills(task.getRequiredSkills());
+                            vo.setPriority(task.getPriority());
+                            vo.setStatus(task.getStatus());
+                            vo.setDeadline(task.getDeadline());
+                            vo.setCreatedAt(task.getCreatedAt());
+                            vo.setAssigneeCount(assigneeCountMap.getOrDefault(task.getId(), 0));
+                            return vo;
+                        }, Collectors.toList())));
+
+        // 8. 构建响应
+        return projects.stream().map(project -> {
+            ProjectTasksVO vo = new ProjectTasksVO();
+            vo.setProjectId(project.getId());
+            vo.setProjectName(project.getName());
+            vo.setTeamId(project.getTeamId());
+            vo.setTasks(grouped.getOrDefault(project.getId(), Collections.emptyList()));
+            return vo;
+        }).collect(Collectors.toList());
+    }
+
+    /**
+     * 自动检测并标记逾期任务
+     * 截止日期已过 且 状态为TODO/IN_PROGRESS → 标记为OVERDUE
+     */
+    private void checkAndMarkOverdue(List<Task> tasks) {
+        LocalDateTime now = LocalDateTime.now();
+        for (Task task : tasks) {
+            if (task.getDeadline() != null
+                    && task.getDeadline().isBefore(now)
+                    && ("TODO".equals(task.getStatus()) || "IN_PROGRESS".equals(task.getStatus()))) {
+                task.setStatus("OVERDUE");
+                updateById(task);
+            }
+        }
+    }
+
+    /**
+     * 过滤掉已关闭项目的任务
+     */
+    private List<Task> filterOutClosedProjectTasks(List<Task> tasks) {
+        if (tasks.isEmpty()) return tasks;
+        // 收集所有 projectId
+        List<Long> projectIds = tasks.stream()
+                .map(Task::getProjectId)
+                .distinct()
+                .collect(Collectors.toList());
+        // 查询这些项目中已关闭的
+        List<Project> closedProjects = projectMapper.selectList(
+                new LambdaQueryWrapper<Project>()
+                        .in(Project::getId, projectIds)
+                        .eq(Project::getStatus, "CLOSED"));
+        if (closedProjects.isEmpty()) return tasks;
+        // 收集已关闭的项目ID集合
+        Set<Long> closedProjectIds = closedProjects.stream()
+                .map(Project::getId)
+                .collect(Collectors.toSet());
+        // 过滤掉属于已关闭项目的任务
+        return tasks.stream()
+                .filter(t -> !closedProjectIds.contains(t.getProjectId()))
+                .collect(Collectors.toList());
     }
 
     // ==================== 人员指派 ====================
@@ -365,10 +699,28 @@ public class TaskServiceImpl extends ServiceImpl<TaskMapper, Task> implements Ta
         Task task = getById(taskId);
         if (task == null) throw BusinessException.notFound("任务不存在");
 
-        // 权限校验
+        // 权限校验：任务创建者 或 用户自指派（团队管理人员可为自己分配任务）
         Long currentUserId = UserContext.getCurrentUserId();
         if (currentUserId != null && !currentUserId.equals(task.getCreatorId())) {
-            throw BusinessException.forbidden("只有任务创建者可以指派执行人");
+            // 允许用户为自己分配任务（自指派），需验证是该项目的团队成员
+            if (currentUserId.equals(userId)) {
+                Project project = projectMapper.selectById(task.getProjectId());
+                if (project == null) {
+                    throw BusinessException.notFound("所属项目不存在");
+                }
+                // 验证是团队成员或导师
+                boolean isMember = teamMemberMapper.selectCount(
+                        new LambdaQueryWrapper<TeamMember>()
+                                .eq(TeamMember::getTeamId, project.getTeamId())
+                                .eq(TeamMember::getUserId, currentUserId)) > 0;
+                boolean isTeacher = isApprovedTeacher(project.getTeamId(), currentUserId);
+                if (!isMember && !isTeacher) {
+                    throw BusinessException.forbidden("你不在该项目所属团队中，无法为自己分配任务");
+                }
+                // 自指派通过，继续执行
+            } else {
+                throw BusinessException.forbidden("只有任务创建者可以指派执行人");
+            }
         }
 
         // 检查是否已存在
@@ -404,14 +756,20 @@ public class TaskServiceImpl extends ServiceImpl<TaskMapper, Task> implements Ta
         if (task == null) throw BusinessException.notFound("任务不存在");
 
         Long currentUserId = UserContext.getCurrentUserId();
-        if (currentUserId != null && !currentUserId.equals(task.getCreatorId())) {
-            throw BusinessException.forbidden("只有任务创建者可以移除执行人");
+        // 权限：任务创建者 或 执行人自己申请退出
+        if (currentUserId != null && !currentUserId.equals(task.getCreatorId())
+                && !currentUserId.equals(userId)) {
+            throw BusinessException.forbidden("只有任务创建者可以移除执行人，或执行人自行退出");
         }
 
         taskAssigneeMapper.delete(
                 new LambdaQueryWrapper<TaskAssignee>()
                         .eq(TaskAssignee::getTaskId, taskId)
                         .eq(TaskAssignee::getUserId, userId));
+
+        // 通知被移除的执行人
+        sendNotification(userId, "任务取消指派",
+                "你已被移出任务「" + task.getTitle() + "」");
     }
 
     @Override
@@ -426,16 +784,25 @@ public class TaskServiceImpl extends ServiceImpl<TaskMapper, Task> implements Ta
             throw BusinessException.notFound("你未被指派到此任务");
         }
         assignee.setStatus(accept ? "ACCEPTED" : "REJECTED");
+        Task task = getById(taskId);
         if (accept) {
             assignee.setAcceptedAt(LocalDateTime.now());
             // 接受后任务进入进行中
-            Task task = getById(taskId);
             if (task != null && "TODO".equals(task.getStatus())) {
                 task.setStatus("IN_PROGRESS");
                 updateById(task);
             }
         }
         taskAssigneeMapper.updateById(assignee);
+
+        // 通知任务创建者
+        if (task != null) {
+            User acceptor = userMapper.selectById(currentUserId);
+            String actionText = accept ? "接受了" : "拒绝了";
+            sendNotification(task.getCreatorId(), "任务" + (accept ? "接受" : "拒绝"),
+                    (acceptor != null ? acceptor.getUsername() : "成员") +
+                            " " + actionText + " 任务「" + task.getTitle() + "」");
+        }
     }
 
     @Override
@@ -509,7 +876,11 @@ public class TaskServiceImpl extends ServiceImpl<TaskMapper, Task> implements Ta
 
         Long currentUserId = UserContext.getCurrentUserId();
         if (currentUserId != null && !currentUserId.equals(task.getCreatorId())) {
-            throw BusinessException.forbidden("只有任务创建者可以验收成果");
+            // 也允许导师验收
+            Project project = projectMapper.selectById(task.getProjectId());
+            if (project == null || !isApprovedTeacher(project.getTeamId(), currentUserId)) {
+                throw BusinessException.forbidden("只有任务创建者或导师可以验收成果");
+            }
         }
 
         if (!"APPROVED".equals(request.getAction()) && !"REJECTED".equals(request.getAction())) {
@@ -521,6 +892,29 @@ public class TaskServiceImpl extends ServiceImpl<TaskMapper, Task> implements Ta
         submission.setReviewerId(currentUserId);
         submission.setReviewedAt(LocalDateTime.now());
         taskSubmissionMapper.updateById(submission);
+
+        // ✨ 更新任务状态
+        if ("APPROVED".equals(request.getAction())) {
+            // 验收通过 → 任务完成
+            task.setStatus("DONE");
+            updateById(task);
+            // 通知所有执行人任务已完成
+            List<TaskAssignee> assignees = getAssignees(task.getId());
+            for (TaskAssignee a : assignees) {
+                sendNotification(a.getUserId(), "任务已完成",
+                        "你参与的任务「" + task.getTitle() + "」已通过验收，标记为已完成");
+            }
+        } else {
+            // 退回 → 任务回到进行中，执行人修改后重新提交
+            task.setStatus("IN_PROGRESS");
+            updateById(task);
+            // 通知所有执行人任务被退回
+            List<TaskAssignee> assignees = getAssignees(task.getId());
+            for (TaskAssignee a : assignees) {
+                sendNotification(a.getUserId(), "成果退回",
+                        "你提交的成果「" + submission.getTitle() + "」已被退回，任务「" + task.getTitle() + "」已回到进行中");
+            }
+        }
 
         // 通知提交人
         String actionText = "APPROVED".equals(request.getAction()) ? "通过" : "退回";
@@ -606,6 +1000,82 @@ public class TaskServiceImpl extends ServiceImpl<TaskMapper, Task> implements Ta
         notificationMapper.insert(n);
     }
 
+    /** 通知项目所在团队的所有成员：新任务发布 */
+    private void notifyProjectMembers(Project project, Task task, Long creatorId) {
+        List<TeamMember> members = teamMemberMapper.selectList(
+                new LambdaQueryWrapper<TeamMember>().eq(TeamMember::getTeamId, project.getTeamId()));
+        for (TeamMember m : members) {
+            // 不通知创建者本人
+            if (m.getUserId().equals(creatorId)) continue;
+            sendNotification(m.getUserId(), "新任务发布",
+                    "项目「" + project.getName() + "」发布了新任务：「" + task.getTitle() + "」");
+        }
+    }
+
+    /** 通知所有执行人任务内容有更新 */
+    /**
+     * 灵活解析 deadline 字符串，兼容多种格式（前端 el-date-picker 可能发送不同格式）
+     */
+    private LocalDateTime parseFlexibleDeadline(String deadlineStr) {
+        // 尝试的格式列表（按优先级排列）
+        String[] patterns = {
+                "yyyy-MM-dd HH:mm:ss",      // value-format 正常输出
+                "yyyy-MM-dd'T'HH:mm:ss",    // ISO 格式（Jackson LocalDateTime 默认序列化）
+                "yyyy-MM-dd'T'HH:mm:ss.SSS",// 带毫秒的 ISO
+                "yyyy-MM-dd HH:mm",         // 无秒格式
+                "yyyy-MM-dd'T'HH:mm",       // ISO 无秒
+        };
+
+        for (String pattern : patterns) {
+            try {
+                return LocalDateTime.parse(deadlineStr,
+                        java.time.format.DateTimeFormatter.ofPattern(pattern));
+            } catch (Exception ignored) {
+                // 尝试下一个格式
+            }
+        }
+
+        throw new IllegalArgumentException("无法解析日期: " + deadlineStr);
+    }
+
+    private void notifyAssigneesAboutUpdate(Task existing, String titleChanged, String descChanged) {
+        List<TaskAssignee> assignees = getAssignees(existing.getId());
+        if (assignees.isEmpty()) return;
+
+        String detail = "基本信息";
+        if (titleChanged != null) detail = "任务信息";
+        if (descChanged != null) detail = "任务描述";
+
+        for (TaskAssignee a : assignees) {
+            sendNotification(a.getUserId(), "任务更新",
+                    "你参与的任务「" + existing.getTitle() + "」" + detail + "有更新，请及时查看");
+        }
+    }
+
+    /** 通知所有执行人任务状态变更 */
+    private void notifyAssigneesStatusChange(Task task) {
+        List<TaskAssignee> assignees = getAssignees(task.getId());
+        if (assignees.isEmpty()) return;
+
+        String statusText = statusLabel(task.getStatus());
+        for (TaskAssignee a : assignees) {
+            sendNotification(a.getUserId(), "任务状态变更",
+                    "任务「" + task.getTitle() + "」状态变更为：" + statusText);
+        }
+    }
+
+    private String statusLabel(String status) {
+        switch (status) {
+            case "TODO": return "待处理";
+            case "IN_PROGRESS": return "进行中";
+            case "SUBMITTED": return "待验收";
+            case "REVIEWING": return "验收中";
+            case "DONE": return "已完成";
+            case "OVERDUE": return "已逾期";
+            default: return status;
+        }
+    }
+
     @SuppressWarnings("unchecked")
     private List<String> parseJsonArray(String json) {
         if (json == null || json.isEmpty()) return Collections.emptyList();
@@ -642,5 +1112,132 @@ public class TaskServiceImpl extends ServiceImpl<TaskMapper, Task> implements Ta
             return "[" + list.stream().map(s -> "\"" + s + "\"").collect(Collectors.joining(",")) + "]";
         }
         return "[" + list.stream().map(Object::toString).collect(Collectors.joining(",")) + "]";
+    }
+
+    /**
+     * 从文件URL列表构建文件元数据（供前端展示：预览/下载地址、文件名、类型）
+     * URL格式预期: /api/file/{id} 或 /api/file/{id}/preview 或 /api/file/{id}/download
+     */
+    private List<TaskDetailVO.FileInfoVO> buildFileInfos(List<String> fileUrls) {
+        List<TaskDetailVO.FileInfoVO> infos = new ArrayList<>();
+        if (fileUrls == null) return infos;
+
+        java.util.regex.Pattern idPattern = java.util.regex.Pattern.compile("/file/(\\d+)");
+        for (String url : fileUrls) {
+            TaskDetailVO.FileInfoVO info = new TaskDetailVO.FileInfoVO();
+            java.util.regex.Matcher m = idPattern.matcher(url);
+            if (m.find()) {
+                Long fileId = Long.valueOf(m.group(1));
+                FileEntity file = fileMapper.selectById(fileId);
+                if (file != null) {
+                    info.setName(file.getName());
+                    info.setMimeType(file.getMimeType());
+                    info.setFileSize(file.getFileSize());
+                    info.setPreviewUrl("/api/file/" + fileId + "/preview");
+                    info.setDownloadUrl("/api/file/" + fileId + "/download");
+                } else {
+                    info.setName("未知文件");
+                    info.setPreviewUrl(url);
+                    info.setDownloadUrl(url);
+                }
+            } else {
+                // 无法解析ID，直接用原URL
+                info.setName(extractFileName(url));
+                info.setPreviewUrl(url);
+                info.setDownloadUrl(url);
+            }
+            infos.add(info);
+        }
+        return infos;
+    }
+
+    private String extractFileName(String url) {
+        if (url == null) return "文件";
+        String name = url.substring(url.lastIndexOf('/') + 1);
+        // 去掉query参数
+        int q = name.indexOf('?');
+        if (q > 0) name = name.substring(0, q);
+        return name;
+    }
+
+    /**
+     * 检查当前用户是否是指定团队的已审核导师
+     */
+    private boolean isApprovedTeacher(Long teamId, Long userId) {
+        // 找到用户对应的 teacher 记录
+        Teacher teacher = teacherMapper.selectOne(
+                new LambdaQueryWrapper<Teacher>().eq(Teacher::getUserId, userId));
+        if (teacher == null) return false;
+
+        // 检查 team_teacher 关联
+        Long count = teamTeacherMapper.selectCount(
+                new LambdaQueryWrapper<TeamTeacher>()
+                        .eq(TeamTeacher::getTeamId, teamId)
+                        .eq(TeamTeacher::getTeacherId, teacher.getId())
+                        .eq(TeamTeacher::getStatus, "APPROVED"));
+        return count > 0;
+    }
+
+    @Override
+    public List<Task> getTeacherTeamTasks(Long userId) {
+        // 找到用户对应的 teacher
+        Teacher teacher = teacherMapper.selectOne(
+                new LambdaQueryWrapper<Teacher>().eq(Teacher::getUserId, userId));
+        if (teacher == null) return Collections.emptyList();
+
+        // 获取导师审核通过的所有团队
+        List<TeamTeacher> relations = teamTeacherMapper.selectList(
+                new LambdaQueryWrapper<TeamTeacher>()
+                        .eq(TeamTeacher::getTeacherId, teacher.getId())
+                        .eq(TeamTeacher::getStatus, "APPROVED"));
+        if (relations.isEmpty()) return Collections.emptyList();
+
+        List<Long> teamIds = relations.stream()
+                .map(TeamTeacher::getTeamId)
+                .distinct()
+                .collect(Collectors.toList());
+
+        // 获取这些团队的所有项目（排除已关闭的项目）
+        List<Project> projects = projectMapper.selectList(
+                new LambdaQueryWrapper<Project>()
+                        .in(Project::getTeamId, teamIds)
+                        .ne(Project::getStatus, "CLOSED"));
+        if (projects.isEmpty()) return Collections.emptyList();
+
+        List<Long> projectIds = projects.stream()
+                .map(Project::getId)
+                .collect(Collectors.toList());
+
+        // 获取所有任务
+        List<Task> tasks = list(new LambdaQueryWrapper<Task>()
+                .in(Task::getProjectId, projectIds)
+                .orderByDesc(Task::getCreatedAt));
+
+        checkAndMarkOverdue(tasks);
+        return tasks;
+    }
+
+    @Override
+    public List<Project> getTeacherProjects(Long userId) {
+        Teacher teacher = teacherMapper.selectOne(
+                new LambdaQueryWrapper<Teacher>().eq(Teacher::getUserId, userId));
+        if (teacher == null) return Collections.emptyList();
+
+        List<TeamTeacher> relations = teamTeacherMapper.selectList(
+                new LambdaQueryWrapper<TeamTeacher>()
+                        .eq(TeamTeacher::getTeacherId, teacher.getId())
+                        .eq(TeamTeacher::getStatus, "APPROVED"));
+        if (relations.isEmpty()) return Collections.emptyList();
+
+        List<Long> teamIds = relations.stream()
+                .map(TeamTeacher::getTeamId)
+                .distinct()
+                .collect(Collectors.toList());
+
+        return projectMapper.selectList(
+                new LambdaQueryWrapper<Project>()
+                        .in(Project::getTeamId, teamIds)
+                        .ne(Project::getStatus, "CLOSED")
+                        .orderByDesc(Project::getCreatedAt));
     }
 }

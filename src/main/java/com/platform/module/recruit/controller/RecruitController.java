@@ -138,4 +138,18 @@ public class RecruitController {
         result.put("message", "招募已成功转为项目");
         return Result.success(result);
     }
+
+    /**
+     * 切换继续招募状态（转为项目后，发布者/管理员可切换）
+     * @param continueRecruit 0=停止招募，1=继续招募
+     */
+    @PutMapping("/{id}/continue-recruit")
+    public Result<Map<String, Object>> toggleContinueRecruit(@PathVariable Long id,
+                                                              @RequestParam Integer continueRecruit) {
+        recruitService.toggleContinueRecruit(id, continueRecruit);
+        Map<String, Object> result = new HashMap<>();
+        result.put("continueRecruit", continueRecruit);
+        result.put("message", continueRecruit == 1 ? "已开启继续招募" : "已停止招募");
+        return Result.success(result);
+    }
 }
