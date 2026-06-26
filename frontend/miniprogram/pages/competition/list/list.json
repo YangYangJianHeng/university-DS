@@ -1,0 +1,12 @@
+{
+  "navigationBarTitleText": "竞赛信息",
+  "navigationBarBackgroundColor": "#f5f6f7",
+  "navigationBarTextStyle": "black",
+  "enablePullDownRefresh": true,
+  "usingComponents": {
+    "t-icon": "tdesign-miniprogram/icon/icon",
+    "t-tag": "tdesign-miniprogram/tag/tag",
+    "t-search": "tdesign-miniprogram/search/search",
+    "t-loading": "tdesign-miniprogram/loading/loading"
+  }
+}

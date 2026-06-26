@@ -1,0 +1,45 @@
+<!--pages/competition/list/list.wxml-->
+<wxs src="../../../utils/filter.wxs" module="F" />
+<view class="competition-list-page">
+  <view class="search-bar">
+    <t-search placeholder="搜索竞赛..." value="{{keyword}}" bind:submit="onSearch" bind:clear="onSearchClear" />
+  </view>
+
+  <view class="filter-bar flex-row px-3">
+    <view class="filter-item {{filterLevel === '' ? 'active' : ''}}" bindtap="onFilterLevel" data-level="">全部</view>
+    <view class="filter-item {{filterLevel === 'NATIONAL' ? 'active' : ''}}" bindtap="onFilterLevel" data-level="NATIONAL">国家级</view>
+    <view class="filter-item {{filterLevel === 'PROVINCIAL' ? 'active' : ''}}" bindtap="onFilterLevel" data-level="PROVINCIAL">省级</view>
+    <view class="filter-item {{filterLevel === 'SCHOOL' ? 'active' : ''}}" bindtap="onFilterLevel" data-level="SCHOOL">校级</view>
+  </view>
+
+  <view class="page-container">
+    <block wx:if="{{!loading}}">
+      <block wx:if="{{competitions.length > 0}}">
+        <view class="comp-card card card-hover" wx:for="{{competitions}}" wx:key="id" bindtap="goDetail" data-id="{{item.id}}">
+          <view class="flex-between mb-2">
+            <view class="flex-row">
+              <view class="level-badge {{F.levelClass(item.level)}}">
+                {{levelLabel(item.level)}}
+              </view>
+              <text class="text-bold text-lg ml-2">{{item.name || item.title}}</text>
+            </view>
+          </view>
+          <view class="text-sm text-secondary mb-2">{{item.description || ''}}</view>
+          <view class="flex-between text-sm text-muted">
+            <text>{{item.organizer || ''}}</text>
+            <t-tag size="small" variant="light" theme="{{item.status === 'REGISTERING' ? 'success' : 'default'}}">
+              {{item.status || ''}}
+            </t-tag>
+          </view>
+        </view>
+      </block>
+      <view wx:else class="empty-state">
+        <view class="empty-icon">🏆</view>
+        <view class="empty-text">暂无竞赛信息</view>
+      </view>
+    </block>
+    <view wx:else class="loading-container">
+      <t-loading theme="circular" size="60rpx" />
+    </view>
+  </view>
+</view>

@@ -1,0 +1,85 @@
+<!--pages/teacher/detail/detail.wxml-->
+<wxs src="../../../utils/filter.wxs" module="F" />
+<view class="teacher-detail-page">
+  <block wx:if="{{!loading && teacher.id}}">
+    <view class="detail-header">
+      <view class="header-bg"></view>
+      <view class="header-content flex-row">
+        <t-avatar size="xlarge">
+          {{F.initial(teacher.name || 'T')}}
+        </t-avatar>
+        <view class="ml-3 flex-1">
+          <view class="header-title">{{teacher.name}}</view>
+          <view class="text-sm mt-1" style="color:rgba(255,255,255,0.8);">{{teacher.department || ''}}</view>
+          <view class="text-sm mt-1" style="color:rgba(255,255,255,0.7);">
+            可带 {{teacher.availableSlots || 0}} 个团队
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <view class="card mx-3 mt-3">
+      <view class="section-header">研究方向</view>
+      <view class="desc-content">{{teacher.researchArea || teacher.direction || '未设置'}}</view>
+    </view>
+
+    <view class="card mx-3 mt-3" wx:if="{{teacher.bio || teacher.introduction}}">
+      <view class="section-header">个人简介</view>
+      <view class="desc-content">{{teacher.bio || teacher.introduction}}</view>
+    </view>
+
+    <view class="card mx-3 mt-3" wx:if="{{teacher.email || teacher.phone}}">
+      <view class="section-header">联系方式</view>
+      <view class="info-grid">
+        <view class="info-item" wx:if="{{teacher.email}}">
+          <text class="info-label">邮箱</text>
+          <text class="info-value">{{teacher.email}}</text>
+        </view>
+        <view class="info-item" wx:if="{{teacher.phone}}">
+          <text class="info-label">电话</text>
+          <text class="info-value">{{teacher.phone}}</text>
+        </view>
+      </view>
+    </view>
+
+    <view class="bottom-bar safe-bottom">
+      <t-button theme="primary" size="large" block loading="{{inviting}}" bindtap="handleInvite" class="primary-btn">
+        邀请指导
+      </t-button>
+    </view>
+
+    <!-- 团队选择弹窗 -->
+    <view class="overlay" wx:if="{{showTeamPicker}}" bindtap="onClosePicker">
+      <view class="picker-sheet" catchtap="">
+        <view class="picker-header">
+          <text class="picker-title">选择团队</text>
+          <text class="picker-close" bindtap="onClosePicker">✕</text>
+        </view>
+        <view class="picker-body">
+          <view
+            class="team-option"
+            wx:for="{{myTeams}}"
+            wx:key="id"
+            bindtap="onSelectTeam"
+            data-id="{{item.id}}"
+          >
+            <view class="flex-row">
+              <t-avatar size="small">{{item.name ? item.name.charAt(0) : 'T'}}</t-avatar>
+              <view class="ml-2">
+                <view class="text-bold">{{item.name}}</view>
+                <view class="text-sm text-muted">{{item.memberCount || 0}} 名成员</view>
+              </view>
+            </view>
+            <t-icon name="chevron-right" size="32rpx" color="#c0c4cc" />
+          </view>
+        </view>
+      </view>
+    </view>
+  </block>
+
+  <view wx:else class="loading-container">
+    <t-loading theme="circular" size="60rpx" />
+  </view>
+
+  <view style="height:120rpx;"></view>
+</view>

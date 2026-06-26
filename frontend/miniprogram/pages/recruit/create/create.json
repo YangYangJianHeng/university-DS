@@ -1,0 +1,12 @@
+{
+  "navigationBarTitleText": "发布招募",
+  "usingComponents": {
+    "t-input": "tdesign-miniprogram/input/input",
+    "t-textarea": "tdesign-miniprogram/textarea/textarea",
+    "t-button": "tdesign-miniprogram/button/button",
+    "t-icon": "tdesign-miniprogram/icon/icon",
+    "t-picker": "tdesign-miniprogram/picker/picker",
+    "t-date-time-picker": "tdesign-miniprogram/date-time-picker/date-time-picker",
+    "t-tag": "tdesign-miniprogram/tag/tag"
+  }
+}

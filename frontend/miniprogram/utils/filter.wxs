@@ -1,0 +1,43 @@
+// WXS 过滤器工具函数 - 用于 WXML 模板中调用
+// 微信小程序 WXML 不支持 .charAt() .toUpperCase() 等 JS 方法链调用
+// 必须通过 WXS 模块来调用
+
+/**
+ * 获取字符串首字符并转为大写
+ */
+function initial(str) {
+  if (!str) return '?'
+  var first = getRegExp('^.').exec(str)
+  if (first) {
+    var ch = first[0]
+    // 转为大写
+    var code = ch.charCodeAt(0)
+    if (code >= 97 && code <= 122) {
+      return String.fromCharCode(code - 32)
+    }
+    return ch
+  }
+  return '?'
+}
+
+/**
+ * 转为小写
+ */
+function toLower(str) {
+  if (!str) return ''
+  return str.toString().toLowerCase()
+}
+
+/**
+ * 获取竞赛级别 CSS 类名
+ */
+function levelClass(level) {
+  var lv = toLower(level || 'school')
+  return 'level-' + lv
+}
+
+module.exports = {
+  initial: initial,
+  toLower: toLower,
+  levelClass: levelClass
+}

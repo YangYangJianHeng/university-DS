@@ -1,0 +1,69 @@
+<!--pages/recruit/create/create.wxml-->
+<view class="create-recruit-page">
+  <view class="page-container">
+    <view class="card">
+      <view class="section-header">发布招募信息</view>
+
+      <view class="form-item">
+        <view class="form-label">项目名称 <text class="text-danger">*</text></view>
+        <t-input placeholder="请输入项目/竞赛名称" value="{{form.title}}" bind:change="onFieldChange" data-field="title" />
+      </view>
+
+      <view class="form-item">
+        <view class="form-label">项目类型</view>
+        <t-input placeholder="如：学科竞赛、科研项目、创业项目" value="{{form.projectType}}" bind:change="onFieldChange" data-field="projectType" />
+      </view>
+
+      <view class="form-item">
+        <view class="form-label">招募人数 <text class="text-danger">*</text></view>
+        <t-input type="number" placeholder="请输入招募人数" value="{{form.requiredCount}}" bind:change="onFieldChange" data-field="requiredCount" />
+      </view>
+
+      <view class="form-item">
+        <view class="form-label">截止日期</view>
+        <t-input placeholder="请选择截止日期" value="{{form.deadline}}" disabled bind:tap="showDatePicker" />
+      </view>
+
+      <view class="form-item">
+        <view class="form-label">项目描述</view>
+        <t-textarea
+          placeholder="请描述项目内容、目标、预期成果等"
+          value="{{form.description}}"
+          bind:change="onFieldChange"
+          data-field="description"
+          maxlength="2000"
+          autosize
+        />
+      </view>
+
+      <view class="form-item">
+        <view class="form-label">所需技能</view>
+        <view class="skill-input-row">
+          <t-input placeholder="输入技能后点击添加" value="{{skillInput}}" bind:change="onSkillInputChange" />
+          <t-button theme="primary" size="medium" bind:tap="addSkill">添加</t-button>
+        </view>
+        <view class="skill-tags mt-2" wx:if="{{skills.length > 0}}">
+          <view class="skill-tag" wx:for="{{skills}}" wx:key="*this">
+            <text>{{item}}</text>
+            <t-icon name="close" size="24rpx" bind:tap="removeSkill" data-index="{{index}}" />
+          </view>
+        </view>
+      </view>
+
+      <view class="form-actions mt-4">
+        <t-button theme="primary" size="large" block loading="{{submitting}}" bind:tap="handleSubmit" class="primary-btn">
+          发布招募
+        </t-button>
+      </view>
+    </view>
+  </view>
+
+  <!-- 日期选择器 -->
+  <t-date-time-picker
+    visible="{{dateVisible}}"
+    mode="date"
+    title="选择截止日期"
+    bind:confirm="onDateConfirm"
+    bind:close="onDateClose"
+  />
+</view>

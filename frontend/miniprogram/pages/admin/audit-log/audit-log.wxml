@@ -1,0 +1,50 @@
+<!--pages/admin/audit-log/audit-log.wxml-->
+<view class="page">
+  <!-- 筛选栏 -->
+  <view class="filter-bar">
+    <view class="filter-tabs">
+      <view class="filter-tab {{currentFilter === 'all' ? 'active' : ''}}" bindtap="onFilterChange" data-filter="all">全部</view>
+      <view class="filter-tab {{currentFilter === 'PENDING' ? 'active' : ''}}" bindtap="onFilterChange" data-filter="PENDING">待处理</view>
+      <view class="filter-tab {{currentFilter === 'APPROVED' ? 'active' : ''}}" bindtap="onFilterChange" data-filter="APPROVED">已通过</view>
+      <view class="filter-tab {{currentFilter === 'REJECTED' ? 'active' : ''}}" bindtap="onFilterChange" data-filter="REJECTED">已驳回</view>
+    </view>
+  </view>
+
+  <!-- 日志列表 -->
+  <view class="list">
+    <view wx:if="{{loading}}" class="loading-wrap">
+      <t-loading theme="circular" size="48rpx" text="加载中..." />
+    </view>
+
+    <block wx:elif="{{filteredLogs.length > 0}}">
+      <view class="log-card card" wx:for="{{filteredLogs}}" wx:key="id">
+        <!-- 时间线左侧 -->
+        <view class="timeline">
+          <view class="timeline-dot timeline-dot-{{statusDotClass(item.afterStatus)}}"></view>
+          <view class="timeline-line"></view>
+        </view>
+
+        <!-- 日志内容 -->
+        <view class="log-content">
+          <view class="flex-between">
+            <text class="log-type">{{targetTypeLabel(item.targetType)}}</text>
+            <t-tag size="small" variant="light" theme="{{statusTheme(item.afterStatus)}}">
+              {{statusLabel(item.afterStatus)}}
+            </t-tag>
+          </view>
+          <view class="log-action">{{item.action === 'APPROVE' ? '审核通过' : item.action === 'REJECT' ? '审核驳回' : item.action}}</view>
+          <view class="log-meta">
+            <text>目标ID: {{item.targetId}}</text>
+            <text wx:if="{{item.operatorId}}"> · 操作人: {{item.operatorId}}</text>
+          </view>
+          <view class="log-time">{{item.createdAt || ''}}</view>
+        </view>
+      </view>
+    </block>
+
+    <view wx:else class="empty-state">
+      <view class="empty-icon">📋</view>
+      <view class="empty-text">暂无审核记录</view>
+    </view>
+  </view>
+</view>

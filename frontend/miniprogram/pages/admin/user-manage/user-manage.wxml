@@ -1,0 +1,60 @@
+<!--pages/admin/user-manage/user-manage.wxml-->
+<wxs src="../../../utils/filter.wxs" module="F" />
+<view class="page">
+  <!-- 搜索栏 -->
+  <view class="search-bar">
+    <t-input placeholder="搜索用户名称" value="{{searchKey}}" bind:change="onSearchChange" clearable>
+      <t-icon slot="prefix-icon" name="search" size="36rpx" color="#8c8c8c" />
+    </t-input>
+  </view>
+
+  <!-- 统计 -->
+  <view class="summary-bar">
+    <text class="summary-text">共 {{totalUsers}} 位用户</text>
+    <view class="filter-tabs">
+      <view class="filter-tab {{currentFilter === 'all' ? 'active' : ''}}" bindtap="onFilterChange" data-filter="all">全部</view>
+      <view class="filter-tab {{currentFilter === 'ACTIVE' ? 'active' : ''}}" bindtap="onFilterChange" data-filter="ACTIVE">正常</view>
+      <view class="filter-tab {{currentFilter === 'DISABLED' ? 'active' : ''}}" bindtap="onFilterChange" data-filter="DISABLED">已禁用</view>
+    </view>
+  </view>
+
+  <!-- 用户列表 -->
+  <view class="list">
+    <view wx:if="{{loading}}" class="loading-wrap">
+      <t-loading theme="circular" size="48rpx" text="加载中..." />
+    </view>
+
+    <block wx:elif="{{filteredUsers.length > 0}}">
+      <view class="user-card card" wx:for="{{filteredUsers}}" wx:key="id">
+        <view class="user-avatar">
+          <text class="avatar-text">{{F.initial(item.username || item.name || '?')}}</text>
+        </view>
+        <view class="user-info">
+          <view class="flex-row">
+            <text class="user-name">{{item.username || item.name}}</text>
+            <t-tag size="small" variant="light" theme="{{roleTheme(item.role)}}">
+              {{roleLabel(item.role)}}
+            </t-tag>
+          </view>
+          <view class="user-detail">{{item.major || '未填写专业'}} · {{item.grade || '未知年级'}}</view>
+          <view class="user-detail text-muted">{{item.phone || '未填写手机号'}}</view>
+        </view>
+        <view class="user-actions">
+          <t-button size="small" variant="text" theme="{{item.status === 'ACTIVE' ? 'danger' : 'success'}}"
+            bindtap="handleToggleStatus" data-id="{{item.id}}" data-status="{{item.status}}">
+            {{item.status === 'ACTIVE' ? '禁用' : '启用'}}
+          </t-button>
+          <t-button size="small" variant="text" theme="primary"
+            bindtap="handleChangeRole" data-user="{{item}}">
+            角色
+          </t-button>
+        </view>
+      </view>
+    </block>
+
+    <view wx:else class="empty-state">
+      <view class="empty-icon">👤</view>
+      <view class="empty-text">暂无用户</view>
+    </view>
+  </view>
+</view>

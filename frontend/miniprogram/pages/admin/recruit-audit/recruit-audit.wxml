@@ -1,0 +1,73 @@
+<!--pages/admin/recruit-audit/recruit-audit.wxml-->
+<view class="page">
+  <!-- 统计栏 -->
+  <view class="summary-bar">
+    <text class="summary-text">共 {{totalCount}} 条待审核</text>
+    <view class="filter-tabs">
+      <view class="filter-tab {{currentFilter === 'all' ? 'active' : ''}}" bindtap="onFilterChange" data-filter="all">全部</view>
+      <view class="filter-tab {{currentFilter === 'PENDING' ? 'active' : ''}}" bindtap="onFilterChange" data-filter="PENDING">待审核</view>
+      <view class="filter-tab {{currentFilter === 'APPROVED' ? 'active' : ''}}" bindtap="onFilterChange" data-filter="APPROVED">已通过</view>
+      <view class="filter-tab {{currentFilter === 'REJECTED' ? 'active' : ''}}" bindtap="onFilterChange" data-filter="REJECTED">已驳回</view>
+    </view>
+  </view>
+
+  <!-- 列表 -->
+  <view class="list">
+    <view wx:if="{{loading}}" class="loading-wrap">
+      <t-loading theme="circular" size="48rpx" text="加载中..." />
+    </view>
+
+    <block wx:elif="{{filteredList.length > 0}}">
+      <view class="audit-card card" wx:for="{{filteredList}}" wx:key="id">
+        <!-- 状态标签 -->
+        <view class="flex-between mb-2">
+          <text class="text-bold text-lg">{{item.title || item.projectName || '未命名招募'}}</text>
+          <t-tag size="small" variant="light" theme="{{auditTheme(item.auditStatus)}}">
+            {{auditLabel(item.auditStatus)}}
+          </t-tag>
+        </view>
+
+        <view class="text-sm text-secondary mb-2">{{item.description || '暂无描述'}}</view>
+
+        <view class="meta-row">
+          <text class="meta-item">
+            <t-icon name="user" size="28rpx" color="#8c8c8c" />
+            {{item.publisherName || item.contactPerson || '未知'}}
+          </text>
+          <text class="meta-item">
+            <t-icon name="time" size="28rpx" color="#8c8c8c" />
+            {{item.createdAt || ''}}
+          </text>
+        </view>
+
+        <!-- 技能标签 -->
+        <view class="tag-row mb-3" wx:if="{{item.requiredSkills && item.requiredSkills.length > 0}}">
+          <view class="skill-tag" wx:for="{{item.requiredSkills}}" wx:for-item="skill" wx:key="*this">{{skill}}</view>
+        </view>
+
+        <!-- 操作按钮（仅待审核时显示） -->
+        <view class="flex-row" style="gap:16rpx;" wx:if="{{item.auditStatus === 'PENDING'}}">
+          <t-button theme="success" size="medium" block bindtap="handleApprove" data-id="{{item.id}}">
+            通过
+          </t-button>
+          <t-button theme="danger" size="medium" block bindtap="handleReject" data-id="{{item.id}}">
+            驳回
+          </t-button>
+        </view>
+
+        <!-- 已处理信息 -->
+        <view class="result-info" wx:else>
+          <text class="text-sm text-muted">
+            {{item.auditStatus === 'APPROVED' ? '✅ 已通过' : '❌ 已驳回'}}
+            <text wx:if="{{item.auditTime}}"> · {{item.auditTime}}</text>
+          </text>
+        </view>
+      </view>
+    </block>
+
+    <view wx:else class="empty-state">
+      <view class="empty-icon">📋</view>
+      <view class="empty-text">暂无审核数据</view>
+    </view>
+  </view>
+</view>

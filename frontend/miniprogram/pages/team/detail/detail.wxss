@@ -1,0 +1,74 @@
+/* pages/team/detail/detail.wxss */
+.team-detail-page {
+  min-height: 100vh;
+  background: var(--color-bg);
+}
+
+.detail-header {
+  background: var(--color-header-bg);
+  padding: 32rpx;
+}
+
+.header-content {
+  position: relative;
+  z-index: 1;
+}
+
+.header-title {
+  font-size: 34rpx;
+  font-weight: 700;
+  color: var(--color-text-primary);
+}
+
+.desc-content {
+  font-size: 28rpx;
+  color: var(--color-text-secondary);
+  line-height: 1.8;
+}
+
+.member-item {
+  padding: 20rpx 0;
+  border-bottom: 1rpx solid var(--color-border-light);
+}
+.member-item:last-child {
+  border-bottom: none;
+}
+
+/* 时间线 */
+.timeline-item {
+  display: flex;
+  padding: 16rpx 0;
+}
+
+.timeline-dot {
+  width: 14rpx;
+  height: 14rpx;
+  border-radius: 50%;
+  background: var(--color-primary);
+  margin-top: 6rpx;
+  margin-right: 20rpx;
+  flex-shrink: 0;
+}
+
+.timeline-content {
+  flex: 1;
+  padding-bottom: 16rpx;
+  border-left: 2rpx solid var(--color-border-light);
+  padding-left: 20rpx;
+}
+
+.timeline-item:last-child .timeline-content {
+  border-left-color: transparent;
+}
+
+/* 底部栏 */
+.bottom-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: var(--color-card);
+  padding: 16rpx 32rpx;
+  box-shadow: 0 -1rpx 4rpx rgba(0, 0, 0, 0.06);
+  z-index: 100;
+}

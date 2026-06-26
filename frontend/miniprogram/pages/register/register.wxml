@@ -1,0 +1,97 @@
+<!--pages/register/register.wxml-->
+<view class="register-page">
+  <view class="page-container">
+    <view class="brand-section">
+      <view class="brand-icon">
+        <text class="brand-icon-text">U</text>
+      </view>
+      <view class="brand-title">加入竞赛组队平台</view>
+      <view class="brand-desc">开启你的竞赛之旅</view>
+    </view>
+
+    <view class="register-card card">
+      <view class="section-header">创建账号</view>
+
+      <view class="form-item">
+        <t-input
+          label="手机号"
+          placeholder="请输入手机号"
+          value="{{form.phone}}"
+          bind:change="onFieldChange"
+          data-field="phone"
+          type="number"
+          maxlength="11"
+        />
+      </view>
+
+      <view class="form-item">
+        <t-input
+          label="昵称"
+          placeholder="请输入昵称"
+          value="{{form.username}}"
+          bind:change="onFieldChange"
+          data-field="username"
+        />
+      </view>
+
+      <view class="form-item">
+        <t-input
+          label="密码"
+          type="password"
+          placeholder="请设置密码(6-20位)"
+          value="{{form.password}}"
+          bind:change="onFieldChange"
+          data-field="password"
+        />
+      </view>
+
+      <view class="form-item">
+        <t-input
+          label="确认密码"
+          type="password"
+          placeholder="请再次输入密码"
+          value="{{form.confirmPassword}}"
+          bind:change="onFieldChange"
+          data-field="confirmPassword"
+        />
+      </view>
+
+      <view class="form-item">
+        <t-input
+          label="姓名"
+          placeholder="请输入真实姓名"
+          value="{{form.name}}"
+          bind:change="onFieldChange"
+          data-field="name"
+        />
+      </view>
+
+      <view class="form-item">
+        <t-input
+          label="学号"
+          placeholder="请输入学号"
+          value="{{form.studentId}}"
+          bind:change="onFieldChange"
+          data-field="studentId"
+        />
+      </view>
+
+      <view class="form-actions mt-4">
+        <t-button
+          theme="primary"
+          size="large"
+          block
+          loading="{{loading}}"
+          bind:tap="handleRegister"
+          class="primary-btn"
+        >
+          注册
+        </t-button>
+      </view>
+
+      <view class="login-link" bindtap="goLogin">
+        已有账号？<text class="text-primary">去登录</text>
+      </view>
+    </view>
+  </view>
+</view>

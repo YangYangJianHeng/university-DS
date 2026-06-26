@@ -1,0 +1,14 @@
+/* pages/teacher/list/list.wxss */
+.teacher-list-page {
+  min-height: 100vh;
+  background: var(--color-bg);
+}
+
+.search-bar {
+  background: var(--color-card);
+  padding: 16rpx 24rpx;
+}
+
+.teacher-card {
+  margin-top: 16rpx;
+}

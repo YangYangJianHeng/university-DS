@@ -1,0 +1,152 @@
+<!--pages/index/index.wxml-->
+<view class="index-page">
+  <!-- 登录检查 -->
+  <block wx:if="{{!isLoggedIn}}">
+    <view class="welcome-section">
+      <view class="welcome-card">
+        <view class="welcome-icon">
+          <text class="welcome-icon-text">U</text>
+        </view>
+        <view class="welcome-title">竞赛组队平台</view>
+        <view class="welcome-desc">高效组队 · 精准匹配 · 全流程协作</view>
+        <t-button theme="primary" size="large" block bind:tap="goLogin" class="mt-4">
+          登录 / 注册
+        </t-button>
+      </view>
+    </view>
+    <!-- 特色功能 -->
+    <view class="feature-grid">
+      <view class="feature-card">
+        <view class="feature-icon">🎯</view>
+        <view class="feature-name">智能匹配</view>
+        <view class="feature-desc">基于技能画像精准推荐队友</view>
+      </view>
+      <view class="feature-card">
+        <view class="feature-icon">👥</view>
+        <view class="feature-name">团队协作</view>
+        <view class="feature-desc">任务分配、进度跟踪、即时通讯</view>
+      </view>
+      <view class="feature-card">
+        <view class="feature-icon">🏆</view>
+        <view class="feature-name">竞赛中心</view>
+        <view class="feature-desc">赛事资讯、智能推荐、日历提醒</view>
+      </view>
+      <view class="feature-card">
+        <view class="feature-icon">👨‍🏫</view>
+        <view class="feature-name">导师对接</view>
+        <view class="feature-desc">导师检索、邀请指导、指导记录</view>
+      </view>
+    </view>
+  </block>
+
+  <!-- 已登录 - 工作台 -->
+  <block wx:else>
+    <!-- 问候语 -->
+    <view class="greeting-section">
+      <view class="greeting-text">
+        <text class="greeting-hello">你好，</text>
+        <text class="greeting-name">{{userInfo.username}}</text>
+      </view>
+      <view class="greeting-date">{{todayDate}}</view>
+    </view>
+
+    <!-- 统计卡片 -->
+    <view class="stats-row">
+      <view class="stat-card stat-card-purple" bindtap="goMyTeams">
+        <view class="stat-card-icon">
+          <t-icon name="usergroup" size="36rpx" color="#fff" />
+        </view>
+        <view class="stat-card-num">{{dashboard.teamCount || 0}}</view>
+        <view class="stat-card-label">我的团队</view>
+      </view>
+      <view class="stat-card stat-card-green" bindtap="goMyTasks">
+        <view class="stat-card-icon">
+          <t-icon name="task" size="36rpx" color="#fff" />
+        </view>
+        <view class="stat-card-num">{{dashboard.taskCount || 0}}</view>
+        <view class="stat-card-label">我的任务</view>
+      </view>
+      <view class="stat-card stat-card-orange" bindtap="goNotifications">
+        <view class="stat-card-icon">
+          <t-icon name="notification" size="36rpx" color="#fff" />
+        </view>
+        <view class="stat-card-num">{{unreadCount}}</view>
+        <view class="stat-card-label">未读消息</view>
+      </view>
+      <view class="stat-card stat-card-pink" bindtap="goRecruit">
+        <view class="stat-card-icon">
+          <t-icon name="search" size="36rpx" color="#fff" />
+        </view>
+        <view class="stat-card-num">{{dashboard.activeRecruitCount || 0}}</view>
+        <view class="stat-card-label">活跃招募</view>
+      </view>
+    </view>
+
+    <!-- 快捷功能 -->
+    <view class="quick-actions card">
+      <view class="section-header">快捷功能</view>
+      <t-grid column="{{4}}" border="{{false}}">
+        <t-grid-item text="发布招募" bind:tap="goCreateRecruit">
+          <t-icon slot="image" name="add-circle" size="40rpx" color="#4e6ef2" />
+        </t-grid-item>
+        <t-grid-item text="创建团队" bind:tap="goCreateTeam">
+          <t-icon slot="image" name="usergroup-add" size="40rpx" color="#52c41a" />
+        </t-grid-item>
+        <t-grid-item text="竞赛列表" bind:tap="goCompetitions">
+          <t-icon slot="image" name="flag" size="40rpx" color="#fa8c16" />
+        </t-grid-item>
+        <t-grid-item text="导师列表" bind:tap="goTeachers">
+          <t-icon slot="image" name="user-talk" size="40rpx" color="#a18cd1" />
+        </t-grid-item>
+        <t-grid-item text="成果展厅" bind:tap="goAchievements">
+          <t-icon slot="image" name="museum" size="40rpx" color="#fa709a" />
+        </t-grid-item>
+        <t-grid-item text="竞赛日历" bind:tap="goCalendar">
+          <t-icon slot="image" name="calendar" size="40rpx" color="#4e6ef2" />
+        </t-grid-item>
+        <t-grid-item text="新建项目" bind:tap="goCreateProject">
+          <t-icon slot="image" name="folder-add" size="40rpx" color="#4e6ef2" />
+        </t-grid-item>
+        <t-grid-item text="更多" bind:tap="goMore">
+          <t-icon slot="image" name="ellipsis" size="40rpx" color="#8c8c8c" />
+        </t-grid-item>
+      </t-grid>
+    </view>
+
+    <!-- 最近动态 -->
+    <view class="recent-section card mt-3">
+      <view class="section-header">最近动态</view>
+      <block wx:if="{{recentRecruits.length > 0}}">
+        <view class="recent-item" wx:for="{{recentRecruits}}" wx:key="id" bindtap="goRecruitDetail" data-id="{{item.id}}">
+          <view class="recent-left">
+            <view class="recent-dot"></view>
+            <view class="recent-content">
+              <view class="recent-title">{{item.title || item.projectName}}</view>
+              <view class="recent-meta">
+                <text class="text-muted text-sm">{{item.createdAt || ''}}</text>
+              </view>
+            </view>
+          </view>
+          <t-tag size="small" variant="light" theme="primary">{{item.status || '招募中'}}</t-tag>
+        </view>
+      </block>
+      <view wx:else class="empty-state">
+        <view class="empty-icon">📭</view>
+        <view class="empty-text">暂无动态，去发布招募吧</view>
+      </view>
+    </view>
+
+    <!-- 管理员快捷入口 -->
+    <view class="admin-entry card mt-3" wx:if="{{isAdmin}}" bindtap="goAdmin">
+      <view class="flex-between">
+        <view class="flex-row">
+          <t-icon name="secured" size="32rpx" color="#4e6ef2" />
+          <text class="ml-2 text-bold">管理后台</text>
+        </view>
+        <t-icon name="chevron-right" size="32rpx" color="#8c8c8c" />
+      </view>
+    </view>
+  </block>
+
+  <view class="safe-bottom"></view>
+</view>

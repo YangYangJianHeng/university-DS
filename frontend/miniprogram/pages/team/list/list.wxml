@@ -1,0 +1,79 @@
+<!--pages/team/list/list.wxml-->
+<wxs src="../../../utils/filter.wxs" module="F" />
+<view class="team-list-page">
+  <view class="page-container">
+    <!-- Tab切换 -->
+    <view class="tab-bar flex-row">
+      <view class="tab-item {{currentTab === 'my' ? 'active' : ''}}" bindtap="switchTab" data-tab="my">
+        我的团队
+      </view>
+      <view class="tab-item {{currentTab === 'all' ? 'active' : ''}}" bindtap="switchTab" data-tab="all">
+        所有团队
+      </view>
+    </view>
+
+    <!-- 列表 -->
+    <block wx:if="{{!loading}}">
+      <block wx:if="{{teams.length > 0}}">
+        <view
+          class="team-card card card-hover"
+          wx:for="{{teams}}"
+          wx:key="id"
+          bindtap="goDetail"
+          data-id="{{item.id}}"
+        >
+          <view class="team-header flex-between">
+            <view class="flex-row">
+              <t-avatar size="medium">
+                {{F.initial(item.name || 'T')}}
+              </t-avatar>
+              <view class="ml-2">
+                <view class="team-name text-bold text-lg">{{item.name}}</view>
+                <view class="text-sm text-muted">{{item.memberCount || 0}} 名成员</view>
+              </view>
+            </view>
+            <t-icon name="chevron-right" size="32rpx" color="#c0c4cc" />
+          </view>
+
+          <view class="team-desc text-sm text-secondary mt-2" wx:if="{{item.description}}">
+            {{item.description}}
+          </view>
+
+          <view class="team-footer flex-between mt-2">
+            <view class="flex-row">
+              <view class="member-avatars flex-row">
+                <t-avatar
+                  wx:for="{{item.members || []}}"
+                  wx:for-item="member"
+                  wx:key="id"
+                  wx:if="{{index < 5}}"
+                  size="small"
+                  class="member-avatar"
+                >
+                  {{F.initial(member.name || member.username || '?')}}
+                </t-avatar>
+              </view>
+            </view>
+            <text class="text-sm text-muted">{{item.createdAt || ''}}</text>
+          </view>
+        </view>
+      </block>
+
+      <!-- 空状态 -->
+      <view wx:else class="empty-state">
+        <view class="empty-icon">👥</view>
+        <view class="empty-text">
+          {{currentTab === 'my' ? '你还没有加入任何团队' : '暂无团队'}}
+        </view>
+        <t-button theme="primary" size="medium" bindtap="goRecruit" class="mt-3">
+          去看看招募
+        </t-button>
+      </view>
+    </block>
+
+    <!-- 加载中 -->
+    <view wx:else class="loading-container">
+      <t-loading theme="circular" size="60rpx" />
+    </view>
+  </view>
+</view>

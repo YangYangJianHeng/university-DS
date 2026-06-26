@@ -1,0 +1,21 @@
+/* pages/achievement/list/list.wxss */
+.achievement-list-page {
+  min-height: 100vh;
+  background: var(--color-bg);
+}
+
+.search-bar {
+  background: var(--color-card);
+  padding: 16rpx 24rpx;
+}
+
+.achievement-card {
+  margin-top: 16rpx;
+}
+
+.achievement-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin-right: 16rpx;
+}

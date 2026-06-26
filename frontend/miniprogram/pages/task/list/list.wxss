@@ -1,0 +1,49 @@
+/* pages/task/list/list.wxss */
+.task-list-page {
+  min-height: 100vh;
+  background: var(--color-bg);
+}
+
+.filter-bar {
+  background: var(--color-card);
+  padding: 16rpx 24rpx;
+  gap: 12rpx;
+  overflow-x: auto;
+  white-space: nowrap;
+}
+
+.filter-item {
+  padding: 8rpx 24rpx;
+  border-radius: 4rpx;
+  font-size: 24rpx;
+  color: var(--color-text-secondary);
+  background: var(--color-bg);
+  flex-shrink: 0;
+}
+
+.filter-item.active {
+  background: var(--color-primary);
+  color: #fff;
+}
+
+.task-card {
+  margin-top: 16rpx;
+}
+
+.priority-bar {
+  width: 6rpx;
+  height: 40rpx;
+  border-radius: 3rpx;
+  margin-right: 16rpx;
+  flex-shrink: 0;
+}
+
+.priority-HIGH, .priority-high { background: #f5222d; }
+.priority-MEDIUM, .priority-medium { background: #fa8c16; }
+.priority-LOW, .priority-low { background: #52c41a; }
+
+.task-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

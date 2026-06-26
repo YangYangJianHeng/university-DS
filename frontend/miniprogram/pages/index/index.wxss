@@ -1,0 +1,202 @@
+/* pages/index/index.wxss */
+.index-page {
+  min-height: 100vh;
+  background: var(--color-bg);
+  padding-bottom: 40rpx;
+}
+
+/* ===== 未登录欢迎页 ===== */
+.welcome-section {
+  background: var(--color-header-bg);
+  padding: 60rpx 32rpx 40rpx;
+}
+
+.welcome-card {
+  text-align: center;
+}
+
+.welcome-icon {
+  width: 120rpx;
+  height: 120rpx;
+  border-radius: 50%;
+  background: var(--color-primary-light);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 24rpx;
+}
+
+.welcome-icon-text {
+  font-size: 56rpx;
+  font-weight: 700;
+  color: var(--color-primary);
+}
+
+.welcome-title {
+  font-size: 40rpx;
+  font-weight: 700;
+  color: var(--color-text-primary);
+  margin-bottom: 12rpx;
+}
+
+.welcome-desc {
+  font-size: 26rpx;
+  color: var(--color-text-secondary);
+  margin-bottom: 36rpx;
+}
+
+/* 特色功能网格 */
+.feature-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16rpx;
+  padding: 24rpx;
+}
+
+.feature-card {
+  background: var(--color-card);
+  border-radius: var(--radius-md);
+  padding: 32rpx 24rpx;
+  text-align: center;
+  box-shadow: var(--shadow-sm);
+}
+
+.feature-icon {
+  font-size: 48rpx;
+  margin-bottom: 12rpx;
+}
+
+.feature-name {
+  font-size: 28rpx;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  margin-bottom: 8rpx;
+}
+
+.feature-desc {
+  font-size: 22rpx;
+  color: var(--color-text-muted);
+}
+
+/* ===== 已登录 - 工作台 ===== */
+.greeting-section {
+  background: var(--color-header-bg);
+  padding: 32rpx 32rpx 24rpx;
+}
+
+.greeting-text {
+  margin-bottom: 8rpx;
+}
+
+.greeting-hello {
+  font-size: 26rpx;
+  color: var(--color-text-secondary);
+}
+
+.greeting-name {
+  font-size: 34rpx;
+  font-weight: 700;
+  color: var(--color-text-primary);
+}
+
+.greeting-date {
+  font-size: 24rpx;
+  color: var(--color-text-muted);
+}
+
+/* 统计卡片 */
+.stats-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr 1fr;
+  gap: 12rpx;
+  padding: 0 24rpx;
+  margin-top: 24rpx;
+}
+
+.stat-card {
+  background: var(--color-card);
+  border-radius: var(--radius-md);
+  padding: 20rpx 12rpx;
+  text-align: center;
+  box-shadow: var(--shadow-sm);
+  border: 1rpx solid var(--color-border-light);
+}
+
+.stat-card-icon {
+  margin-bottom: 8rpx;
+}
+
+.stat-card-num {
+  font-size: 36rpx;
+  font-weight: 700;
+  color: var(--color-text-primary);
+}
+
+.stat-card-label {
+  font-size: 20rpx;
+  color: var(--color-text-muted);
+  margin-top: 4rpx;
+}
+
+/* 快捷功能 */
+.quick-actions {
+  margin: 20rpx 24rpx;
+}
+
+/* 最近动态 */
+.recent-section {
+  margin: 0 24rpx;
+}
+
+.recent-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20rpx 0;
+  border-bottom: 1rpx solid var(--color-border-light);
+}
+
+.recent-item:last-child {
+  border-bottom: none;
+}
+
+.recent-left {
+  display: flex;
+  align-items: flex-start;
+  flex: 1;
+  overflow: hidden;
+}
+
+.recent-dot {
+  width: 10rpx;
+  height: 10rpx;
+  border-radius: 50%;
+  background: var(--color-primary);
+  margin-top: 10rpx;
+  margin-right: 16rpx;
+  flex-shrink: 0;
+}
+
+.recent-content {
+  flex: 1;
+  overflow: hidden;
+}
+
+.recent-title {
+  font-size: 28rpx;
+  color: var(--color-text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin-bottom: 4rpx;
+}
+
+.recent-meta {
+  font-size: 22rpx;
+}
+
+/* 管理员入口 */
+.admin-entry {
+  margin: 0 24rpx;
+  padding: 24rpx;
+}

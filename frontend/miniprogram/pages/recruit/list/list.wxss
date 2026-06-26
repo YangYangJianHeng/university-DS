@@ -1,0 +1,96 @@
+/* pages/recruit/list/list.wxss */
+.recruit-list-page {
+  min-height: 100vh;
+  background: var(--color-bg);
+  padding-bottom: 100rpx;
+}
+
+.search-bar {
+  background: var(--color-card);
+  padding: 16rpx 24rpx;
+}
+
+/* 筛选栏 */
+.filter-bar {
+  background: var(--color-card);
+  padding: 16rpx 24rpx;
+  border-bottom: 1rpx solid var(--color-border-light);
+  gap: 8rpx;
+}
+
+.filter-item {
+  padding: 8rpx 24rpx;
+  border-radius: 4rpx;
+  font-size: 24rpx;
+  color: var(--color-text-secondary);
+  background: var(--color-bg);
+}
+
+.filter-item.active {
+  background: var(--color-primary);
+  color: #fff;
+}
+
+/* 招募卡片 */
+.recruit-card {
+  margin-top: 16rpx;
+}
+
+.recruit-title {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin-right: 16rpx;
+}
+
+.recruit-desc {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  line-height: 1.5;
+}
+
+.recruit-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8rpx;
+}
+
+.recruit-footer {
+  padding-top: 12rpx;
+  border-top: 1rpx solid var(--color-border-light);
+}
+
+.recruit-meta-item {
+  gap: 4rpx;
+}
+
+/* 加载更多 */
+.load-more {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 32rpx 0;
+}
+
+/* 发布按钮 */
+.fab-btn {
+  position: fixed;
+  right: 32rpx;
+  bottom: 120rpx;
+  width: 96rpx;
+  height: 96rpx;
+  border-radius: 50%;
+  background: var(--color-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4rpx 12rpx rgba(78, 110, 242, 0.3);
+  z-index: 99;
+}
+.fab-btn:active {
+  transform: scale(0.92);
+  opacity: 0.9;
+}

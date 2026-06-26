@@ -1,0 +1,47 @@
+/* pages/recruit/create/create.wxss */
+.create-recruit-page {
+  min-height: 100vh;
+  background: var(--color-bg);
+}
+
+.form-item {
+  margin-bottom: 28rpx;
+}
+
+.form-label {
+  font-size: 28rpx;
+  font-weight: 500;
+  color: var(--color-text-primary);
+  margin-bottom: 12rpx;
+}
+
+.skill-input-row {
+  display: flex;
+  gap: 16rpx;
+  align-items: center;
+}
+
+.skill-input-row t-input {
+  flex: 1;
+}
+
+.skill-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12rpx;
+}
+
+.skill-tag {
+  display: flex;
+  align-items: center;
+  gap: 8rpx;
+  padding: 8rpx 16rpx;
+  background: var(--color-primary-light);
+  color: var(--color-primary);
+  border-radius: 4rpx;
+  font-size: 24rpx;
+}
+
+.form-actions {
+  margin-top: 48rpx;
+}

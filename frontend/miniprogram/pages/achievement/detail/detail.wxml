@@ -1,0 +1,48 @@
+<!--pages/achievement/detail/detail.wxml-->
+<view class="achievement-detail-page">
+  <block wx:if="{{!loading && achievement.id}}">
+    <view class="detail-header">
+      <view class="header-bg"></view>
+      <view class="header-content">
+        <view class="flex-between">
+          <t-tag size="small" variant="light" theme="warning" wx:if="{{achievement.isFeatured}}">精选</t-tag>
+          <text class="text-sm" style="color:rgba(255,255,255,0.7);">{{achievement.createdAt}}</text>
+        </view>
+        <view class="header-title mt-2">{{achievement.title || achievement.name}}</view>
+        <view class="text-sm mt-1" style="color:rgba(255,255,255,0.7);">
+          {{achievement.teamName || achievement.author || ''}}
+        </view>
+      </view>
+    </view>
+
+    <view class="card mx-3 mt-3">
+      <view class="section-header">成果描述</view>
+      <view class="desc-content">{{achievement.description || '暂无描述'}}</view>
+    </view>
+
+    <view class="card mx-3 mt-3">
+      <view class="section-header">互动数据</view>
+      <view class="stats-row">
+        <view class="stat-item" bindtap="handleLike">
+          <t-icon name="{{isLiked ? 'thumb-up-filled' : 'thumb-up'}}" size="48rpx" color="{{isLiked ? '#4e6ef2' : '#8c8c8c'}}" />
+          <text class="stat-num">{{achievement.likeCount || 0}}</text>
+          <text class="stat-label">点赞</text>
+        </view>
+        <view class="stat-item">
+          <t-icon name="browse" size="48rpx" color="#8c8c8c" />
+          <text class="stat-num">{{achievement.viewCount || 0}}</text>
+          <text class="stat-label">浏览</text>
+        </view>
+        <view class="stat-item" bindtap="handleFavorite">
+          <t-icon name="{{isFavorited ? 'star-filled' : 'star'}}" size="48rpx" color="{{isFavorited ? '#fa8c16' : '#8c8c8c'}}" />
+          <text class="stat-num">{{achievement.favoriteCount || 0}}</text>
+          <text class="stat-label">收藏</text>
+        </view>
+      </view>
+    </view>
+  </block>
+
+  <view wx:else class="loading-container">
+    <t-loading theme="circular" size="60rpx" />
+  </view>
+</view>

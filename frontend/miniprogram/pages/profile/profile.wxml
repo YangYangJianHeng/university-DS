@@ -1,0 +1,90 @@
+<!--pages/profile/profile.wxml-->
+<wxs src="../../utils/filter.wxs" module="F" />
+<view class="profile-page">
+  <!-- 用户信息头部 -->
+  <view class="profile-header">
+    <view class="profile-bg"></view>
+    <view class="profile-info">
+      <t-avatar size="large" class="user-avatar">
+        {{F.initial(userInfo.username || 'U')}}
+      </t-avatar>
+      <view class="user-detail">
+        <view class="user-name">{{userInfo.username || '未登录'}}</view>
+        <view class="user-role">
+          <t-tag size="small" theme="primary" variant="light">{{roleLabel}}</t-tag>
+        </view>
+        <view class="user-phone" wx:if="{{userInfo.phone}}">{{userInfo.phone}}</view>
+      </view>
+    </view>
+    <!-- 统计数据 -->
+    <view class="profile-stats">
+      <view class="stat-item">
+        <text class="stat-num">{{stats.teamCount || 0}}</text>
+        <text class="stat-label">团队</text>
+      </view>
+      <view class="stat-divider"></view>
+      <view class="stat-item">
+        <text class="stat-num">{{stats.projectCount || 0}}</text>
+        <text class="stat-label">项目</text>
+      </view>
+      <view class="stat-divider"></view>
+      <view class="stat-item">
+        <text class="stat-num">{{stats.achievementCount || 0}}</text>
+        <text class="stat-label">成果</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- 快捷入口 -->
+  <view class="quick-actions card">
+    <t-grid column="{{4}}" border="{{false}}">
+      <t-grid-item text="参赛履历" bind:tap="goExperiences">
+        <t-icon slot="image" name="file-paste" size="40rpx" color="#4e6ef2" />
+      </t-grid-item>
+      <t-grid-item text="技能图谱" bind:tap="goSkillRadar">
+        <t-icon slot="image" name="chart-radial" size="40rpx" color="#52c41a" />
+      </t-grid-item>
+      <t-grid-item text="成就徽章" bind:tap="goBadges">
+        <t-icon slot="image" name="medal" size="40rpx" color="#fa8c16" />
+      </t-grid-item>
+      <t-grid-item text="竞赛日历" bind:tap="goCalendar">
+        <t-icon slot="image" name="calendar" size="40rpx" color="#a18cd1" />
+      </t-grid-item>
+    </t-grid>
+  </view>
+
+  <!-- 功能菜单 -->
+  <view class="menu-section mt-3">
+    <t-cell-group>
+      <t-cell title="我的团队" leftIcon="usergroup" arrow bind:click="goMyTeams" />
+      <t-cell title="我的项目" leftIcon="folder-open" arrow bind:click="goMyProjects" />
+      <t-cell title="我的任务" leftIcon="task" arrow bind:click="goMyTasks" />
+      <t-cell title="竞赛收藏" leftIcon="star" arrow bind:click="goFavorites" />
+      <t-cell title="导师信息" leftIcon="user-talk" arrow bind:click="goTeacher" />
+      <t-cell title="文件中心" leftIcon="folder" arrow bind:click="goFiles" />
+    </t-cell-group>
+  </view>
+
+  <view class="menu-section mt-3">
+    <t-cell-group>
+      <t-cell title="设置" leftIcon="setting" arrow bind:click="goSettings" />
+      <t-cell title="关于平台" leftIcon="info-circle" arrow bind:click="goAbout" />
+    </t-cell-group>
+  </view>
+
+  <!-- 管理员入口 -->
+  <view class="menu-section mt-3" wx:if="{{isAdmin}}">
+    <t-cell-group>
+      <t-cell title="管理后台" leftIcon="secured" arrow bind:click="goAdmin" />
+    </t-cell-group>
+  </view>
+
+  <!-- 退出登录 -->
+  <view class="logout-section mt-4">
+    <t-button theme="danger" variant="outline" size="large" block bind:tap="handleLogout">
+      退出登录
+    </t-button>
+  </view>
+
+  <view class="safe-bottom"></view>
+</view>

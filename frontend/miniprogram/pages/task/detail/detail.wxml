@@ -1,0 +1,76 @@
+<!--pages/task/detail/detail.wxml-->
+<view class="task-detail-page">
+  <block wx:if="{{!loading && task.id}}">
+    <view class="detail-header">
+      <view class="header-bg"></view>
+      <view class="header-content">
+        <view class="flex-between">
+          <t-tag size="small" variant="light" theme="{{statusTheme(task.status)}}">
+            {{statusLabel(task.status)}}
+          </t-tag>
+          <text class="text-sm" style="color:rgba(255,255,255,0.7);">{{task.createdAt}}</text>
+        </view>
+        <view class="header-title mt-2">{{task.title || task.name}}</view>
+      </view>
+    </view>
+
+    <view class="card mx-3 mt-3">
+      <view class="section-header">任务信息</view>
+      <view class="info-grid">
+        <view class="info-item">
+          <text class="info-label">优先级</text>
+          <t-tag size="small" variant="light" theme="{{priorityTheme(task.priority)}}">
+            {{task.priority || 'MEDIUM'}}
+          </t-tag>
+        </view>
+        <view class="info-item">
+          <text class="info-label">负责人</text>
+          <text class="info-value">{{task.assigneeName || task.assignee || '未分配'}}</text>
+        </view>
+        <view class="info-item">
+          <text class="info-label">截止日期</text>
+          <text class="info-value">{{task.deadline || task.dueDate || '未设置'}}</text>
+        </view>
+        <view class="info-item">
+          <text class="info-label">所属项目</text>
+          <text class="info-value">{{task.projectName || '未关联'}}</text>
+        </view>
+      </view>
+    </view>
+
+    <view class="card mx-3 mt-3" wx:if="{{task.description}}">
+      <view class="section-header">任务描述</view>
+      <view class="desc-content">{{task.description}}</view>
+    </view>
+
+    <view class="card mx-3 mt-3">
+      <view class="section-header">进度更新</view>
+      <view class="status-actions flex-row" style="gap:16rpx;flex-wrap:wrap;">
+        <t-button
+          wx:if="{{task.status === 'TODO'}}"
+          theme="primary"
+          size="medium"
+          bindtap="updateStatus"
+          data-status="IN_PROGRESS"
+        >开始任务</t-button>
+        <t-button
+          wx:if="{{task.status === 'IN_PROGRESS'}}"
+          theme="success"
+          size="medium"
+          bindtap="updateStatus"
+          data-status="DONE"
+        >完成任务</t-button>
+        <t-button
+          wx:if="{{task.status === 'DONE'}}"
+          variant="outline"
+          size="medium"
+          disabled
+        >已完成 ✓</t-button>
+      </view>
+    </view>
+  </block>
+
+  <view wx:else class="loading-container">
+    <t-loading theme="circular" size="60rpx" />
+  </view>
+</view>

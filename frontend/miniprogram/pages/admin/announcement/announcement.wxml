@@ -1,0 +1,68 @@
+<!--pages/admin/announcement/announcement.wxml-->
+<view class="page">
+  <!-- 发布公告按钮 -->
+  <view class="action-bar">
+    <t-button theme="primary" block bindtap="showCreateDialog">
+      <t-icon name="add" size="36rpx" /> 发布新公告
+    </t-button>
+  </view>
+
+  <!-- 公告列表 -->
+  <view class="list">
+    <view wx:if="{{loading}}" class="loading-wrap">
+      <t-loading theme="circular" size="48rpx" text="加载中..." />
+    </view>
+
+    <block wx:elif="{{announcements.length > 0}}">
+      <view class="announce-card card" wx:for="{{announcements}}" wx:key="id">
+        <view class="card-header flex-between">
+          <view class="flex-row">
+            <text class="text-bold text-lg">{{item.title}}</text>
+            <t-tag size="small" variant="light" theme="{{typeTheme(item.type)}}" class="ml-2">
+              {{typeLabel(item.type)}}
+            </t-tag>
+          </view>
+          <t-button size="small" variant="text" theme="danger" bindtap="handleDelete" data-id="{{item.id}}">
+            删除
+          </t-button>
+        </view>
+        <view class="text-sm text-secondary announce-body">{{item.content}}</view>
+        <view class="text-sm text-muted mt-2">{{item.createdAt || ''}}</view>
+      </view>
+    </block>
+
+    <view wx:else class="empty-state">
+      <view class="empty-icon">📢</view>
+      <view class="empty-text">暂无公告，点击上方按钮发布</view>
+    </view>
+  </view>
+
+  <!-- 发布公告弹窗 -->
+  <t-dialog
+    visible="{{showDialog}}"
+    title="发布公告"
+    confirmBtn="发布"
+    cancelBtn="取消"
+    bind:confirm="handleCreate"
+    bind:cancel="onDialogClose"
+  >
+    <view slot="content" class="dialog-content">
+      <view class="form-group">
+        <view class="form-label">公告类型</view>
+        <view class="type-selector">
+          <view class="type-item {{formType === 'SYSTEM' ? 'active' : ''}}" bindtap="onTypeChange" data-type="SYSTEM">系统</view>
+          <view class="type-item {{formType === 'COMPETITION' ? 'active' : ''}}" bindtap="onTypeChange" data-type="COMPETITION">竞赛</view>
+          <view class="type-item {{formType === 'NOTICE' ? 'active' : ''}}" bindtap="onTypeChange" data-type="NOTICE">通知</view>
+        </view>
+      </view>
+      <view class="form-group">
+        <view class="form-label">公告标题</view>
+        <t-input placeholder="请输入公告标题" value="{{formTitle}}" bind:change="onTitleChange" />
+      </view>
+      <view class="form-group">
+        <view class="form-label">公告内容</view>
+        <t-textarea placeholder="请输入公告内容" value="{{formContent}}" bind:change="onContentChange" autosize maxlength="500" />
+      </view>
+    </view>
+  </t-dialog>
+</view>

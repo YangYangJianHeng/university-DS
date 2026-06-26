@@ -1,0 +1,15 @@
+{
+  "navigationBarTitleText": "招募列表",
+  "navigationBarBackgroundColor": "#f5f6f7",
+  "navigationBarTextStyle": "black",
+  "enablePullDownRefresh": true,
+  "usingComponents": {
+    "t-icon": "tdesign-miniprogram/icon/icon",
+    "t-tag": "tdesign-miniprogram/tag/tag",
+    "t-button": "tdesign-miniprogram/button/button",
+    "t-search": "tdesign-miniprogram/search/search",
+    "t-dropdown-menu": "tdesign-miniprogram/dropdown-menu/dropdown-menu",
+    "t-dropdown-item": "tdesign-miniprogram/dropdown-item/dropdown-item",
+    "t-loading": "tdesign-miniprogram/loading/loading"
+  }
+}

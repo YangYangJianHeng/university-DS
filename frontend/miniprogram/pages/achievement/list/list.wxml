@@ -1,0 +1,40 @@
+<!--pages/achievement/list/list.wxml-->
+<view class="achievement-list-page">
+  <view class="search-bar">
+    <t-search placeholder="搜索成果..." value="{{keyword}}" bind:submit="onSearch" bind:clear="onSearchClear" />
+  </view>
+
+  <view class="page-container">
+    <block wx:if="{{!loading}}">
+      <block wx:if="{{achievements.length > 0}}">
+        <view class="achievement-card card card-hover" wx:for="{{achievements}}" wx:key="id" bindtap="goDetail" data-id="{{item.id}}">
+          <view class="flex-between mb-2">
+            <view class="achievement-title text-bold text-lg flex-1">{{item.title || item.name}}</view>
+            <t-tag size="small" variant="light" theme="warning" wx:if="{{item.isFeatured}}">精选</t-tag>
+          </view>
+          <view class="text-sm text-secondary mb-2">{{item.description || ''}}</view>
+          <view class="flex-between text-sm text-muted">
+            <text>{{item.teamName || item.author || ''}}</text>
+            <view class="flex-row" style="gap:16rpx;">
+              <view class="flex-row">
+                <t-icon name="thumb-up" size="24rpx" />
+                <text class="ml-1">{{item.likeCount || 0}}</text>
+              </view>
+              <view class="flex-row">
+                <t-icon name="browse" size="24rpx" />
+                <text class="ml-1">{{item.viewCount || 0}}</text>
+              </view>
+            </view>
+          </view>
+        </view>
+      </block>
+      <view wx:else class="empty-state">
+        <view class="empty-icon">🏆</view>
+        <view class="empty-text">暂无成果展示</view>
+      </view>
+    </block>
+    <view wx:else class="loading-container">
+      <t-loading theme="circular" size="60rpx" />
+    </view>
+  </view>
+</view>

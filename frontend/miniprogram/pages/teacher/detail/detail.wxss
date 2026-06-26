@@ -1,0 +1,119 @@
+/* pages/teacher/detail/detail.wxss */
+.teacher-detail-page {
+  min-height: 100vh;
+  background: var(--color-bg);
+}
+
+.detail-header {
+  background: var(--color-header-bg);
+  padding: 32rpx;
+}
+
+.header-content {
+  position: relative;
+  z-index: 1;
+}
+
+.header-title {
+  font-size: 34rpx;
+  font-weight: 700;
+  color: var(--color-text-primary);
+}
+
+.info-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24rpx;
+}
+
+.info-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4rpx;
+}
+
+.info-label {
+  font-size: 24rpx;
+  color: var(--color-text-muted);
+}
+
+.info-value {
+  font-size: 28rpx;
+  color: var(--color-text-primary);
+}
+
+.desc-content {
+  font-size: 28rpx;
+  color: var(--color-text-secondary);
+  line-height: 1.8;
+}
+
+.bottom-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: var(--color-card);
+  padding: 16rpx 32rpx;
+  box-shadow: 0 -1rpx 4rpx rgba(0, 0, 0, 0.06);
+  z-index: 100;
+}
+
+/* 弹窗遮罩 */
+.overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 200;
+  display: flex;
+  align-items: flex-end;
+}
+
+.picker-sheet {
+  width: 100%;
+  background: var(--color-card);
+  border-radius: 24rpx 24rpx 0 0;
+  max-height: 60vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.picker-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 28rpx 32rpx 16rpx;
+  border-bottom: 1rpx solid var(--color-border);
+}
+
+.picker-title {
+  font-size: 32rpx;
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.picker-close {
+  font-size: 36rpx;
+  color: var(--color-text-muted);
+  padding: 8rpx;
+}
+
+.picker-body {
+  padding: 16rpx 0;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.team-option {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 24rpx 32rpx;
+}
+
+.team-option:active {
+  background: var(--color-bg);
+}

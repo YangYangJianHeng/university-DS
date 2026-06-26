@@ -1,0 +1,15 @@
+{
+  "navigationBarTitleText": "我的",
+  "navigationBarBackgroundColor": "#f5f6f7",
+  "navigationBarTextStyle": "black",
+  "usingComponents": {
+    "t-cell": "tdesign-miniprogram/cell/cell",
+    "t-cell-group": "tdesign-miniprogram/cell-group/cell-group",
+    "t-avatar": "tdesign-miniprogram/avatar/avatar",
+    "t-tag": "tdesign-miniprogram/tag/tag",
+    "t-button": "tdesign-miniprogram/button/button",
+    "t-icon": "tdesign-miniprogram/icon/icon",
+    "t-grid": "tdesign-miniprogram/grid/grid",
+    "t-grid-item": "tdesign-miniprogram/grid-item/grid-item"
+  }
+}

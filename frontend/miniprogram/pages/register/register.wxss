@@ -1,0 +1,60 @@
+/* pages/register/register.wxss */
+.register-page {
+  min-height: 100vh;
+  background: var(--color-header-bg);
+}
+
+.brand-section {
+  padding-top: 48rpx;
+  text-align: center;
+  margin-bottom: 32rpx;
+}
+
+.brand-icon {
+  width: 88rpx;
+  height: 88rpx;
+  border-radius: 50%;
+  background: var(--color-primary-light);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 20rpx;
+}
+
+.brand-icon-text {
+  font-size: 40rpx;
+  font-weight: 700;
+  color: var(--color-primary);
+}
+
+.brand-title {
+  font-size: 32rpx;
+  font-weight: 700;
+  color: var(--color-text-primary);
+  margin-bottom: 6rpx;
+}
+
+.brand-desc {
+  font-size: 24rpx;
+  color: var(--color-text-secondary);
+}
+
+.register-card {
+  border-radius: var(--radius-lg);
+  padding: 32rpx 28rpx;
+}
+
+.form-item {
+  margin-bottom: 20rpx;
+}
+
+.form-actions {
+  margin-top: 32rpx;
+}
+
+.login-link {
+  text-align: center;
+  margin-top: 24rpx;
+  font-size: 26rpx;
+  color: var(--color-text-muted);
+}

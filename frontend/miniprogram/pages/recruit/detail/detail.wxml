@@ -1,0 +1,164 @@
+<!--pages/recruit/detail/detail.wxml-->
+<wxs src="../../../utils/filter.wxs" module="F" />
+<view class="recruit-detail-page">
+  <block wx:if="{{!loading && recruit.id}}">
+    <!-- 头部信息 -->
+    <view class="detail-header">
+      <view class="header-bg"></view>
+      <view class="header-content">
+        <view class="flex-between">
+          <t-tag size="medium" theme="{{statusTheme(recruit.status)}}" variant="light">
+            {{statusLabel(recruit.status)}}
+          </t-tag>
+          <text class="text-sm text-muted">{{recruit.createdAt}}</text>
+        </view>
+        <view class="header-title">{{recruit.title || recruit.projectName}}</view>
+        <view class="header-meta flex-row mt-2">
+          <view class="flex-row">
+            <t-icon name="user" size="28rpx" color="#fff" />
+            <text class="ml-1" style="color:rgba(255,255,255,0.8);font-size:24rpx;">
+              {{recruit.currentCount || 0}}/{{recruit.requiredCount || recruit.targetCount || 0}}人
+            </text>
+          </view>
+          <view class="flex-row ml-4">
+            <t-icon name="time" size="28rpx" color="#fff" />
+            <text class="ml-1" style="color:rgba(255,255,255,0.8);font-size:24rpx;">
+              截止 {{recruit.deadline || '未设置'}}
+            </text>
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <!-- 基本信息 -->
+    <view class="card mt-3 mx-3">
+      <view class="section-header">基本信息</view>
+      <view class="info-grid">
+        <view class="info-item">
+          <text class="info-label">项目类型</text>
+          <text class="info-value">{{recruit.projectType || '未设置'}}</text>
+        </view>
+        <view class="info-item">
+          <text class="info-label">招募人数</text>
+          <text class="info-value">{{recruit.requiredCount || recruit.targetCount || 0}}人</text>
+        </view>
+        <view class="info-item">
+          <text class="info-label">截止日期</text>
+          <text class="info-value">{{recruit.deadline || '未设置'}}</text>
+        </view>
+        <view class="info-item">
+          <text class="info-label">浏览次数</text>
+          <text class="info-value">{{recruit.viewCount || 0}}</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- 项目描述 -->
+    <view class="card mx-3 mt-3">
+      <view class="section-header">项目描述</view>
+      <view class="desc-content">{{recruit.description || '暂无描述'}}</view>
+    </view>
+
+    <!-- 所需技能 -->
+    <view class="card mx-3 mt-3" wx:if="{{skills.length > 0}}">
+      <view class="section-header">所需技能</view>
+      <view class="tags-wrap">
+        <text class="tag tag-primary" wx:for="{{skills}}" wx:key="*this">{{item}}</text>
+      </view>
+    </view>
+
+    <!-- 发布者信息 -->
+    <view class="card mx-3 mt-3">
+      <view class="section-header">发布者</view>
+      <view class="flex-row">
+        <t-avatar size="medium">
+          {{F.initial(recruit.publisherName || 'U')}}
+        </t-avatar>
+        <view class="ml-2">
+          <view class="text-bold">{{recruit.publisherName || '未知用户'}}</view>
+          <view class="text-sm text-muted">{{recruit.publisherPhone || ''}}</view>
+        </view>
+      </view>
+    </view>
+
+    <!-- 智能匹配 -->
+    <view class="card mx-3 mt-3" wx:if="{{matchResults.length > 0}}">
+      <view class="section-header">
+        智能匹配推荐
+        <text class="text-sm text-muted" style="font-weight:400;">（基于技能相似度）</text>
+      </view>
+      <view class="match-item" wx:for="{{matchResults}}" wx:key="id">
+        <view class="flex-between">
+          <view class="flex-row">
+            <t-avatar size="small">{{F.initial(item.name || 'U')}}</t-avatar>
+            <view class="ml-2">
+              <text class="text-bold">{{item.name || item.username}}</text>
+              <text class="text-sm text-muted ml-2">{{item.major || ''}}</text>
+            </view>
+          </view>
+          <t-tag size="small" theme="success" variant="light">匹配度 {{item.score || item.matchRate || 0}}%</t-tag>
+        </view>
+      </view>
+    </view>
+
+    <!-- 发布者可见：申请管理 -->
+    <view class="card mx-3 mt-3" wx:if="{{isPublisher}}">
+      <view class="section-header">
+        申请管理
+        <text class="text-sm text-muted" style="font-weight:400;">（{{applications.length}} 条申请）</text>
+      </view>
+      <view wx:if="{{loadingApplications}}" class="loading-wrap">
+        <t-loading theme="circular" size="40rpx" text="加载中..." />
+      </view>
+      <block wx:elif="{{applications.length > 0}}">
+        <view class="application-item" wx:for="{{applications}}" wx:key="id">
+          <view class="flex-between">
+            <view class="flex-row">
+              <t-avatar size="small">{{item.applicantName || '?'}}</t-avatar>
+              <view class="ml-2">
+                <view class="text-bold">{{item.applicantName || item.applicantId || '未知用户'}}</view>
+                <view class="text-sm text-muted">{{item.createdAt || ''}}</view>
+              </view>
+            </view>
+            <t-tag size="small" theme="{{applicationStatusTheme(item.status)}}" variant="light">
+              {{applicationStatusLabel(item.status)}}
+            </t-tag>
+          </view>
+          <view class="flex-end mt-2" wx:if="{{item.status === 'PENDING'}}">
+            <t-button size="small" theme="danger" variant="outline" bindtap="handleReject" data-id="{{item.id}}">
+              拒绝
+            </t-button>
+            <t-button size="small" theme="primary" bindtap="handleApprove" data-id="{{item.id}}" class="ml-2">
+              通过
+            </t-button>
+          </view>
+        </view>
+      </block>
+      <view wx:else class="empty-state-sm">
+        <text class="text-muted">暂无申请记录</text>
+      </view>
+    </view>
+
+    <!-- 底部操作栏（发布者不显示申请按钮） -->
+    <view class="bottom-bar safe-bottom" wx:if="{{!isPublisher}}">
+      <t-button
+        theme="primary"
+        size="large"
+        block
+        bind:tap="handleApply"
+        disabled="{{recruit.status !== 'OPEN'}}"
+        loading="{{applying}}"
+        class="primary-btn"
+      >
+        {{recruit.status === 'OPEN' ? '立即申请' : (recruit.status === 'FULL' ? '已满员' : '已结束')}}
+      </t-button>
+    </view>
+  </block>
+
+  <!-- 加载中 -->
+  <view wx:else class="loading-container">
+    <t-loading theme="circular" size="60rpx" />
+  </view>
+
+  <view style="height:120rpx;"></view>
+</view>

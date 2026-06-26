@@ -1,0 +1,14 @@
+{
+  "navigationBarTitleText": "我的团队",
+  "navigationBarBackgroundColor": "#f5f6f7",
+  "navigationBarTextStyle": "black",
+  "enablePullDownRefresh": true,
+  "usingComponents": {
+    "t-icon": "tdesign-miniprogram/icon/icon",
+    "t-tag": "tdesign-miniprogram/tag/tag",
+    "t-button": "tdesign-miniprogram/button/button",
+    "t-avatar": "tdesign-miniprogram/avatar/avatar",
+    "t-loading": "tdesign-miniprogram/loading/loading",
+    "t-empty": "tdesign-miniprogram/empty/empty"
+  }
+}

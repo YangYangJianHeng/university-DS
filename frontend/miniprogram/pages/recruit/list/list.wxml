@@ -1,0 +1,104 @@
+<!--pages/recruit/list/list.wxml-->
+<view class="recruit-list-page">
+  <!-- 搜索栏 -->
+  <view class="search-bar">
+    <t-search
+      placeholder="搜索招募..."
+      value="{{keyword}}"
+      bind:change="onSearchChange"
+      bind:submit="onSearch"
+      bind:clear="onSearchClear"
+    />
+  </view>
+
+  <!-- 筛选 -->
+  <view class="filter-bar flex-between px-3">
+    <view class="filter-item {{filterType === '' ? 'active' : ''}}" bindtap="onFilterType" data-type="">
+      全部
+    </view>
+    <view class="filter-item {{filterType === 'OPEN' ? 'active' : ''}}" bindtap="onFilterType" data-type="OPEN">
+      招募中
+    </view>
+    <view class="filter-item {{filterType === 'FULL' ? 'active' : ''}}" bindtap="onFilterType" data-type="FULL">
+      已满员
+    </view>
+    <view class="filter-item {{filterType === 'CLOSED' ? 'active' : ''}}" bindtap="onFilterType" data-type="CLOSED">
+      已结束
+    </view>
+  </view>
+
+  <!-- 列表 -->
+  <block wx:if="{{!loading}}">
+    <view class="recruit-list px-3">
+      <block wx:if="{{recruits.length > 0}}">
+        <view
+          class="recruit-card card card-hover"
+          wx:for="{{recruits}}"
+          wx:key="id"
+          bindtap="goDetail"
+          data-id="{{item.id}}"
+        >
+          <view class="recruit-header flex-between">
+            <view class="recruit-title text-bold text-lg">{{item.title || item.projectName}}</view>
+            <t-tag size="small" theme="{{statusTheme(item.status)}}" variant="light">
+              {{statusLabel(item.status)}}
+            </t-tag>
+          </view>
+
+          <view class="recruit-desc text-secondary text-sm mt-2">{{item.description || '暂无描述'}}</view>
+
+          <view class="recruit-tags mt-2">
+            <text class="tag tag-primary" wx:for="{{item.skills || item.requiredSkills || []}}" wx:for-item="skill" wx:key="*this">{{skill}}</text>
+          </view>
+
+          <view class="recruit-footer flex-between mt-3">
+            <view class="flex-row">
+              <view class="flex-row recruit-meta-item">
+                <t-icon name="user" size="24rpx" color="#8c8c8c" />
+                <text class="text-sm text-muted ml-1">{{item.currentCount || 0}}/{{item.requiredCount || item.targetCount || 0}}人</text>
+              </view>
+              <view class="flex-row recruit-meta-item ml-3">
+                <t-icon name="time" size="24rpx" color="#8c8c8c" />
+                <text class="text-sm text-muted ml-1">{{item.deadline || ''}}</text>
+              </view>
+            </view>
+            <view class="flex-row">
+              <t-icon name="browse" size="24rpx" color="#8c8c8c" />
+              <text class="text-sm text-muted ml-1">{{item.viewCount || 0}}</text>
+            </view>
+          </view>
+        </view>
+
+        <!-- 加载更多 -->
+        <view class="load-more" wx:if="{{hasMore}}">
+          <t-loading theme="dots" size="40rpx" />
+          <text class="text-sm text-muted ml-2">加载中...</text>
+        </view>
+        <view class="load-more text-muted text-sm" wx:else>
+          没有更多了
+        </view>
+      </block>
+
+      <!-- 空状态 -->
+      <view wx:else class="empty-state">
+        <view class="empty-icon">📋</view>
+        <view class="empty-text">暂无招募信息</view>
+        <t-button theme="primary" size="medium" bindtap="goCreate" class="mt-3">
+          发布招募
+        </t-button>
+      </view>
+    </view>
+  </block>
+
+  <!-- 加载中 -->
+  <view wx:else class="loading-container">
+    <t-loading theme="circular" size="60rpx" />
+  </view>
+
+  <!-- 发布按钮 -->
+  <view class="fab-btn" bindtap="goCreate">
+    <t-icon name="add" size="48rpx" color="#fff" />
+  </view>
+
+  <view class="safe-bottom"></view>
+</view>

@@ -1,0 +1,12 @@
+{
+  "navigationBarTitleText": "成果展厅",
+  "navigationBarBackgroundColor": "#f5f6f7",
+  "navigationBarTextStyle": "black",
+  "enablePullDownRefresh": true,
+  "usingComponents": {
+    "t-icon": "tdesign-miniprogram/icon/icon",
+    "t-tag": "tdesign-miniprogram/tag/tag",
+    "t-loading": "tdesign-miniprogram/loading/loading",
+    "t-search": "tdesign-miniprogram/search/search"
+  }
+}

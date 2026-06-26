@@ -1,0 +1,47 @@
+<!--pages/admin/team-manage/team-manage.wxml-->
+<view class="page">
+  <view class="header-bar">
+    <view class="header-title">团队管理</view>
+    <text class="header-total">共 {{total}} 个团队</text>
+  </view>
+
+  <view class="list">
+    <view wx:if="{{loading}}" class="loading-wrap">
+      <t-loading theme="circular" size="48rpx" text="加载中..." />
+    </view>
+
+    <block wx:elif="{{teams.length > 0}}">
+      <view class="item-card card" wx:for="{{teams}}" wx:key="id">
+        <view class="item-top">
+          <view class="item-avatar">{{item.name ? item.name.charAt(0) : 'T'}}</view>
+          <view class="item-info">
+            <text class="item-name">{{item.name || '--'}}</text>
+            <view class="item-meta">
+              <text>队长ID: {{item.leaderId || '--'}}</text>
+              <text>创建: {{item.createdAt || '--'}}</text>
+            </view>
+          </view>
+        </view>
+        <view class="item-actions">
+          <view class="picker-wrap">
+            <t-tag size="small" variant="light" theme="{{statusTheme(item.status)}}">
+              {{statusLabel(item.status)}}
+            </t-tag>
+            <picker mode="selector" range="{{['ACTIVE','DISBANDED']}}" value="{{['ACTIVE','DISBANDED'].indexOf(item.status)}}"
+              bindchange="handleUpdateStatus" data-id="{{item.id}}">
+              <t-button size="small" variant="text" theme="primary">改状态</t-button>
+            </picker>
+          </view>
+          <t-button size="small" variant="text" theme="danger" bindtap="handleDelete" data-id="{{item.id}}">
+            删除
+          </t-button>
+        </view>
+      </view>
+    </block>
+
+    <view wx:else class="empty-state">
+      <view class="empty-icon">👥</view>
+      <view class="empty-text">暂无团队</view>
+    </view>
+  </view>
+</view>

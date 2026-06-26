@@ -1,0 +1,117 @@
+/* pages/project/detail/detail.wxss */
+.project-detail-page {
+  min-height: 100vh;
+  background: var(--color-bg);
+}
+
+.detail-header {
+  background: var(--color-header-bg);
+  padding: 32rpx;
+}
+
+.header-content {
+  position: relative;
+  z-index: 1;
+}
+
+.header-title {
+  font-size: 34rpx;
+  font-weight: 700;
+  color: var(--color-text-primary);
+}
+
+.desc-content {
+  font-size: 28rpx;
+  color: var(--color-text-secondary);
+  line-height: 1.8;
+}
+
+/* 里程碑 */
+.milestone-item {
+  display: flex;
+  padding: 16rpx 0;
+}
+
+.milestone-dot {
+  width: 18rpx;
+  height: 18rpx;
+  border-radius: 50%;
+  background: var(--color-border);
+  border: 3rpx solid var(--color-border);
+  margin-top: 4rpx;
+  margin-right: 20rpx;
+  flex-shrink: 0;
+}
+
+.milestone-dot.completed {
+  background: #52c41a;
+  border-color: #52c41a;
+}
+
+.milestone-content {
+  flex: 1;
+  padding-bottom: 16rpx;
+  border-left: 2rpx solid var(--color-border-light);
+  padding-left: 20rpx;
+}
+
+.milestone-item:last-child .milestone-content {
+  border-left-color: transparent;
+}
+
+/* 甘特图 */
+.gantt-scroll {
+  width: 100%;
+}
+
+.gantt-chart {
+  min-width: 600rpx;
+}
+
+.gantt-row {
+  display: flex;
+  align-items: center;
+  margin-bottom: 16rpx;
+}
+
+.gantt-label {
+  width: 160rpx;
+  font-size: 24rpx;
+  color: var(--color-text-secondary);
+  flex-shrink: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.gantt-bar-wrap {
+  flex: 1;
+  height: 32rpx;
+  background: var(--color-border-light);
+  border-radius: 4rpx;
+  position: relative;
+}
+
+.gantt-bar {
+  position: absolute;
+  top: 0;
+  height: 100%;
+  border-radius: 4rpx;
+  min-width: 40rpx;
+  display: flex;
+  align-items: center;
+  padding: 0 8rpx;
+}
+
+.gantt-bar-text {
+  font-size: 20rpx;
+  color: #fff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* 风险 */
+.risk-content {
+  padding: 16rpx 0;
+}

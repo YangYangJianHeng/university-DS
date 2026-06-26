@@ -1,0 +1,78 @@
+<!--pages/project/detail/detail.wxml-->
+<view class="project-detail-page">
+  <block wx:if="{{!loading && project.id}}">
+    <!-- 头部 -->
+    <view class="detail-header">
+      <view class="header-bg"></view>
+      <view class="header-content">
+        <view class="header-title">{{project.name}}</view>
+        <view class="flex-row mt-2" style="gap:16rpx;">
+          <t-tag size="small" variant="light" theme="primary">{{project.status || '进行中'}}</t-tag>
+          <text class="text-sm" style="color:rgba(255,255,255,0.7);">{{project.createdAt}}</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- 基本信息 -->
+    <view class="card mx-3 mt-3">
+      <view class="section-header">基本信息</view>
+      <view class="desc-content">{{project.description || '暂无描述'}}</view>
+
+      <!-- 进度 -->
+      <view class="mt-3" wx:if="{{project.progress !== undefined}}">
+        <view class="flex-between mb-2">
+          <text class="text-sm text-secondary">项目进度</text>
+          <text class="text-sm text-primary text-bold">{{project.progress || 0}}%</text>
+        </view>
+        <t-progress percentage="{{project.progress || 0}}" stroke-width="8" />
+      </view>
+    </view>
+
+    <!-- 里程碑 -->
+    <view class="card mx-3 mt-3" wx:if="{{milestones.length > 0}}">
+      <view class="section-header">里程碑</view>
+      <view class="milestone-item" wx:for="{{milestones}}" wx:key="index">
+        <view class="milestone-dot {{item.completed ? 'completed' : ''}}"></view>
+        <view class="milestone-content">
+          <view class="text-bold">{{item.name || item.title}}</view>
+          <view class="text-sm text-muted mt-1">{{item.deadline || item.date || ''}}</view>
+          <view class="text-sm text-secondary mt-1" wx:if="{{item.description}}">{{item.description}}</view>
+        </view>
+      </view>
+    </view>
+
+    <!-- 甘特图（简化版） -->
+    <view class="card mx-3 mt-3" wx:if="{{ganttData.length > 0}}">
+      <view class="section-header">甘特图</view>
+      <scroll-view scroll-x class="gantt-scroll">
+        <view class="gantt-chart">
+          <view class="gantt-row" wx:for="{{ganttData}}" wx:key="index">
+            <view class="gantt-label">{{item.name}}</view>
+            <view class="gantt-bar-wrap">
+              <view class="gantt-bar" style="left:{{item.left}}%;width:{{item.width}}%;background:{{item.color}};">
+                <text class="gantt-bar-text">{{item.name}}</text>
+              </view>
+            </view>
+          </view>
+        </view>
+      </scroll-view>
+    </view>
+
+    <!-- 风险评估 -->
+    <view class="card mx-3 mt-3" wx:if="{{riskInfo}}">
+      <view class="section-header">风险评估</view>
+      <view class="risk-content">
+        <view class="flex-row">
+          <text class="risk-level text-bold" style="color:{{riskColor}};">{{riskInfo.level || '低'}}风险</text>
+        </view>
+        <view class="text-sm text-secondary mt-2">{{riskInfo.description || riskInfo.detail || ''}}</view>
+      </view>
+    </view>
+  </block>
+
+  <view wx:else class="loading-container">
+    <t-loading theme="circular" size="60rpx" />
+  </view>
+
+  <view style="height:40rpx;"></view>
+</view>

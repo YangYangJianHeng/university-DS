@@ -1,0 +1,71 @@
+<!--pages/competition/detail/detail.wxml-->
+<wxs src="../../../utils/filter.wxs" module="F" />
+<view class="comp-detail-page">
+  <block wx:if="{{!loading && competition.id}}">
+    <view class="detail-header">
+      <view class="header-bg"></view>
+      <view class="header-content">
+        <view class="level-badge {{F.levelClass(competition.level)}} mb-2">
+          {{levelLabel(competition.level)}}
+        </view>
+        <view class="header-title">{{competition.name || competition.title}}</view>
+        <view class="flex-row mt-2" style="gap:16rpx;">
+          <t-tag size="small" variant="light" theme="primary">{{competition.status || '未知'}}</t-tag>
+          <text class="text-sm" style="color:rgba(255,255,255,0.7);">{{competition.organizer || ''}}</text>
+        </view>
+      </view>
+    </view>
+
+    <view class="card mx-3 mt-3">
+      <view class="section-header">竞赛详情</view>
+      <view class="desc-content">{{competition.description || '暂无详细信息'}}</view>
+    </view>
+
+    <view class="card mx-3 mt-3">
+      <view class="section-header">赛程信息</view>
+      <view class="info-grid">
+        <view class="info-item">
+          <text class="info-label">报名时间</text>
+          <text class="info-value">{{competition.registerStart || ''}} ~ {{competition.registerEnd || ''}}</text>
+        </view>
+        <view class="info-item">
+          <text class="info-label">比赛时间</text>
+          <text class="info-value">{{competition.startDate || ''}} ~ {{competition.endDate || ''}}</text>
+        </view>
+        <view class="info-item">
+          <text class="info-label">主办方</text>
+          <text class="info-value">{{competition.organizer || '未知'}}</text>
+        </view>
+        <view class="info-item">
+          <text class="info-label">官网</text>
+          <text class="info-value text-primary">{{competition.website || '暂无'}}</text>
+        </view>
+      </view>
+    </view>
+
+    <view class="card mx-3 mt-3">
+      <view class="section-header">奖项设置</view>
+      <view class="desc-content">{{competition.awards || '暂无信息'}}</view>
+    </view>
+
+    <!-- 收藏按钮 -->
+    <view class="bottom-bar safe-bottom">
+      <t-button
+        variant="outline"
+        size="large"
+        block
+        bindtap="handleFavorite"
+        theme="{{isFavorited ? 'primary' : 'default'}}"
+      >
+        <t-icon name="{{isFavorited ? 'star-filled' : 'star'}}" size="32rpx" />
+        {{isFavorited ? '已收藏' : '收藏'}}
+      </t-button>
+    </view>
+  </block>
+
+  <view wx:else class="loading-container">
+    <t-loading theme="circular" size="60rpx" />
+  </view>
+
+  <view style="height:120rpx;"></view>
+</view>

@@ -1,0 +1,112 @@
+<!--pages/team/detail/detail.wxml-->
+<wxs src="../../../utils/filter.wxs" module="F" />
+<view class="team-detail-page">
+  <block wx:if="{{!loading && team.id}}">
+    <!-- 头部 -->
+    <view class="detail-header">
+      <view class="header-bg"></view>
+      <view class="header-content flex-row">
+        <t-avatar size="large">
+          {{F.initial(team.name || 'T')}}
+        </t-avatar>
+        <view class="ml-3 flex-1">
+          <view class="header-title">{{team.name}}</view>
+          <view class="header-meta text-sm mt-1" style="color:rgba(255,255,255,0.8);">
+            {{members.length}} 名成员 · 创建于 {{team.createdAt}}
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <!-- 团队简介 -->
+    <view class="card mx-3 mt-3" wx:if="{{team.description}}">
+      <view class="section-header">团队简介</view>
+      <view class="desc-content">{{team.description}}</view>
+    </view>
+
+    <!-- 成员列表 -->
+    <view class="card mx-3 mt-3">
+      <view class="section-header">团队成员</view>
+      <view class="member-item flex-between" wx:for="{{members}}" wx:key="id">
+        <view class="flex-row">
+          <t-avatar size="medium">
+            {{F.initial(item.name || item.username || '?')}}
+          </t-avatar>
+          <view class="ml-2">
+            <view class="flex-row">
+              <text class="text-bold">{{item.name || item.username}}</text>
+              <t-tag
+                wx:if="{{item.role === 'LEADER' || item.role === 'leader'}}"
+                size="small"
+                theme="warning"
+                variant="light"
+                class="ml-2"
+              >队长</t-tag>
+            </view>
+            <view class="text-sm text-muted">{{item.major || item.department || ''}}</view>
+          </view>
+        </view>
+        <!-- 队长可管理成员 -->
+        <t-button
+          wx:if="{{isLeader && (item.role !== 'LEADER' && item.role !== 'leader')}}"
+          size="small"
+          variant="text"
+          theme="danger"
+          bindtap="handleRemoveMember"
+          data-id="{{item.userId || item.id}}"
+        >移除</t-button>
+      </view>
+    </view>
+
+    <!-- 导师信息 -->
+    <view class="card mx-3 mt-3" wx:if="{{team.teachers && team.teachers.length > 0}}">
+      <view class="section-header">指导教师</view>
+      <view class="member-item" wx:for="{{team.teachers}}" wx:key="id">
+        <view class="flex-row">
+          <t-avatar size="medium">
+            {{F.initial(item.name || 'T')}}
+          </t-avatar>
+          <view class="ml-2">
+            <text class="text-bold">{{item.name}}</text>
+            <view class="text-sm text-muted">{{item.department || ''}}</view>
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <!-- 团队动态 -->
+    <view class="card mx-3 mt-3" wx:if="{{timeline.length > 0}}">
+      <view class="section-header">团队动态</view>
+      <view class="timeline-item" wx:for="{{timeline}}" wx:key="index">
+        <view class="timeline-dot"></view>
+        <view class="timeline-content">
+          <view class="text-sm">{{item.content || item.event}}</view>
+          <view class="text-sm text-muted mt-1">{{item.time || item.createdAt}}</view>
+        </view>
+      </view>
+    </view>
+
+    <!-- 底部操作栏 -->
+    <view class="bottom-bar safe-bottom" wx:if="{{isMember}}">
+      <view class="flex-row" style="gap:16rpx;">
+        <t-button variant="outline" size="large" bindtap="goTasks">查看任务</t-button>
+        <t-button variant="outline" size="large" bindtap="goProjects">查看项目</t-button>
+        <t-button theme="danger" variant="outline" size="large" bindtap="handleLeave" wx:if="{{!isLeader}}">退出团队</t-button>
+      </view>
+    </view>
+
+    <!-- 加入按钮 -->
+    <view class="bottom-bar safe-bottom" wx:if="{{!isMember}}">
+      <t-button theme="primary" size="large" block loading="{{joining}}" bindtap="handleJoin" class="primary-btn">
+        加入团队
+      </t-button>
+    </view>
+  </block>
+
+  <!-- 加载中 -->
+  <view wx:else class="loading-container">
+    <t-loading theme="circular" size="60rpx" />
+  </view>
+
+  <view style="height:120rpx;"></view>
+</view>

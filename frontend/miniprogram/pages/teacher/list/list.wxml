@@ -1,0 +1,39 @@
+<!--pages/teacher/list/list.wxml-->
+<wxs src="../../../utils/filter.wxs" module="F" />
+<view class="teacher-list-page">
+  <view class="search-bar">
+    <t-search placeholder="搜索导师..." value="{{keyword}}" bind:submit="onSearch" bind:clear="onSearchClear" />
+  </view>
+
+  <view class="page-container">
+    <block wx:if="{{!loading}}">
+      <block wx:if="{{teachers.length > 0}}">
+        <view class="teacher-card card card-hover" wx:for="{{teachers}}" wx:key="id" bindtap="goDetail" data-id="{{item.id}}">
+          <view class="flex-row">
+            <t-avatar size="large">
+              {{F.initial(item.name || 'T')}}
+            </t-avatar>
+            <view class="ml-3 flex-1">
+              <view class="flex-between">
+                <text class="text-bold text-lg">{{item.name}}</text>
+                <t-tag size="small" variant="light" theme="primary">{{item.department || ''}}</t-tag>
+              </view>
+              <view class="text-sm text-secondary mt-1">{{item.researchArea || item.direction || '研究方向未设置'}}</view>
+              <view class="text-sm text-muted mt-1">
+                可带团队: {{item.availableSlots || item.maxTeams || 0}}个 · 
+                已指导: {{item.currentTeams || 0}}个
+              </view>
+            </view>
+          </view>
+        </view>
+      </block>
+      <view wx:else class="empty-state">
+        <view class="empty-icon">👨‍🏫</view>
+        <view class="empty-text">暂无导师信息</view>
+      </view>
+    </block>
+    <view wx:else class="loading-container">
+      <t-loading theme="circular" size="60rpx" />
+    </view>
+  </view>
+</view>

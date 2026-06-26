@@ -1,0 +1,278 @@
+/* ===== University Platform Design System ===== */
+page {
+  /* ---- Brand Colors ---- */
+  --color-primary: #4e6ef2;
+  --color-primary-dark: #3b54d4;
+  --color-primary-light: #eef0fe;
+  --color-secondary: #4e6ef2;
+
+  /* ---- Functional Colors ---- */
+  --color-success: #52c41a;
+  --color-warning: #fa8c16;
+  --color-danger: #f5222d;
+  --color-info: #8c8c8c;
+
+  /* ---- Neutral Colors ---- */
+  --color-bg: #f5f6f7;
+  --color-header-bg: #f5f6f7;
+  --color-card: #ffffff;
+  --color-text-primary: #1f1f1f;
+  --color-text-secondary: #595959;
+  --color-text-muted: #8c8c8c;
+  --color-text-placeholder: #bfbfbf;
+  --color-border: #e8e8e8;
+  --color-border-light: #f0f0f0;
+
+  /* ---- Border Radius ---- */
+  --radius-sm: 4rpx;
+  --radius-md: 8rpx;
+  --radius-lg: 12rpx;
+  --radius-xl: 16rpx;
+  --radius-full: 50%;
+
+  /* ---- Shadows ---- */
+  --shadow-sm: 0 1rpx 4rpx rgba(0, 0, 0, 0.04);
+  --shadow-md: 0 2rpx 8rpx rgba(0, 0, 0, 0.06);
+  --shadow-lg: 0 4rpx 16rpx rgba(0, 0, 0, 0.08);
+
+  /* ---- Font ---- */
+  --font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Microsoft YaHei', 'Helvetica Neue', sans-serif;
+
+  /* ---- Base ---- */
+  font-family: var(--font-family);
+  font-size: 28rpx;
+  color: var(--color-text-primary);
+  background-color: var(--color-bg);
+  line-height: 1.6;
+  box-sizing: border-box;
+}
+
+/* ===== Utility Classes ===== */
+
+/* Card */
+.card {
+  background: var(--color-card);
+  border-radius: var(--radius-md);
+  padding: 24rpx;
+  margin-bottom: 16rpx;
+  box-shadow: var(--shadow-sm);
+}
+
+.card-hover:active {
+  opacity: 0.85;
+}
+
+/* Section Header */
+.section-header {
+  font-size: 30rpx;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  padding-bottom: 12rpx;
+  margin-bottom: 20rpx;
+  border-bottom: 1rpx solid var(--color-border);
+}
+
+/* Primary Button */
+.primary-btn {
+  background: var(--color-primary);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-md);
+  font-weight: 500;
+}
+.primary-btn:active {
+  background: var(--color-primary-dark);
+  opacity: 1;
+}
+
+/* Flex helpers */
+.flex-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+}
+.flex-col {
+  display: flex;
+  flex-direction: column;
+}
+.flex-between {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.flex-center {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+.flex-1 {
+  flex: 1;
+}
+
+/* Text helpers */
+.text-muted {
+  color: var(--color-text-muted);
+}
+.text-secondary {
+  color: var(--color-text-secondary);
+}
+.text-primary {
+  color: var(--color-primary);
+}
+.text-danger {
+  color: var(--color-danger);
+}
+.text-success {
+  color: var(--color-success);
+}
+.text-warning {
+  color: var(--color-warning);
+}
+.text-sm {
+  font-size: 24rpx;
+}
+.text-lg {
+  font-size: 32rpx;
+}
+.text-xl {
+  font-size: 36rpx;
+}
+.text-bold {
+  font-weight: 600;
+}
+.text-center {
+  text-align: center;
+}
+
+/* Spacing */
+.mt-1 { margin-top: 8rpx; }
+.mt-2 { margin-top: 16rpx; }
+.mt-3 { margin-top: 24rpx; }
+.mt-4 { margin-top: 32rpx; }
+.mb-1 { margin-bottom: 8rpx; }
+.mb-2 { margin-bottom: 16rpx; }
+.mb-3 { margin-bottom: 24rpx; }
+.mb-4 { margin-bottom: 32rpx; }
+.ml-2 { margin-left: 16rpx; }
+.mr-2 { margin-right: 16rpx; }
+.p-1 { padding: 8rpx; }
+.p-2 { padding: 16rpx; }
+.p-3 { padding: 24rpx; }
+.p-4 { padding: 32rpx; }
+.px-2 { padding-left: 16rpx; padding-right: 16rpx; }
+.px-3 { padding-left: 24rpx; padding-right: 24rpx; }
+.py-2 { padding-top: 16rpx; padding-bottom: 16rpx; }
+.py-3 { padding-top: 24rpx; padding-bottom: 24rpx; }
+
+/* Tag */
+.tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 2rpx 12rpx;
+  border-radius: 4rpx;
+  font-size: 22rpx;
+  font-weight: 500;
+}
+.tag-primary {
+  background: var(--color-primary-light);
+  color: var(--color-primary);
+}
+.tag-success {
+  background: #f6ffed;
+  color: var(--color-success);
+}
+.tag-warning {
+  background: #fff7e6;
+  color: var(--color-warning);
+}
+.tag-danger {
+  background: #fff2f0;
+  color: var(--color-danger);
+}
+.tag-info {
+  background: #f5f5f5;
+  color: var(--color-info);
+}
+
+/* Avatar */
+.avatar-sm { width: 56rpx; height: 56rpx; border-radius: var(--radius-full); }
+.avatar-md { width: 80rpx; height: 80rpx; border-radius: var(--radius-full); }
+.avatar-lg { width: 120rpx; height: 120rpx; border-radius: var(--radius-full); }
+
+/* Empty state */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 80rpx 0;
+  color: var(--color-text-muted);
+}
+.empty-state .empty-icon {
+  font-size: 80rpx;
+  margin-bottom: 24rpx;
+}
+.empty-state .empty-text {
+  font-size: 28rpx;
+}
+
+/* Loading */
+.loading-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 60rpx 0;
+}
+
+/* Safe area bottom */
+.safe-bottom {
+  padding-bottom: constant(safe-area-inset-bottom);
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* Page container */
+.page-container {
+  min-height: 100vh;
+  padding: 20rpx;
+  padding-bottom: calc(20rpx + constant(safe-area-inset-bottom));
+  padding-bottom: calc(20rpx + env(safe-area-inset-bottom));
+}
+
+/* Divider */
+.divider {
+  height: 1rpx;
+  background: var(--color-border);
+  margin: 16rpx 0;
+}
+
+/* Status dot */
+.status-dot {
+  display: inline-block;
+  width: 12rpx;
+  height: 12rpx;
+  border-radius: 50%;
+  margin-right: 8rpx;
+}
+.status-dot-success { background: #52c41a; }
+.status-dot-warning { background: #fa8c16; }
+.status-dot-danger { background: #f5222d; }
+.status-dot-info { background: #8c8c8c; }
+
+/* ===== Override TDesign variables ===== */
+page {
+  --td-brand-color: #4e6ef2;
+  --td-brand-color-light: #eef0fe;
+  --td-brand-color-1: #eef0fe;
+  --td-brand-color-2: #d5dafc;
+  --td-brand-color-3: #afb8f9;
+  --td-brand-color-4: #8996f6;
+  --td-brand-color-5: #4e6ef2;
+  --td-brand-color-6: #435ed4;
+  --td-brand-color-7: #384eb6;
+  --td-brand-color-8: #2d3e98;
+  --td-brand-color-9: #222e7a;
+  --td-brand-color-10: #171e5c;
+  --td-font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Microsoft YaHei', 'Helvetica Neue', sans-serif;
+  --td-radius-default: 6rpx;
+  --td-radius-medium: 8rpx;
+}

@@ -1,0 +1,133 @@
+/* pages/admin/audit-log/audit-log.wxss */
+.page {
+  min-height: 100vh;
+  background: var(--color-bg);
+  padding-bottom: 40rpx;
+}
+
+/* 筛选栏 */
+.filter-bar {
+  background: #fff;
+  padding: 16rpx 24rpx;
+  box-shadow: var(--shadow-sm);
+}
+
+.filter-tabs {
+  display: flex;
+  gap: 16rpx;
+}
+
+.filter-tab {
+  font-size: 24rpx;
+  color: var(--color-text-secondary);
+  padding: 8rpx 20rpx;
+  border-radius: 4rpx;
+  background: var(--color-bg);
+}
+
+.filter-tab.active {
+  background: var(--color-primary);
+  color: #fff;
+}
+
+/* 日志卡片 */
+.log-card {
+  display: flex;
+  margin: 12rpx 24rpx;
+  padding: 24rpx;
+  background: #fff;
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+}
+
+/* 时间线 */
+.timeline {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-right: 20rpx;
+  flex-shrink: 0;
+}
+
+.timeline-dot {
+  width: 20rpx;
+  height: 20rpx;
+  border-radius: 50%;
+  margin-top: 6rpx;
+}
+
+.timeline-dot-warning { background: #fa8c16; }
+.timeline-dot-success { background: #52c41a; }
+.timeline-dot-danger { background: #f5222d; }
+.timeline-dot-default { background: #d9d9d9; }
+
+.timeline-line {
+  width: 2rpx;
+  flex: 1;
+  background: var(--color-border);
+  margin-top: 8rpx;
+  min-height: 40rpx;
+}
+
+/* 日志内容 */
+.log-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.log-type {
+  font-size: 22rpx;
+  color: var(--color-primary);
+  background: var(--color-primary-light);
+  padding: 2rpx 12rpx;
+  border-radius: 4rpx;
+}
+
+.log-action {
+  font-size: 28rpx;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  margin-top: 8rpx;
+}
+
+.log-meta {
+  font-size: 22rpx;
+  color: var(--color-text-secondary);
+  margin-top: 6rpx;
+}
+
+.log-time {
+  font-size: 20rpx;
+  color: var(--color-text-muted);
+  margin-top: 6rpx;
+}
+
+.flex-between {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+/* 空状态 */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 120rpx 0;
+}
+
+.empty-icon {
+  font-size: 80rpx;
+  margin-bottom: 16rpx;
+}
+
+.empty-text {
+  font-size: 28rpx;
+  color: var(--color-text-muted);
+}
+
+.loading-wrap {
+  display: flex;
+  justify-content: center;
+  padding: 80rpx 0;
+}

@@ -1,0 +1,16 @@
+/* pages/project/list/list.wxss */
+.project-list-page {
+  min-height: 100vh;
+  background: var(--color-bg);
+}
+
+.project-card {
+  margin-top: 16rpx;
+}
+
+.project-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin-right: 16rpx;
+}

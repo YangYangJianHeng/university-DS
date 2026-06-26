@@ -1,0 +1,9 @@
+{
+  "name": "university-team-miniprogram",
+  "version": "1.0.0",
+  "description": "大学生竞赛组队匹配与过程管理平台 - 微信小程序",
+  "main": "app.js",
+  "dependencies": {
+    "tdesign-miniprogram": "^1.5.0"
+  }
+}

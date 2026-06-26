@@ -1,0 +1,136 @@
+<!--pages/admin/dashboard/dashboard.wxml-->
+<view class="admin-page">
+  <!-- 顶部统计 -->
+  <view class="stats-header">
+    <view class="header-title">管理后台</view>
+    <view class="stats-row">
+      <view class="stat-card">
+        <view class="stat-num">{{stats.totalUsers || 0}}</view>
+        <view class="stat-label">用户总数</view>
+      </view>
+      <view class="stat-card">
+        <view class="stat-num">{{stats.totalTeams || 0}}</view>
+        <view class="stat-label">团队总数</view>
+      </view>
+      <view class="stat-card">
+        <view class="stat-num">{{stats.totalProjects || 0}}</view>
+        <view class="stat-label">项目总数</view>
+      </view>
+      <view class="stat-card">
+        <view class="stat-num">{{stats.totalCompetitions || 0}}</view>
+        <view class="stat-label">竞赛总数</view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 快捷入口 -->
+  <view class="section">
+    <view class="section-title">快捷管理</view>
+    <view class="menu-grid">
+      <view class="menu-card" bindtap="navigateTo" data-url="/pages/admin/user-manage/user-manage">
+        <view class="menu-icon menu-icon-purple">
+          <t-icon name="user" size="48rpx" color="#4e6ef2" />
+        </view>
+        <view class="menu-name">用户管理</view>
+        <view class="menu-desc">查看、禁用、角色分配</view>
+      </view>
+      <view class="menu-card" bindtap="navigateTo" data-url="/pages/admin/recruit-audit/recruit-audit">
+        <view class="menu-icon menu-icon-orange">
+          <t-icon name="check-circle" size="48rpx" color="#fa8c16" />
+        </view>
+        <view class="menu-name">招募审核</view>
+        <view class="menu-desc">审批招募信息</view>
+        <view wx:if="{{stats.pendingRecruits > 0}}" class="menu-badge">{{stats.pendingRecruits}}</view>
+      </view>
+      <view class="menu-card" bindtap="navigateTo" data-url="/pages/admin/audit-log/audit-log">
+        <view class="menu-icon menu-icon-blue">
+          <t-icon name="file-paste" size="48rpx" color="#409eff" />
+        </view>
+        <view class="menu-name">审核日志</view>
+        <view class="menu-desc">操作记录追溯</view>
+      </view>
+      <view class="menu-card" bindtap="navigateTo" data-url="/pages/admin/announcement/announcement">
+        <view class="menu-icon menu-icon-green">
+          <t-icon name="notification" size="48rpx" color="#67c23a" />
+        </view>
+        <view class="menu-name">公告管理</view>
+        <view class="menu-desc">发布系统公告</view>
+      </view>
+      <!-- 新增：项目管理 -->
+      <view class="menu-card" bindtap="navigateTo" data-url="/pages/admin/project-manage/project-manage">
+        <view class="menu-icon" style="background:#fdf6ec;">
+          <t-icon name="folder" size="48rpx" color="#e6a23c" />
+        </view>
+        <view class="menu-name">项目管理</view>
+        <view class="menu-desc">查看/修改/删除项目</view>
+      </view>
+      <!-- 新增：任务管理 -->
+      <view class="menu-card" bindtap="navigateTo" data-url="/pages/admin/task-manage/task-manage">
+        <view class="menu-icon" style="background:#eef6fe;">
+          <t-icon name="task" size="48rpx" color="#2d8cf0" />
+        </view>
+        <view class="menu-name">任务管理</view>
+        <view class="menu-desc">查看/修改/删除任务</view>
+      </view>
+      <!-- 新增：团队管理 -->
+      <view class="menu-card" bindtap="navigateTo" data-url="/pages/admin/team-manage/team-manage">
+        <view class="menu-icon" style="background:#f0f9eb;">
+          <t-icon name="usergroup" size="48rpx" color="#67c23a" />
+        </view>
+        <view class="menu-name">团队管理</view>
+        <view class="menu-desc">查看/修改/删除团队</view>
+      </view>
+      <!-- 新增：导师管理 -->
+      <view class="menu-card" bindtap="navigateTo" data-url="/pages/admin/teacher-manage/teacher-manage">
+        <view class="menu-icon" style="background:#fef0f0;">
+          <t-icon name="user-avatar" size="48rpx" color="#f56c6c" />
+        </view>
+        <view class="menu-name">导师管理</view>
+        <view class="menu-desc">管理导师库</view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 周报 -->
+  <view class="section">
+    <view class="section-title">
+      <text>数据周报</text>
+      <text class="report-period" bindtap="loadWeeklyReport">刷新</text>
+    </view>
+    <view class="report-card" wx:if="{{weeklyReport}}">
+      <view class="report-row">
+        <view class="report-item">
+          <view class="report-num">{{weeklyReport.newUsers || 0}}</view>
+          <view class="report-label">本周新增用户</view>
+        </view>
+        <view class="report-item">
+          <view class="report-num">{{weeklyReport.activeProjects || 0}}</view>
+          <view class="report-label">活跃项目</view>
+        </view>
+        <view class="report-item">
+          <view class="report-num">{{weeklyReport.completedTasks || 0}}</view>
+          <view class="report-label">完成任务</view>
+        </view>
+        <view class="report-item">
+          <view class="report-num">{{weeklyReport.newCompetitions || 0}}</view>
+          <view class="report-label">新竞赛</view>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 最新公告 -->
+  <view class="section" wx:if="{{announcements.length > 0}}">
+    <view class="section-title">最新公告</view>
+    <view class="announce-list">
+      <view class="announce-item" wx:for="{{announcements}}" wx:key="id" wx:if="{{index < 3}}">
+        <view class="announce-dot"></view>
+        <view class="announce-content">
+          <view class="announce-title">{{item.title}}</view>
+          <view class="announce-text text-ellipsis">{{item.content}}</view>
+          <view class="announce-time">{{item.createdAt}}</view>
+        </view>
+      </view>
+    </view>
+  </view>
+</view>

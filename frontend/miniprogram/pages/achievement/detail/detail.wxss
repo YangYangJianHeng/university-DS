@@ -1,0 +1,52 @@
+/* pages/achievement/detail/detail.wxss */
+.achievement-detail-page {
+  min-height: 100vh;
+  background: var(--color-bg);
+}
+
+.detail-header {
+  background: var(--color-header-bg);
+  padding: 32rpx;
+}
+
+.header-content {
+  position: relative;
+  z-index: 1;
+}
+
+.header-title {
+  font-size: 34rpx;
+  font-weight: 700;
+  color: var(--color-text-primary);
+}
+
+.desc-content {
+  font-size: 28rpx;
+  color: var(--color-text-secondary);
+  line-height: 1.8;
+  white-space: pre-wrap;
+}
+
+.stats-row {
+  display: flex;
+  justify-content: space-around;
+  padding: 24rpx 0;
+}
+
+.stat-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8rpx;
+}
+
+.stat-num {
+  font-size: 36rpx;
+  font-weight: 700;
+  color: var(--color-text-primary);
+}
+
+.stat-label {
+  font-size: 22rpx;
+  color: var(--color-text-muted);
+}

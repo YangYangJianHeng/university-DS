@@ -1,0 +1,95 @@
+/* pages/profile/profile.wxss */
+.profile-page {
+  min-height: 100vh;
+  background: var(--color-bg);
+  padding-bottom: 40rpx;
+}
+
+/* 头部 */
+.profile-header {
+  background: var(--color-header-bg);
+  padding: 0 32rpx 24rpx;
+}
+
+.profile-info {
+  display: flex;
+  align-items: center;
+  padding-top: 40rpx;
+  padding-bottom: 24rpx;
+}
+
+.user-avatar {
+  margin-right: 24rpx;
+  flex-shrink: 0;
+}
+
+.user-detail {
+  flex: 1;
+}
+
+.user-name {
+  font-size: 34rpx;
+  font-weight: 700;
+  color: var(--color-text-primary);
+  margin-bottom: 6rpx;
+}
+
+.user-role {
+  margin-bottom: 4rpx;
+}
+
+.user-phone {
+  font-size: 24rpx;
+  color: var(--color-text-secondary);
+}
+
+/* 统计数据 */
+.profile-stats {
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  background: var(--color-card);
+  border-radius: var(--radius-md);
+  padding: 20rpx 0;
+  border: 1rpx solid var(--color-border-light);
+}
+
+.stat-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: 1;
+}
+
+.stat-num {
+  font-size: 36rpx;
+  font-weight: 700;
+  color: var(--color-primary);
+}
+
+.stat-label {
+  font-size: 22rpx;
+  color: var(--color-text-muted);
+  margin-top: 4rpx;
+}
+
+.stat-divider {
+  width: 1rpx;
+  height: 40rpx;
+  background: var(--color-border-light);
+}
+
+/* 快捷入口 */
+.quick-actions {
+  margin: 20rpx 24rpx 0;
+  border-radius: var(--radius-md);
+}
+
+/* 菜单 */
+.menu-section {
+  margin: 0 24rpx;
+}
+
+.logout-section {
+  padding: 0 40rpx;
+}
