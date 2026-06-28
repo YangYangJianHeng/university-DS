@@ -15,6 +15,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -23,8 +24,67 @@ public class FileServiceImpl extends ServiceImpl<FileMapper, FileEntity> impleme
 
     private static final String UPLOAD_DIR = "./uploads/";
 
+    /** 允许上传的文件扩展名白名单 */
+    private static final Set<String> ALLOWED_EXTENSIONS = Set.of(
+        // 文档
+        "pdf", "doc", "docx", "xls", "xlsx", "ppt", "pptx",
+        "txt", "csv", "md",
+        // 图片（排除了svg避免存储型XSS）
+        "jpg", "jpeg", "png", "gif", "bmp", "webp",
+        // 压缩包
+        "zip", "rar", "7z", "tar", "gz",
+        // 音视频
+        "mp4", "avi", "mov", "mkv", "mp3", "wav", "flac"
+    );
+
+    /** 禁止的 MIME 类型（防止伪造扩展名绕过） */
+    private static final Set<String> BLOCKED_MIME_TYPES = Set.of(
+        "application/x-msdownload",       // .exe
+        "application/x-dosexec",          // .exe (alternative)
+        "application/x-msdos-program",    // .exe/.com
+        "application/x-sh",               // .sh
+        "application/x-bsh",              // .bsh
+        "application/x-csh",              // .csh
+        "application/x-perl",             // .pl
+        "application/x-php",              // .php
+        "application/x-httpd-php",        // .php
+        "application/x-jsp",              // .jsp
+        "application/x-asp",              // .asp
+        "application/x-java-jnlp-file",   // .jnlp
+        "application/x-ms-shortcut"       // .lnk
+    );
+
+    /** 文件最大大小 (50MB) */
+    private static final long MAX_FILE_SIZE = 50 * 1024 * 1024;
+
     @Override
-    public FileEntity upload(MultipartFile file, Long teamId, Long projectId, Long parentId, Long uploaderId) {
+    public FileEntity upload(MultipartFile file, Long teamId, Long projectId, Long taskId, Long parentId, Long uploaderId) {
+        // 1. 校验文件是否为空
+        if (file == null || file.isEmpty()) {
+            throw new BusinessException("请选择要上传的文件");
+        }
+
+        // 2. 校验文件大小
+        if (file.getSize() > MAX_FILE_SIZE) {
+            throw new BusinessException("文件大小不能超过50MB");
+        }
+
+        // 3. 校验文件扩展名白名单
+        String originalFilename = file.getOriginalFilename();
+        String extension = "";
+        if (originalFilename != null && originalFilename.contains(".")) {
+            extension = originalFilename.substring(originalFilename.lastIndexOf(".") + 1).toLowerCase();
+        }
+        if (extension.isEmpty() || !ALLOWED_EXTENSIONS.contains(extension)) {
+            throw new BusinessException("不支持的文件类型: ." + extension);
+        }
+
+        // 4. 校验 MIME 类型黑名单（防止伪造扩展名绕过）
+        String contentType = file.getContentType();
+        if (contentType != null && BLOCKED_MIME_TYPES.contains(contentType.toLowerCase())) {
+            throw new BusinessException("不支持的文件类型");
+        }
+
         // Ensure upload directory exists
         try {
             Files.createDirectories(Paths.get(UPLOAD_DIR));
@@ -33,12 +93,7 @@ public class FileServiceImpl extends ServiceImpl<FileMapper, FileEntity> impleme
         }
 
         // Generate unique file key
-        String originalFilename = file.getOriginalFilename();
-        String extension = "";
-        if (originalFilename != null && originalFilename.contains(".")) {
-            extension = originalFilename.substring(originalFilename.lastIndexOf("."));
-        }
-        String fileKey = UUID.randomUUID().toString() + extension;
+        String fileKey = UUID.randomUUID().toString() + "." + extension;
 
         // Save file to disk
         Path targetPath = Paths.get(UPLOAD_DIR, fileKey);
@@ -57,7 +112,7 @@ public class FileServiceImpl extends ServiceImpl<FileMapper, FileEntity> impleme
         fileEntity.setType("FILE");
         fileEntity.setFileKey(fileKey);
         fileEntity.setFileSize(file.getSize());
-        fileEntity.setMimeType(file.getContentType());
+        fileEntity.setMimeType(contentType);
         fileEntity.setVersion(1);
         fileEntity.setUploaderId(uploaderId);
         fileEntity.setIsDeleted(0);
@@ -78,6 +133,15 @@ public class FileServiceImpl extends ServiceImpl<FileMapper, FileEntity> impleme
             wrapper.eq(FileEntity::getProjectId, projectId);
         }
         wrapper.eq(FileEntity::getParentId, parentId != null ? parentId : 0);
+        return list(wrapper);
+    }
+
+    @Override
+    public List<FileEntity> listFilesByTaskId(Long taskId) {
+        LambdaQueryWrapper<FileEntity> wrapper = new LambdaQueryWrapper<FileEntity>()
+                .eq(FileEntity::getTaskId, taskId)
+                .eq(FileEntity::getIsDeleted, 0)
+                .orderByDesc(FileEntity::getCreatedAt);
         return list(wrapper);
     }
 

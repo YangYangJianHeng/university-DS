@@ -1,5 +1,9 @@
 import request from './request'
 
+export function getCaptcha() {
+  return request.get('/captcha')
+}
+
 export function register(data: any) {
   return request.post('/user/register', data)
 }

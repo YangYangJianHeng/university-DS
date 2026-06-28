@@ -1,1 +1,0 @@
-import{r as e}from"./request-DxApAtjI.js";function n(t){return e.post("/project",t)}function o(t){return e.get(`/project/${t}`)}function c(t){return e.get(`/project/${t}/gantt`)}function s(t){return e.get(`/project/${t}/risk`)}function a(){return e.get("/project/my")}export{o as a,c as b,n as c,s as d,a as g};

@@ -3,6 +3,10 @@ package com.platform.module.team.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.platform.common.exception.BusinessException;
 import com.platform.common.util.UserContext;
+import com.platform.module.collaboration.entity.Task;
+import com.platform.module.collaboration.mapper.TaskMapper;
+import com.platform.module.project.entity.Project;
+import com.platform.module.project.mapper.ProjectMapper;
 import com.platform.module.team.dto.CreateTeamDTO;
 import com.platform.module.team.dto.UpdateTeamDTO;
 import com.platform.module.team.entity.Team;
@@ -35,15 +39,21 @@ public class TeamServiceImpl implements TeamService {
     private final TeamMemberMapper teamMemberMapper;
     private final TeamTeacherMapper teamTeacherMapper;
     private final UserMapper userMapper;
+    private final ProjectMapper projectMapper;
+    private final TaskMapper taskMapper;
 
     public TeamServiceImpl(TeamMapper teamMapper,
                            TeamMemberMapper teamMemberMapper,
                            TeamTeacherMapper teamTeacherMapper,
-                           UserMapper userMapper) {
+                           UserMapper userMapper,
+                           ProjectMapper projectMapper,
+                           TaskMapper taskMapper) {
         this.teamMapper = teamMapper;
         this.teamMemberMapper = teamMemberMapper;
         this.teamTeacherMapper = teamTeacherMapper;
         this.userMapper = userMapper;
+        this.projectMapper = projectMapper;
+        this.taskMapper = taskMapper;
     }
 
     @Override
@@ -53,6 +63,7 @@ public class TeamServiceImpl implements TeamService {
 
         Team team = new Team();
         team.setName(dto.getName());
+        team.setDescription(dto.getDescription());
         team.setRecruitId(dto.getRecruitId());
         team.setLeaderId(currentUserId);
         team.setStatus("ACTIVE");
@@ -207,6 +218,10 @@ public class TeamServiceImpl implements TeamService {
         if (!team.getLeaderId().equals(currentUserId)) {
             throw BusinessException.forbidden("Only team leader can remove members");
         }
+        // 不能移除队长自身
+        if (team.getLeaderId().equals(userId)) {
+            throw BusinessException.badRequest("队长不能移除自己，请转让队长或解散团队");
+        }
 
         teamMemberMapper.delete(
                 new LambdaQueryWrapper<TeamMember>()
@@ -247,23 +262,24 @@ public class TeamServiceImpl implements TeamService {
                 .map(TeamMember::getUserId)
                 .distinct()
                 .collect(Collectors.toList());
-        Map<Long, String> userNameMap = new HashMap<>();
+        Map<Long, User> userMap = new HashMap<>();
         if (!userIds.isEmpty()) {
             List<User> users = userMapper.selectBatchIds(userIds);
             for (User user : users) {
-                userNameMap.put(user.getId(), user.getUsername());
+                userMap.put(user.getId(), user);
             }
         }
 
-        Map<Long, String> finalUserNameMap = userNameMap;
         return members.stream().map(m -> {
+            User user = userMap.get(m.getUserId());
             TeamMemberVO vo = new TeamMemberVO();
             vo.setId(m.getId());
             vo.setTeamId(m.getTeamId());
             vo.setUserId(m.getUserId());
             vo.setRole(m.getRole());
             vo.setJoinedAt(m.getJoinedAt());
-            vo.setUserName(finalUserNameMap.getOrDefault(m.getUserId(), "Unknown"));
+            vo.setUserName(user != null ? user.getUsername() : "Unknown");
+            vo.setAvatar(user != null ? user.getAvatar() : null);
             return vo;
         }).collect(Collectors.toList());
     }
@@ -312,18 +328,21 @@ public class TeamServiceImpl implements TeamService {
                         .orderByAsc(TeamMember::getJoinedAt));
 
         for (TeamMember member : members) {
+            User u = userMapper.selectById(member.getUserId());
+            String uname = u != null ? u.getUsername() : "User#" + member.getUserId();
+
             TimelineEvent event = new TimelineEvent();
             event.setTimestamp(member.getJoinedAt());
 
             if ("LEADER".equals(member.getRole())) {
                 event.setType("LEADER_JOINED");
-                event.setDescription("Team leader joined the team");
+                event.setDescription(uname + " 作为队长创建了团队");
             } else if ("MEMBER".equals(member.getRole())) {
                 event.setType("MEMBER_JOINED");
-                event.setDescription("Member joined the team");
+                event.setDescription(uname + " 加入了团队");
             } else if ("PENDING".equals(member.getRole())) {
                 event.setType("MEMBER_APPLIED");
-                event.setDescription("User applied to join the team");
+                event.setDescription(uname + " 申请加入团队");
             }
             events.add(event);
         }
@@ -347,6 +366,69 @@ public class TeamServiceImpl implements TeamService {
                 approveEvent.setDescription("Teacher approved the invitation");
                 approveEvent.setTimestamp(teacher.getApprovedAt());
                 events.add(approveEvent);
+            }
+        }
+
+        // ---- 团队关联项目的动态 ----
+        List<Project> teamProjects = projectMapper.selectList(
+                new LambdaQueryWrapper<Project>()
+                        .eq(Project::getTeamId, teamId));
+        if (!teamProjects.isEmpty()) {
+            List<Long> projectIds = teamProjects.stream()
+                    .map(Project::getId)
+                    .collect(Collectors.toList());
+
+            // 项目创建事件
+            for (Project project : teamProjects) {
+                User pLeader = userMapper.selectById(project.getLeaderId());
+                String pname = pLeader != null ? pLeader.getUsername() : "User#" + project.getLeaderId();
+
+                TimelineEvent projectEvent = new TimelineEvent();
+                projectEvent.setType("PROJECT_CREATED");
+                projectEvent.setDescription(pname + " 创建了项目: " + project.getName());
+                projectEvent.setTimestamp(project.getCreatedAt());
+                projectEvent.setProjectName(project.getName());
+                events.add(projectEvent);
+            }
+
+            // 任务事件
+            List<Task> tasks = taskMapper.selectList(
+                    new LambdaQueryWrapper<Task>()
+                            .in(Task::getProjectId, projectIds)
+                            .orderByDesc(Task::getCreatedAt));
+
+            for (Task task : tasks) {
+                User creator = userMapper.selectById(task.getCreatorId());
+                String cname = creator != null ? creator.getUsername() : "User#" + task.getCreatorId();
+
+                // 找到任务所属的项目名
+                String projName = teamProjects.stream()
+                        .filter(p -> p.getId().equals(task.getProjectId()))
+                        .findFirst()
+                        .map(Project::getName)
+                        .orElse(null);
+
+                // 任务发布事件
+                TimelineEvent taskEvent = new TimelineEvent();
+                taskEvent.setType("TASK_CREATED");
+                taskEvent.setDescription(cname + " 发布了任务: " + task.getTitle());
+                taskEvent.setTimestamp(task.getCreatedAt());
+                taskEvent.setProjectName(projName);
+                taskEvent.setTaskId(task.getId());
+                taskEvent.setTaskTitle(task.getTitle());
+                events.add(taskEvent);
+
+                // 任务完成事件
+                if ("DONE".equals(task.getStatus()) && task.getUpdatedAt() != null) {
+                    TimelineEvent doneEvent = new TimelineEvent();
+                    doneEvent.setType("TASK_COMPLETED");
+                    doneEvent.setDescription("任务已完成: " + task.getTitle());
+                    doneEvent.setTimestamp(task.getUpdatedAt());
+                    doneEvent.setProjectName(projName);
+                    doneEvent.setTaskId(task.getId());
+                    doneEvent.setTaskTitle(task.getTitle());
+                    events.add(doneEvent);
+                }
             }
         }
 

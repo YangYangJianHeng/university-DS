@@ -126,7 +126,7 @@ import { ElMessage } from 'element-plus'
 import type { FormInstance, FormRules } from 'element-plus'
 import { createRecruit } from '@/api/recruit'
 import { uploadFile } from '@/api/file'
-import { withToken } from '@/utils/url'
+import { prefetchFileUrls, getSignedFileUrl } from '@/utils/url'
 
 const router = useRouter()
 const formRef = ref<FormInstance>()
@@ -157,7 +157,10 @@ async function handleIconUpload(e: Event) {
     const res = await uploadFile(file, 0) // teamId=0 表示临时上传
     // 使用预览URL作为图标路径
     const fileData = res.data
-    form.projectIcon = withToken(`/api/file/${fileData.id}/preview`)
+    // 预加载文件签名URL并设置项目图标
+    const fileId = fileData.id
+    await prefetchFileUrls([fileId])
+    form.projectIcon = getSignedFileUrl(fileId, 'preview')
     ElMessage.success('图标上传成功')
   } catch (_) {} finally {
     iconUploading.value = false

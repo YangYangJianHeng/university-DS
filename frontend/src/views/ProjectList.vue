@@ -138,7 +138,7 @@ function projectAvatarStyle(item: any) {
   return { background: avatarColors[idx] }
 }
 
-onMounted(async () => { await loadProjects(); await loadTeams() })
+onMounted(() => { Promise.all([loadProjects(), loadTeams()]) })
 
 async function loadProjects() {
   loading.value = true

@@ -38,4 +38,8 @@ public class BusinessException extends RuntimeException {
     public static BusinessException conflict(String message) {
         return new BusinessException(409, message);
     }
+
+    public static BusinessException tooManyRequests(String message) {
+        return new BusinessException(429, message);
+    }
 }

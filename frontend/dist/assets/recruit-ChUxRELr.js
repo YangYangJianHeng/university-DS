@@ -1,1 +1,0 @@
-import{r}from"./request-DxApAtjI.js";function u(t){return r.post("/recruit",t)}function c(t){return r.get(`/recruit/${t}`)}function i(t){return r.get("/recruit/list",{params:t})}function n(t){return r.get("/recruit/match",{params:{recruitId:t}})}function a(t){return r.post(`/recruit/${t}/apply`)}export{a,u as c,c as g,i as l,n as m};

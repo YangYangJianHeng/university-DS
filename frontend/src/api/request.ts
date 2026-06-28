@@ -10,7 +10,7 @@ declare module 'axios' {
 
 const request = axios.create({
   baseURL: '/api',
-  timeout: 30000,
+  timeout: 15000,
 })
 
 // 用于401跳转的去重防抖
@@ -57,8 +57,13 @@ function handleUnauthorized() {
   isRedirecting = true
   localStorage.removeItem('token')
   localStorage.removeItem('userInfo')
-  // 使用 router 导航而不是 window.location.href 保持 SPA 体验
-  window.location.href = '/login'
+  // 如果当前已经在公开页面（/, /login, /register），不重定向
+  const path = window.location.pathname
+  if (path === '/' || path === '/login' || path === '/register') {
+    isRedirecting = false
+    return
+  }
+  window.location.href = '/'
 }
 
 export default request

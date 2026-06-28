@@ -28,10 +28,13 @@ import com.platform.module.team.entity.Team;
 import com.platform.module.team.mapper.TeamMapper;
 import com.platform.module.user.entity.User;
 import com.platform.module.user.mapper.UserMapper;
+import org.springframework.transaction.annotation.Transactional;
 import com.platform.module.competition.mapper.CompetitionMapper;
 import org.springframework.stereotype.Service;
 
 import com.platform.module.user.vo.UserVO;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 
 import java.time.LocalDateTime;
 import java.util.*;
@@ -104,6 +107,7 @@ public class AdminServiceImpl implements AdminService {
     }
 
     @Override
+    @CacheEvict(value = {"admin", "publicStats", "competition", "recruit"}, allEntries = true)
     public void updateUserStatus(Long userId, Integer status) {
         User user = userMapper.selectById(userId);
         if (user == null) {
@@ -140,6 +144,7 @@ public class AdminServiceImpl implements AdminService {
     }
 
     @Override
+    @Cacheable(value = "admin", key = "'dashboard'")
     public Map<String, Object> getDashboardStats() {
         Map<String, Object> stats = new HashMap<>();
 
@@ -172,6 +177,7 @@ public class AdminServiceImpl implements AdminService {
     }
 
     @Override
+    @Cacheable(value = "admin", key = "'weeklyReport'")
     public Map<String, Object> getWeeklyReport() {
         Map<String, Object> report = new HashMap<>();
         LocalDateTime now = LocalDateTime.now();
@@ -209,6 +215,7 @@ public class AdminServiceImpl implements AdminService {
     }
 
     @Override
+    @CacheEvict(value = "admin", key = "'announcements'")
     public void createAnnouncement(String title, String content, String type) {
         Announcement announcement = new Announcement();
         announcement.setTitle(title);
@@ -218,6 +225,7 @@ public class AdminServiceImpl implements AdminService {
     }
 
     @Override
+    @Cacheable(value = "admin", key = "'announcements'")
     public List<Map<String, Object>> listAnnouncements() {
         List<Announcement> list = announcementMapper.selectList(
                 new LambdaQueryWrapper<Announcement>().orderByDesc(Announcement::getCreatedAt));
@@ -242,6 +250,7 @@ public class AdminServiceImpl implements AdminService {
 
     @Override
     @org.springframework.transaction.annotation.Transactional
+    @CacheEvict(value = {"recruit", "admin", "publicStats"}, allEntries = true)
     public void auditRecruit(Long recruitId, String action, Long operatorId) {
         Recruit recruit = recruitMapper.selectById(recruitId);
         if (recruit == null) {
@@ -292,6 +301,7 @@ public class AdminServiceImpl implements AdminService {
     }
 
     @Override
+    @CacheEvict(value = {"admin", "publicStats"}, allEntries = true)
     public Project updateProject(Long id, String name, String description, String status) {
         Project project = projectMapper.selectById(id);
         if (project == null) {
@@ -306,6 +316,7 @@ public class AdminServiceImpl implements AdminService {
 
     @Override
     @org.springframework.transaction.annotation.Transactional
+    @CacheEvict(value = {"admin", "publicStats"}, allEntries = true)
     public void deleteProject(Long id) {
         Project project = projectMapper.selectById(id);
         if (project == null) {
@@ -369,6 +380,7 @@ public class AdminServiceImpl implements AdminService {
     }
 
     @Override
+    @CacheEvict(value = {"admin", "publicStats"}, allEntries = true)
     public void deleteTeam(Long id) {
         Team team = teamMapper.selectById(id);
         if (team == null) {
@@ -423,6 +435,8 @@ public class AdminServiceImpl implements AdminService {
     }
 
     @Override
+    @Transactional
+    @CacheEvict(value = {"competition", "admin", "publicStats"}, allEntries = true)
     public Competition createCompetition(Competition competition) {
         competition.setViewCount(0);
         competition.setCollectCount(0);
@@ -431,6 +445,7 @@ public class AdminServiceImpl implements AdminService {
     }
 
     @Override
+    @CacheEvict(value = {"competition", "admin", "publicStats"}, allEntries = true)
     public Competition updateCompetition(Long id, Competition competition) {
         Competition existing = competitionMapper.selectById(id);
         if (existing == null) {
@@ -452,6 +467,7 @@ public class AdminServiceImpl implements AdminService {
     }
 
     @Override
+    @CacheEvict(value = {"competition", "admin", "publicStats"}, allEntries = true)
     public void deleteCompetition(Long id) {
         Competition competition = competitionMapper.selectById(id);
         if (competition == null) {

@@ -8,9 +8,11 @@ import java.util.List;
 
 public interface FileService extends IService<FileEntity> {
 
-    FileEntity upload(MultipartFile file, Long teamId, Long projectId, Long parentId, Long uploaderId);
+    FileEntity upload(MultipartFile file, Long teamId, Long projectId, Long taskId, Long parentId, Long uploaderId);
 
     List<FileEntity> listFiles(Long teamId, Long projectId, Long parentId);
+
+    List<FileEntity> listFilesByTaskId(Long taskId);
 
     String getDownloadUrl(Long id);
 

@@ -8,6 +8,8 @@ import com.platform.common.exception.BusinessException;
 import com.platform.module.competition.entity.Competition;
 import com.platform.module.competition.mapper.CompetitionMapper;
 import com.platform.module.competition.service.CompetitionService;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
@@ -37,18 +39,19 @@ public class CompetitionServiceImpl extends ServiceImpl<CompetitionMapper, Compe
     }
 
     @Override
+    @Cacheable(value = "competition", key = "'recommend:' + #major")
     public List<Competition> getRecommendByMajor(String major) {
         LambdaQueryWrapper<Competition> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(Competition::getStatus, "REGISTERING")
                 .and(w -> w.like(Competition::getCategory, major)
                         .or()
                         .like(Competition::getName, major))
-                .orderByDesc(Competition::getViewCount)
-                .last("LIMIT 10");
-        return list(wrapper);
+                .orderByDesc(Competition::getViewCount);
+        return page(new Page<>(1, 10), wrapper).getRecords();
     }
 
     @Override
+    @CacheEvict(value = "competition", allEntries = true)
     public boolean toggleCollect(Long competitionId, Long userId) {
         Competition competition = getById(competitionId);
         if (competition == null) {
@@ -74,6 +77,7 @@ public class CompetitionServiceImpl extends ServiceImpl<CompetitionMapper, Compe
     }
 
     @Override
+    @Cacheable(value = "competition", key = "'calendar'")
     public List<Map<String, Object>> getCalendarEvents() {
         List<Competition> list = list(new LambdaQueryWrapper<Competition>()
                 .eq(Competition::getStatus, "REGISTERING")

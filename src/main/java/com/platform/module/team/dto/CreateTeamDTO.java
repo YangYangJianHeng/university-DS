@@ -10,5 +10,7 @@ public class CreateTeamDTO {
     @Size(min = 2, max = 50, message = "团队名称长度需要2-50位")
     private String name;
 
+    private String description;
+
     private Long recruitId;
 }

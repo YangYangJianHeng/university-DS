@@ -1,5 +1,6 @@
 package com.platform.module.user.controller;
 
+import com.platform.common.annotation.RateLimit;
 import com.platform.common.result.Result;
 import com.platform.common.util.UserContext;
 import com.platform.module.user.dto.ChangePasswordDTO;
@@ -9,6 +10,7 @@ import com.platform.module.user.dto.UpdateProfileDTO;
 import com.platform.module.user.service.UserService;
 import com.platform.module.user.vo.UserVO;
 import jakarta.validation.Valid;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -21,19 +23,31 @@ import java.util.Map;
 public class UserController {
 
     private final UserService userService;
+    private final StringRedisTemplate redisTemplate;
 
-    public UserController(UserService userService) {
+    public UserController(UserService userService, StringRedisTemplate redisTemplate) {
         this.userService = userService;
+        this.redisTemplate = redisTemplate;
     }
 
+    @RateLimit(prefix = "rate:register", window = 60, maxRequests = 5, message = "注册过于频繁，请1分钟后再试")
     @PostMapping("/register")
     public Result<Void> register(@Valid @RequestBody RegisterDTO dto) {
+        // Validate captcha
+        if (!CaptchaController.validateCaptcha(redisTemplate, dto.getCaptchaKey(), dto.getCaptchaCode())) {
+            return Result.badRequest("验证码错误或已过期");
+        }
         userService.register(dto);
         return Result.success("Registration successful", null);
     }
 
+    @RateLimit(prefix = "rate:login", window = 60, maxRequests = 10, message = "登录过于频繁，请1分钟后再试")
     @PostMapping("/login")
     public Result<Map<String, Object>> login(@Valid @RequestBody LoginDTO dto) {
+        // Validate captcha
+        if (!CaptchaController.validateCaptcha(redisTemplate, dto.getCaptchaKey(), dto.getCaptchaCode())) {
+            return Result.badRequest("验证码错误或已过期");
+        }
         Map<String, Object> result = userService.login(dto);
         return Result.success(result);
     }

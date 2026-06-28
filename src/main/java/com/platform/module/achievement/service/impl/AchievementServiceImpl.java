@@ -7,6 +7,8 @@ import com.platform.common.util.UserContext;
 import com.platform.module.achievement.entity.Achievement;
 import com.platform.module.achievement.mapper.AchievementMapper;
 import com.platform.module.achievement.service.AchievementService;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -24,6 +26,7 @@ public class AchievementServiceImpl extends ServiceImpl<AchievementMapper, Achie
     private final Set<String> userCollects = ConcurrentHashMap.newKeySet();
 
     @Override
+    @CacheEvict(value = {"achievement", "publicStats"}, allEntries = true)
     public Achievement submit(Achievement achievement) {
         // 输入校验
         if (achievement.getTitle() == null || achievement.getTitle().trim().isEmpty()) {
@@ -44,6 +47,7 @@ public class AchievementServiceImpl extends ServiceImpl<AchievementMapper, Achie
     }
 
     @Override
+    @CacheEvict(value = "achievement", allEntries = true)
     public void setFeatured(Long id) {
         Achievement achievement = getById(id);
         if (achievement == null) {
@@ -103,6 +107,7 @@ public class AchievementServiceImpl extends ServiceImpl<AchievementMapper, Achie
     }
 
     @Override
+    @Cacheable(value = "achievement", key = "'stats'")
     public Map<String, Object> getStatistics() {
         Map<String, Object> stats = new HashMap<>();
         long total = count();
@@ -126,6 +131,7 @@ public class AchievementServiceImpl extends ServiceImpl<AchievementMapper, Achie
     }
 
     @Override
+    @CacheEvict(value = "achievement", key = "'sharePosts'")
     public Achievement createSharePost(Achievement achievement) {
         if (achievement.getTitle() == null || achievement.getTitle().trim().isEmpty()) {
             throw BusinessException.badRequest("分享标题不能为空");
@@ -140,6 +146,7 @@ public class AchievementServiceImpl extends ServiceImpl<AchievementMapper, Achie
     }
 
     @Override
+    @Cacheable(value = "achievement", key = "'sharePosts'")
     public List<Achievement> getSharePosts() {
         return list(new LambdaQueryWrapper<Achievement>()
                 .eq(Achievement::getType, "SHARE")

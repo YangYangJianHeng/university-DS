@@ -3,6 +3,13 @@ import { createRouter, createWebHistory } from 'vue-router'
 const router = createRouter({
   history: createWebHistory(),
   routes: [
+    // ===== PUBLIC ROUTES =====
+    {
+      path: '/',
+      name: 'Landing',
+      component: () => import('@/views/LandingPage.vue'),
+      meta: { title: '组队星' },
+    },
     {
       path: '/login',
       name: 'Login',
@@ -15,97 +22,103 @@ const router = createRouter({
       component: () => import('@/views/Register.vue'),
       meta: { title: '注册' },
     },
+    // ===== AUTHENTICATED ROUTES =====
     {
-      path: '/',
+      path: '/dashboard',
       component: () => import('@/views/layout/Layout.vue'),
-      redirect: '/dashboard',
       children: [
         {
-          path: 'dashboard',
+          path: '',
           name: 'Dashboard',
           component: () => import('@/views/Dashboard.vue'),
           meta: { title: '工作台', icon: 'HomeFilled' },
         },
         {
-          path: 'recruit',
+          path: '/recruit',
           name: 'Recruit',
           component: () => import('@/views/RecruitList.vue'),
           meta: { title: '招募广场', icon: 'Search' },
         },
         {
-          path: 'recruit/create',
+          path: '/recruit/create',
           name: 'CreateRecruit',
           component: () => import('@/views/CreateRecruit.vue'),
           meta: { title: '发布招募' },
         },
         {
-          path: 'recruit/:id',
+          path: '/recruit/:id',
           name: 'RecruitDetail',
           component: () => import('@/views/RecruitDetail.vue'),
           meta: { title: '招募详情' },
         },
         {
-          path: 'teams',
+          path: '/teams',
           name: 'Teams',
           component: () => import('@/views/TeamList.vue'),
           meta: { title: '我的团队', icon: 'UserFilled' },
         },
         {
-          path: 'team/:id',
+          path: '/team/:id',
           name: 'TeamDetail',
           component: () => import('@/views/TeamDetail.vue'),
           meta: { title: '团队详情' },
         },
         {
-          path: 'projects',
+          path: '/projects',
           name: 'Projects',
           component: () => import('@/views/ProjectList.vue'),
           meta: { title: '项目管理', icon: 'FolderOpened' },
         },
         {
-          path: 'project/:id',
+          path: '/project/:id',
           name: 'ProjectDetail',
           component: () => import('@/views/ProjectDetail.vue'),
           meta: { title: '项目详情' },
         },
         {
-          path: 'tasks',
+          path: '/tasks',
           name: 'Tasks',
           component: () => import('@/views/TaskList.vue'),
           meta: { title: '任务中心', icon: 'List' },
         },
         {
-          path: 'competitions',
+          path: '/competitions',
           name: 'Competitions',
           component: () => import('@/views/CompetitionList.vue'),
           meta: { title: '竞赛中心', icon: 'Trophy' },
         },
         {
-          path: 'competition/:id',
+          path: '/competition/:id',
           name: 'CompetitionDetail',
           component: () => import('@/views/CompetitionDetail.vue'),
           meta: { title: '竞赛详情' },
         },
         {
-          path: 'teachers',
+          path: '/teachers',
           name: 'Teachers',
           component: () => import('@/views/TeacherList.vue'),
           meta: { title: '导师库', icon: 'Reading' },
         },
         {
-          path: 'achievements',
+          path: '/achievements',
           name: 'Achievements',
           component: () => import('@/views/AchievementHall.vue'),
           meta: { title: '成果展厅', icon: 'Collection' },
         },
         {
-          path: 'profile',
+          path: '/profile',
           name: 'Profile',
           component: () => import('@/views/Profile.vue'),
           meta: { title: '个人中心', icon: 'User' },
         },
         {
-          path: 'admin',
+          path: '/ai-chat',
+          name: 'AiChat',
+          component: () => import('@/views/AiChat.vue'),
+          meta: { title: 'AI 助手', icon: 'ChatDotRound' },
+        },
+        {
+          path: '/admin',
           name: 'Admin',
           component: () => import('@/views/admin/AdminDashboard.vue'),
           meta: { title: '管理后台', icon: 'Setting', admin: true },
@@ -116,13 +129,27 @@ const router = createRouter({
 })
 
 router.beforeEach((to, _from, next) => {
-  document.title = (to.meta.title as string) + ' - 组队平台'
-  const token = localStorage.getItem('token')
-  if (to.path !== '/login' && to.path !== '/register' && !token) {
-    next('/login')
-  } else {
-    next()
+  const title = to.meta.title as string
+  if (title === '组队星') {
+    document.title = '组队星 / TeamStar - 大学生计算机竞赛组队匹配平台'
+  } else if (title) {
+    document.title = title + ' - 组队星'
   }
+  const token = localStorage.getItem('token')
+  const isPublicRoute = to.path === '/' || to.path === '/login' || to.path === '/register'
+  if (!isPublicRoute && !token) {
+    next('/')
+    return
+  }
+  // 管理后台路由需要 ADMIN 角色
+  if (to.meta.admin) {
+    const userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}')
+    if (userInfo.role !== 'ADMIN') {
+      next('/')
+      return
+    }
+  }
+  next()
 })
 
 export default router

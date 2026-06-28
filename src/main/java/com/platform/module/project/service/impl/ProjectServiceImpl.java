@@ -163,7 +163,7 @@ public class ProjectServiceImpl extends ServiceImpl<ProjectMapper, Project> impl
         if (!isProjectMemberOrAdmin(project)) {
             throw BusinessException.forbidden("无权限操作此项目");
         }
-        JSONArray milestones = parseMilestones(project.getDescription());
+        JSONArray milestones = parseMilestones(project.getMilestones());
         JSONObject newMilestone = new JSONObject();
         newMilestone.put("id", System.currentTimeMillis());
         newMilestone.put("name", milestone.get("name"));
@@ -171,7 +171,7 @@ public class ProjectServiceImpl extends ServiceImpl<ProjectMapper, Project> impl
         newMilestone.put("deadline", milestone.get("deadline"));
         newMilestone.put("status", "PENDING");
         milestones.add(newMilestone);
-        project.setDescription(JSON.toJSONString(milestones));
+        project.setMilestones(JSON.toJSONString(milestones));
         updateById(project);
     }
 
@@ -187,7 +187,7 @@ public class ProjectServiceImpl extends ServiceImpl<ProjectMapper, Project> impl
         if (!isProjectMemberOrAdmin(project)) {
             throw BusinessException.forbidden("无权限操作此项目");
         }
-        JSONArray milestones = parseMilestones(project.getDescription());
+        JSONArray milestones = parseMilestones(project.getMilestones());
         for (int i = 0; i < milestones.size(); i++) {
             JSONObject ms = milestones.getJSONObject(i);
             if (ms.getLong("id").equals(milestoneId)) {
@@ -198,11 +198,12 @@ public class ProjectServiceImpl extends ServiceImpl<ProjectMapper, Project> impl
                 break;
             }
         }
-        project.setDescription(JSON.toJSONString(milestones));
+        project.setMilestones(JSON.toJSONString(milestones));
         updateById(project);
     }
 
     @Override
+    @org.springframework.cache.annotation.CacheEvict(value = {"admin", "publicStats"}, allEntries = true)
     public void archive(Long projectId) {
         Project project = getById(projectId);
         if (project == null) {
@@ -220,6 +221,7 @@ public class ProjectServiceImpl extends ServiceImpl<ProjectMapper, Project> impl
 
     @Override
     @org.springframework.transaction.annotation.Transactional(rollbackFor = Exception.class)
+    @org.springframework.cache.annotation.CacheEvict(value = {"admin", "publicStats"}, allEntries = true)
     public void closeProject(Long projectId) {
         Project project = getById(projectId);
         if (project == null) {
@@ -228,8 +230,12 @@ public class ProjectServiceImpl extends ServiceImpl<ProjectMapper, Project> impl
         if ("CLOSED".equals(project.getStatus())) {
             throw BusinessException.badRequest("项目已经处于关闭状态");
         }
-        if (!isProjectMemberOrAdmin(project)) {
-            throw BusinessException.forbidden("无权限关闭此项目");
+
+        // 仅项目队长或管理员可以关闭项目
+        Long currentUserId = UserContext.getCurrentUserId();
+        String role = UserContext.getCurrentUserRole();
+        if (!"ADMIN".equals(role) && !project.getLeaderId().equals(currentUserId)) {
+            throw BusinessException.forbidden("仅项目队长可以关闭项目");
         }
 
         // 1. 关闭项目
@@ -246,6 +252,7 @@ public class ProjectServiceImpl extends ServiceImpl<ProjectMapper, Project> impl
 
     @Override
     @org.springframework.transaction.annotation.Transactional(rollbackFor = Exception.class)
+    @org.springframework.cache.annotation.CacheEvict(value = {"admin", "publicStats"}, allEntries = true)
     public void reopenProject(Long projectId) {
         Project project = getById(projectId);
         if (project == null) {
@@ -254,8 +261,12 @@ public class ProjectServiceImpl extends ServiceImpl<ProjectMapper, Project> impl
         if (!"CLOSED".equals(project.getStatus())) {
             throw BusinessException.badRequest("只有已关闭的项目可以重新开启");
         }
-        if (!isProjectMemberOrAdmin(project)) {
-            throw BusinessException.forbidden("无权限开启此项目");
+
+        // 仅项目队长或管理员可以重新开启项目
+        Long currentUserId = UserContext.getCurrentUserId();
+        String role = UserContext.getCurrentUserRole();
+        if (!"ADMIN".equals(role) && !project.getLeaderId().equals(currentUserId)) {
+            throw BusinessException.forbidden("仅项目队长可以重新开启项目");
         }
 
         // 1. 开启项目
@@ -336,7 +347,7 @@ public class ProjectServiceImpl extends ServiceImpl<ProjectMapper, Project> impl
             throw BusinessException.notFound("Project not found");
         }
         List<Map<String, Object>> ganttData = new ArrayList<>();
-        JSONArray milestones = parseMilestones(project.getDescription());
+        JSONArray milestones = parseMilestones(project.getMilestones());
 
         Map<String, Object> projectTask = new HashMap<>();
         projectTask.put("id", "project-" + projectId);
@@ -378,7 +389,7 @@ public class ProjectServiceImpl extends ServiceImpl<ProjectMapper, Project> impl
         int totalScore = 0;
 
         // 进度风险：基于状态和里程碑完成情况
-        JSONArray milestones = parseMilestones(project.getDescription());
+        JSONArray milestones = parseMilestones(project.getMilestones());
         long completedMilestones = 0;
         for (int i = 0; i < milestones.size(); i++) {
             JSONObject ms = milestones.getJSONObject(i);
@@ -459,9 +470,12 @@ public class ProjectServiceImpl extends ServiceImpl<ProjectMapper, Project> impl
         return count > 0;
     }
 
-    private JSONArray parseMilestones(String description) {
+    private JSONArray parseMilestones(String milestonesJson) {
+        if (milestonesJson == null || milestonesJson.trim().isEmpty()) {
+            return new JSONArray();
+        }
         try {
-            return JSON.parseArray(description);
+            return JSON.parseArray(milestonesJson);
         } catch (Exception e) {
             return new JSONArray();
         }
@@ -554,8 +568,6 @@ public class ProjectServiceImpl extends ServiceImpl<ProjectMapper, Project> impl
             map.put("avatar", user != null ? user.getAvatar() : null);
             map.put("major", user != null ? user.getMajor() : null);
             map.put("grade", user != null ? user.getGrade() : null);
-            map.put("phone", user != null ? user.getPhone() : null);
-            map.put("studentId", user != null ? user.getStudentId() : null);
             map.put("bio", user != null ? user.getBio() : null);
             map.put("role", m.getRole());
             map.put("joinedAt", m.getJoinedAt());

@@ -1,5 +1,6 @@
 package com.platform.module.recruit.dto;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Positive;
 import lombok.Data;
@@ -26,5 +27,6 @@ public class CreateRecruitDTO {
     @Positive(message = "最大成员数必须为正数")
     private Integer maxMembers;
 
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "Asia/Shanghai")
     private LocalDateTime deadline;
 }

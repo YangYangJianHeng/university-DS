@@ -7,6 +7,8 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.platform.common.exception.BusinessException;
 import com.platform.common.util.UserContext;
 import com.platform.module.collaboration.entity.Task;
+import com.platform.module.collaboration.entity.TaskAssignee;
+import com.platform.module.collaboration.mapper.TaskAssigneeMapper;
 import com.platform.module.collaboration.mapper.TaskMapper;
 import com.platform.module.recruit.dto.ConvertToProjectDTO;
 import com.platform.module.recruit.dto.CreateRecruitDTO;
@@ -16,6 +18,7 @@ import com.platform.module.recruit.entity.Recruit;
 import com.platform.module.recruit.mapper.ApplicationMapper;
 import com.platform.module.recruit.mapper.RecruitMapper;
 import com.platform.module.recruit.service.RecruitService;
+import com.platform.module.recruit.vo.RecruitApplicationVO;
 import com.platform.module.recruit.vo.RecruitVO;
 import com.platform.module.team.entity.Team;
 import com.platform.module.team.entity.TeamMember;
@@ -29,6 +32,8 @@ import com.platform.module.project.entity.Project;
 import com.platform.module.project.mapper.ProjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -54,9 +59,11 @@ public class RecruitServiceImpl implements RecruitService {
     private final TeamMemberMapper teamMemberMapper;
     private final ProjectMapper projectMapper;
     private final TaskMapper taskMapper;
+    private final TaskAssigneeMapper taskAssigneeMapper;
 
     @Override
     @Transactional
+    @CacheEvict(value = {"recruit", "publicStats"}, allEntries = true)
     public RecruitVO createRecruit(CreateRecruitDTO dto) {
         Recruit recruit = new Recruit();
         recruit.setPublisherId(UserContext.getCurrentUserId());
@@ -114,6 +121,7 @@ public class RecruitServiceImpl implements RecruitService {
 
     @Override
     @Transactional
+    @CacheEvict(value = "recruit", key = "'detail:' + #id")
     public RecruitVO updateRecruit(Long id, UpdateRecruitDTO dto) {
         Recruit recruit = recruitMapper.selectById(id);
         if (recruit == null) {
@@ -157,6 +165,7 @@ public class RecruitServiceImpl implements RecruitService {
 
     @Override
     @Transactional
+    @CacheEvict(value = {"recruit", "publicStats"}, allEntries = true)
     public void closeRecruit(Long id) {
         Recruit recruit = recruitMapper.selectById(id);
         if (recruit == null) {
@@ -210,6 +219,7 @@ public class RecruitServiceImpl implements RecruitService {
 
                 User user = userMapper.selectById(entry.getKey());
                 item.put("username", user != null ? user.getUsername() : "Unknown");
+                item.put("avatar", user != null ? user.getAvatar() : null);
                 item.put("major", user != null ? user.getMajor() : null);
                 item.put("grade", user != null ? user.getGrade() : null);
                 item.put("userSkills", entry.getValue());
@@ -230,6 +240,7 @@ public class RecruitServiceImpl implements RecruitService {
 
     @Override
     @Transactional
+    @CacheEvict(value = "recruit", key = "'detail:' + #recruitId")
     public void applyToRecruit(Long recruitId, Long userId) {
         Recruit recruit = recruitMapper.selectById(recruitId);
         if (recruit == null) {
@@ -327,7 +338,7 @@ public class RecruitServiceImpl implements RecruitService {
     }
 
     @Override
-    public List<Application> getApplications(Long recruitId) {
+    public List<RecruitApplicationVO> getApplications(Long recruitId) {
         Recruit recruit = recruitMapper.selectById(recruitId);
         if (recruit == null) {
             throw BusinessException.notFound("招募信息不存在");
@@ -337,10 +348,40 @@ public class RecruitServiceImpl implements RecruitService {
                 && !isAdmin()) {
             throw BusinessException.forbidden("无权查看此招募的申请列表");
         }
-        return applicationMapper.selectList(
+        List<Application> apps = applicationMapper.selectList(
                 new LambdaQueryWrapper<Application>()
                         .eq(Application::getRecruitId, recruitId)
                         .orderByDesc(Application::getAppliedAt));
+
+        // 批量查询申请人信息
+        List<Long> applicantIds = apps.stream()
+                .map(Application::getApplicantId)
+                .distinct()
+                .collect(Collectors.toList());
+        Map<Long, User> userMap = new HashMap<>();
+        if (!applicantIds.isEmpty()) {
+            List<User> users = userMapper.selectBatchIds(applicantIds);
+            for (User u : users) {
+                userMap.put(u.getId(), u);
+            }
+        }
+
+        return apps.stream().map(app -> {
+            RecruitApplicationVO vo = new RecruitApplicationVO();
+            vo.setId(app.getId());
+            vo.setRecruitId(app.getRecruitId());
+            vo.setApplicantId(app.getApplicantId());
+            vo.setStatus(app.getStatus());
+            vo.setAppliedAt(app.getAppliedAt());
+            User applicant = userMap.get(app.getApplicantId());
+            if (applicant != null) {
+                vo.setApplicantName(applicant.getUsername());
+                vo.setApplicantAvatar(applicant.getAvatar());
+            } else {
+                vo.setApplicantName("用户" + app.getApplicantId());
+            }
+            return vo;
+        }).collect(Collectors.toList());
     }
 
     // -----------------------------------------------------------
@@ -381,10 +422,15 @@ public class RecruitServiceImpl implements RecruitService {
             vo.setRequiredSkills(Collections.emptyList());
         }
 
-        // Look up publisher name
+        // Look up publisher name and avatar
         try {
             User publisher = userMapper.selectById(recruit.getPublisherId());
-            vo.setPublisherName(publisher != null ? publisher.getUsername() : "Unknown");
+            if (publisher != null) {
+                vo.setPublisherName(publisher.getUsername());
+                vo.setPublisherAvatar(publisher.getAvatar());
+            } else {
+                vo.setPublisherName("Unknown");
+            }
         } catch (Exception e) {
             log.warn("Failed to fetch publisher info for id: {}", recruit.getPublisherId(), e);
             vo.setPublisherName("Unknown");
@@ -546,13 +592,18 @@ public class RecruitServiceImpl implements RecruitService {
                     }
                 }
 
-                // 轮转分配给团队成员
+                // 轮转分配给团队成员（通过TaskAssignee关联表）
                 if (!allMembers.isEmpty()) {
                     TeamMember assignee = allMembers.get(taskIndex % memberCount);
-                    task.setCreatorId(assignee.getUserId()); // 利用creatorId记录负责人
+                    taskMapper.insert(task); // 先保存任务，获取ID
+                    // 创建任务-执行人关联
+                    TaskAssignee ta = new TaskAssignee();
+                    ta.setTaskId(task.getId());
+                    ta.setUserId(assignee.getUserId());
+                    taskAssigneeMapper.insert(ta);
+                } else {
+                    taskMapper.insert(task);
                 }
-
-                taskMapper.insert(task);
                 taskIndex++;
             }
             log.info("Created {} tasks for project {} from recruit {}", dto.getTasks().size(), projectId, recruitId);

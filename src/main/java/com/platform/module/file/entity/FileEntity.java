@@ -12,6 +12,7 @@ public class FileEntity {
     private Long id;
     private Long teamId;
     private Long projectId;
+    private Long taskId;
     private Long parentId;
     private String name;
     private String type;

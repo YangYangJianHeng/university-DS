@@ -29,6 +29,9 @@ public class WebConfig implements WebMvcConfigurer {
                 .excludePathPatterns(List.of(
                         "/api/user/register",
                         "/api/user/login",
+                        "/api/captcha",
+                        // 公开API（落地页统计等）
+                        "/api/public/**",
                         // 公开的GET端点（列表、详情）放行
                         "/api/competition/list",
                         "/api/competition/*",  // GET /api/competition/{id}

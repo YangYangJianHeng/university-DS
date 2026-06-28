@@ -24,12 +24,11 @@ public class JwtAuthenticationInterceptor implements HandlerInterceptor {
             return true;
         }
 
-        // 优先从 Header 读取 token，其次从 query 参数读取（兼容 img/iframe 等浏览器直接加载场景）
+        // 仅从 Authorization Header 读取 JWT token
+        // 文件访问通过 FileAccessController 使用签名URL（无需JWT），不再通过URL参数传递token
         String token = request.getHeader("Authorization");
         if (token != null && token.startsWith("Bearer ")) {
             token = token.substring(7);
-        } else {
-            token = request.getParameter("token");
         }
 
         if (token == null || token.isEmpty()) {

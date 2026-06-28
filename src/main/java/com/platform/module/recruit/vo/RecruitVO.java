@@ -11,6 +11,7 @@ public class RecruitVO {
     private Long id;
     private Long publisherId;
     private String publisherName;
+    private String publisherAvatar;
     private String title;
     private String projectIcon;
     private String projectName;

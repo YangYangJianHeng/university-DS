@@ -4,7 +4,7 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.platform.module.recruit.dto.ConvertToProjectDTO;
 import com.platform.module.recruit.dto.CreateRecruitDTO;
 import com.platform.module.recruit.dto.UpdateRecruitDTO;
-import com.platform.module.recruit.entity.Application;
+import com.platform.module.recruit.vo.RecruitApplicationVO;
 import com.platform.module.recruit.vo.RecruitVO;
 
 import java.util.List;
@@ -30,7 +30,7 @@ public interface RecruitService {
 
     List<RecruitVO> getMyRecruits(Long userId);
 
-    List<Application> getApplications(Long recruitId);
+    List<RecruitApplicationVO> getApplications(Long recruitId);
 
     /**
      * 将招募转为项目（创建项目、团队，并可继续招募）

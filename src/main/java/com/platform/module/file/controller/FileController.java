@@ -1,6 +1,7 @@
 package com.platform.module.file.controller;
 
 import com.platform.common.result.Result;
+import com.platform.common.util.FileAccessSigner;
 import com.platform.common.util.UserContext;
 import com.platform.module.file.entity.FileEntity;
 import com.platform.module.file.service.FileService;
@@ -17,6 +18,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.net.MalformedURLException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -26,28 +28,41 @@ import java.util.Map;
 public class FileController {
 
     private final FileService fileService;
+    private final FileAccessSigner fileAccessSigner;
 
     private static final String UPLOAD_DIR = "./uploads/";
 
-    public FileController(FileService fileService) {
+    public FileController(FileService fileService, FileAccessSigner fileAccessSigner) {
         this.fileService = fileService;
+        this.fileAccessSigner = fileAccessSigner;
     }
 
     @PostMapping("/upload")
     @Operation(summary = "Upload file")
-    public Result<FileEntity> upload(@RequestParam("file") MultipartFile file,
+    public Result<Map<String, Object>> upload(@RequestParam("file") MultipartFile file,
                                      @RequestParam(required = false) Long teamId,
                                      @RequestParam(required = false) Long projectId,
                                      @RequestParam(required = false) Long parentId) {
         Long userId = UserContext.getCurrentUserId();
-        return Result.success(fileService.upload(file, teamId, projectId, parentId, userId));
+        // taskId 在上传时尚未确定，创建任务或提交成果时后端再关联
+        FileEntity fileEntity = fileService.upload(file, teamId, projectId, null, parentId, userId);
+        Map<String, Object> result = new java.util.LinkedHashMap<>();
+        result.put("id", fileEntity.getId());
+        result.put("name", fileEntity.getName());
+        result.put("mimeType", fileEntity.getMimeType());
+        result.put("fileSize", fileEntity.getFileSize());
+        return Result.success(result);
     }
 
     @GetMapping("/list")
     @Operation(summary = "List files")
     public Result<List<FileEntity>> list(@RequestParam(required = false) Long teamId,
                                          @RequestParam(required = false) Long projectId,
+                                         @RequestParam(required = false) Long taskId,
                                          @RequestParam(required = false) Long parentId) {
+        if (taskId != null) {
+            return Result.success(fileService.listFilesByTaskId(taskId));
+        }
         return Result.success(fileService.listFiles(teamId, projectId, parentId));
     }
 
@@ -58,37 +73,25 @@ public class FileController {
         if (fileEntity == null || fileEntity.getIsDeleted() == 1) {
             return ResponseEntity.notFound().build();
         }
-        try {
-            Path filePath = Paths.get(UPLOAD_DIR).resolve(fileEntity.getFileKey()).normalize();
-            Resource resource = new UrlResource(filePath.toUri());
-            if (resource.exists()) {
-                return ResponseEntity.ok()
-                        .contentType(MediaType.APPLICATION_OCTET_STREAM)
-                        .header(HttpHeaders.CONTENT_DISPOSITION,
-                                "attachment; filename=\"" + fileEntity.getName() + "\"")
-                        .body(resource);
-            }
-        } catch (MalformedURLException e) {
-            // ignore
-        }
-        return ResponseEntity.notFound().build();
+        return serveResource(fileEntity, false);
     }
 
     @GetMapping("/{id}")
     @Operation(summary = "Get file info")
-    public Result<java.util.Map<String, Object>> fileInfo(@PathVariable Long id) {
+    public Result<Map<String, Object>> fileInfo(@PathVariable Long id) {
         FileEntity fileEntity = fileService.getById(id);
         if (fileEntity == null || fileEntity.getIsDeleted() == 1) {
             return Result.error("文件不存在");
         }
-        java.util.Map<String, Object> info = new java.util.LinkedHashMap<>();
+        Map<String, Object> info = new LinkedHashMap<>();
         info.put("id", fileEntity.getId());
         info.put("name", fileEntity.getName());
         info.put("fileKey", fileEntity.getFileKey());
         info.put("fileSize", fileEntity.getFileSize());
         info.put("mimeType", fileEntity.getMimeType());
-        info.put("previewUrl", "/api/file/" + id + "/preview");
-        info.put("downloadUrl", "/api/file/" + id + "/download");
+        // 安全签名URL（5分钟有效期），替代直接拼接token的形式
+        info.put("previewToken", fileAccessSigner.sign(id, "preview"));
+        info.put("downloadToken", fileAccessSigner.sign(id, "download"));
         info.put("createdAt", fileEntity.getCreatedAt());
         return Result.success(info);
     }
@@ -100,14 +103,50 @@ public class FileController {
         if (fileEntity == null || fileEntity.getIsDeleted() == 1) {
             return ResponseEntity.notFound().build();
         }
+        return serveResource(fileEntity, true);
+    }
+
+    /**
+     * 生成文件访问签名URL（5分钟有效）
+     */
+    @GetMapping("/{id}/signed-url")
+    @Operation(summary = "Generate signed access URL")
+    public Result<Map<String, String>> getSignedUrl(@PathVariable Long id) {
+        FileEntity fileEntity = fileService.getById(id);
+        if (fileEntity == null || fileEntity.getIsDeleted() == 1) {
+            return Result.error("文件不存在");
+        }
+        Map<String, String> urls = new LinkedHashMap<>();
+        urls.put("previewUrl", "/api/public/file/preview?token=" + fileAccessSigner.sign(id, "preview"));
+        urls.put("downloadUrl", "/api/public/file/download?token=" + fileAccessSigner.sign(id, "download"));
+        return Result.success(urls);
+    }
+
+    /**
+     * 安全地提供文件资源，防止路径穿越攻击
+     */
+    private ResponseEntity<Resource> serveResource(FileEntity fileEntity, boolean isPreview) {
         try {
-            Path filePath = Paths.get(UPLOAD_DIR).resolve(fileEntity.getFileKey()).normalize();
+            Path uploadDir = Paths.get(UPLOAD_DIR).toAbsolutePath().normalize();
+            Path filePath = uploadDir.resolve(fileEntity.getFileKey()).normalize();
+            // 防止路径穿越攻击：确保解析后的路径仍然在 uploads 目录下
+            if (!filePath.startsWith(uploadDir)) {
+                return ResponseEntity.status(403).build();
+            }
             Resource resource = new UrlResource(filePath.toUri());
             if (resource.exists()) {
-                String contentType = fileEntity.getMimeType() != null ? fileEntity.getMimeType() : "application/octet-stream";
-                return ResponseEntity.ok()
-                        .contentType(MediaType.parseMediaType(contentType))
-                        .body(resource);
+                if (isPreview) {
+                    String contentType = fileEntity.getMimeType() != null ? fileEntity.getMimeType() : "application/octet-stream";
+                    return ResponseEntity.ok()
+                            .contentType(MediaType.parseMediaType(contentType))
+                            .body(resource);
+                } else {
+                    return ResponseEntity.ok()
+                            .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                            .header(HttpHeaders.CONTENT_DISPOSITION,
+                                    "attachment; filename=\"" + fileEntity.getName() + "\"")
+                            .body(resource);
+                }
             }
         } catch (MalformedURLException e) {
             // ignore

@@ -56,8 +56,8 @@
             <div v-else class="project-mini-list">
               <div v-for="p in teamProjects" :key="p.id" class="project-mini-item" @click="router.push(`/project/${p.id}`)">
                 <div class="project-mini-name">{{ p.name }}</div>
-                <el-tag size="small" :type="p.status === 'ARCHIVED' ? 'info' : 'success'" effect="plain">
-                  {{ p.status === 'ARCHIVED' ? '已归档' : p.status === 'COMPLETED' ? '已完成' : '进行中' }}
+                <el-tag size="small" :type="projectStatusTagType(p.status)" effect="plain">
+                  {{ projectStatusLabel(p.status) }}
                 </el-tag>
               </div>
             </div>
@@ -77,9 +77,9 @@
             <div v-if="members.length === 0" class="empty-hint">暂无成员</div>
             <div v-else class="member-list">
               <div v-for="member in members" :key="member.userId || member.id" class="member-item">
-                <el-avatar :size="42" class="member-avatar">{{ (member.username || member.name || '?').charAt(0) }}</el-avatar>
+                <el-avatar :size="42" class="member-avatar" :src="member.avatar">{{ (member.userName || member.name || '?').charAt(0) }}</el-avatar>
                 <div class="member-info">
-                  <span class="member-name">{{ member.username || member.name || '未知' }}</span>
+                  <span class="member-name">{{ member.userName || member.name || '未知' }}</span>
                   <span class="member-role-tag">
                     <el-tag v-if="member.role === 'LEADER' || member.role === 'leader'" type="warning" size="small" effect="dark">队长</el-tag>
                     <el-tag v-else type="info" size="small" effect="plain">成员</el-tag>
@@ -106,11 +106,17 @@
             <el-timeline v-else>
               <el-timeline-item
                 v-for="(event, index) in timeline"
-                :key="event.id || index"
-                :timestamp="dayjs(event.createdAt || event.time).format('YYYY-MM-DD HH:mm')"
-                :type="event.type === 'CREATE' || event.type === 'JOIN' ? 'primary' : 'info'"
+                :key="index"
+                :timestamp="formatTime(event.timestamp)"
+                :type="timelineType(event.type)"
+                placement="top"
               >
-                {{ event.content || event.description || event.message }}
+                <div class="timeline-event-content">
+                  <span class="timeline-desc">{{ event.description }}</span>
+                  <span v-if="event.projectName" class="timeline-project-tag">
+                    <el-tag size="small" effect="plain" type="info">{{ event.projectName }}</el-tag>
+                  </span>
+                </div>
               </el-timeline-item>
             </el-timeline>
           </el-card>
@@ -174,7 +180,7 @@ import {
 import dayjs from 'dayjs'
 import { useUserStore } from '@/stores/user'
 import { getTeam, quitTeam, removeMember } from '@/api/team'
-import axios from 'axios'
+import request from '@/api/request'
 
 const SKIP_TOAST = { skipErrorToast: true }
 
@@ -219,11 +225,11 @@ async function fetchTeam() {
   }
 
   // 附属数据：独立加载，互不影响，静默失败不弹错误提示
-  try { const res = await axios.get('/api/team/' + id + '/members', SKIP_TOAST); members.value = res.data?.data || [] } catch (_) { members.value = [] }
-  try { const res = await axios.get('/api/team/' + id + '/timeline', SKIP_TOAST); timeline.value = res.data?.data || [] } catch (_) { timeline.value = [] }
+  try { const res = await request.get('/team/' + id + '/members', SKIP_TOAST); members.value = res.data || [] } catch (_) { members.value = [] }
+  try { const res = await request.get('/team/' + id + '/timeline', SKIP_TOAST); timeline.value = res.data || [] } catch (_) { timeline.value = [] }
   try {
-    const res = await axios.get('/api/project/my', SKIP_TOAST)
-    const allProjects = res.data?.data || []
+    const res = await request.get('/project/my', SKIP_TOAST)
+    const allProjects = res.data || []
     teamProjects.value = allProjects.filter((p: any) => p.teamId === id)
   } catch (_) { teamProjects.value = [] }
 
@@ -250,6 +256,41 @@ function teamStatusType(status: string): 'success' | 'info' | 'warning' | 'dange
 
 function teamStatusLabel(status: string): string {
   switch (status) { case 'ACTIVE': case 'NORMAL': return '活跃中'; case 'INACTIVE': return '已停用'; case 'DISBANDED': return '已解散'; case 'CLOSED': return '已关闭（项目已关闭）'; default: return status || '未知' }
+}
+
+function projectStatusLabel(status: string): string {
+  switch (status) { case 'PLANNING': return '规划中'; case 'IN_PROGRESS': return '进行中'; case 'REVIEW': return '评审中'; case 'COMPLETED': return '已完成'; case 'ARCHIVED': return '已归档'; case 'CLOSED': return '已关闭'; default: return status || '未知' }
+}
+
+function projectStatusTagType(status: string): 'success' | 'info' | 'warning' | 'danger' {
+  switch (status) { case 'IN_PROGRESS': case 'PLANNING': return 'success'; case 'COMPLETED': return ''; case 'ARCHIVED': case 'REVIEW': return 'warning'; case 'CLOSED': return 'danger'; default: return 'info' }
+}
+
+function formatTime(ts: any): string {
+  if (!ts) return ''
+  return dayjs(ts).format('YYYY-MM-DD HH:mm')
+}
+
+function timelineType(type: string): 'primary' | 'success' | 'warning' | 'info' | 'danger' {
+  switch (type) {
+    case 'TEAM_CREATED':
+    case 'PROJECT_CREATED':
+    case 'TASK_CREATED':
+      return 'primary'
+    case 'LEADER_JOINED':
+    case 'MEMBER_JOINED':
+      return 'success'
+    case 'TASK_COMPLETED':
+      return 'success'
+    case 'TEACHER_APPROVED':
+      return 'success'
+    case 'TEACHER_INVITED':
+      return 'warning'
+    case 'MEMBER_APPLIED':
+      return 'warning'
+    default:
+      return 'info'
+  }
 }
 
 onMounted(() => fetchTeam())
@@ -332,4 +373,15 @@ onMounted(() => fetchTeam())
 }
 .project-mini-item:hover { background: var(--color-bg-hover); border-color: var(--color-primary); }
 .project-mini-name { font-weight: 500; font-size: 14px; color: var(--color-text-primary); }
+
+/* Timeline */
+.timeline-event-content {
+  display: flex; align-items: center; flex-wrap: wrap; gap: 8px;
+}
+.timeline-desc {
+  font-size: 14px; color: #303133; line-height: 1.5;
+}
+.timeline-project-tag {
+  flex-shrink: 0;
+}
 </style>

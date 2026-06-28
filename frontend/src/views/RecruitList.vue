@@ -63,7 +63,9 @@
             <div class="card-body">
               <div class="card-title">{{ item.title }}</div>
               <div class="card-publisher">
-                <el-icon><UserFilled /></el-icon>
+                <el-avatar :size="18" :src="item.publisherAvatar" style="margin-right:4px;flex-shrink:0">
+                  {{ item.publisherName?.charAt(0) || '?' }}
+                </el-avatar>
                 {{ item.publisherName || item.publisher?.username || '未知' }}
               </div>
               <div class="card-skills" v-if="item.requiredSkills?.length">

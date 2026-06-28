@@ -527,7 +527,12 @@ function handleResetPasswordForm() {
   passwordFormRef.value?.resetFields()
 }
 
-onMounted(() => { fetchProfileData(); fetchStatsData(); loadUserCertificates() })
+onMounted(() => {
+  // 并行加载个人资料、统计数据和证书
+  fetchProfileData()
+  fetchStatsData()
+  loadUserCertificates()
+})
 
 // 监听tab切换，加载对应数据
 watch(activeTab, (tab) => {

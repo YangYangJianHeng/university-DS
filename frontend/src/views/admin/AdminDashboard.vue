@@ -705,6 +705,7 @@
           <el-select v-model="teamEditForm.status">
             <el-option label="正常" value="ACTIVE" />
             <el-option label="已解散" value="DISBANDED" />
+            <el-option label="已关闭" value="CLOSED" />
           </el-select>
         </el-form-item>
       </el-form>
@@ -1028,10 +1029,13 @@ const certPreviewVisible = ref(false)
 const certPreviewImageUrl = ref('')
 
 onMounted(async () => {
-  await loadStats()
-  await loadPendingRecruits()
-  await loadUsers()
-  await loadAuditList()
+  // 并行加载所有独立数据，大幅减少页面加载时间
+  await Promise.all([
+    loadStats(),
+    loadPendingRecruits(),
+    loadUsers(),
+    loadAuditList(),
+  ])
 })
 
 watch(activeTab, async (tab) => {
@@ -1258,11 +1262,11 @@ async function loadAllProjects(page = 1) {
 }
 
 function projectStatusType(s: string) {
-  const map: Record<string, string> = { PLANNING: 'info', IN_PROGRESS: 'primary', REVIEW: 'warning', COMPLETED: 'success', ARCHIVED: 'info' }
+  const map: Record<string, string> = { PLANNING: 'info', IN_PROGRESS: 'primary', REVIEW: 'warning', COMPLETED: 'success', ARCHIVED: 'info', CLOSED: 'danger' }
   return map[s] || 'info'
 }
 function projectStatusLabel(s: string) {
-  const map: Record<string, string> = { PLANNING: '规划中', IN_PROGRESS: '进行中', REVIEW: '审核中', COMPLETED: '已完成', ARCHIVED: '已归档' }
+  const map: Record<string, string> = { PLANNING: '规划中', IN_PROGRESS: '进行中', REVIEW: '审核中', COMPLETED: '已完成', ARCHIVED: '已归档', CLOSED: '已关闭' }
   return map[s] || s
 }
 

@@ -196,7 +196,7 @@ function teamStatusLabel(status: string): string {
   }
 }
 
-onMounted(() => { fetchMyTeams(); fetchJoinedTeams() })
+onMounted(() => { Promise.all([fetchMyTeams(), fetchJoinedTeams()]) })
 </script>
 
 <style scoped>

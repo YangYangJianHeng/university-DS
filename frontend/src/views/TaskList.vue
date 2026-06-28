@@ -126,12 +126,25 @@
           <el-table-column prop="title" label="任务名称" min-width="200">
             <template #default="{ row }"><span class="task-title-link">{{ row.title }}</span></template>
           </el-table-column>
-          <el-table-column label="创建者" width="120">
-            <template #default="{ row }"><span>{{ row.creatorName || '--' }}</span></template>
-          </el-table-column>
-          <el-table-column label="执行人" width="120">
+          <el-table-column label="创建者" width="140">
             <template #default="{ row }">
-              <span>{{ row.assigneeCount ? row.assigneeCount + '人' : '未指派' }}</span>
+              <div class="user-cell">
+                <el-avatar v-if="row.creatorAvatar" :size="24" :src="row.creatorAvatar" />
+                <el-avatar v-else :size="24">{{ row.creatorName?.charAt(0) || '?' }}</el-avatar>
+                <span class="user-name">{{ row.creatorName || '--' }}</span>
+              </div>
+            </template>
+          </el-table-column>
+          <el-table-column label="执行人" min-width="160">
+            <template #default="{ row }">
+              <div v-if="row.assigneeCount && row.assigneeAvatars?.length" class="user-cell">
+                <el-avatar-group v-if="row.assigneeAvatars.length > 1" :size="24" :max="3">
+                  <el-avatar v-for="(avatar, i) in row.assigneeAvatars" :key="i" :size="24" :src="avatar" />
+                </el-avatar-group>
+                <el-avatar v-else :size="24" :src="row.assigneeAvatars[0]" />
+                <span class="user-name">{{ row.assigneeNames }}</span>
+              </div>
+              <span v-else>{{ row.assigneeCount ? row.assigneeCount + '人' : '未指派' }}</span>
             </template>
           </el-table-column>
           <el-table-column label="优先级" width="90">
@@ -174,9 +187,16 @@
             <span class="project-tag">{{ row.projectName || '--' }}</span>
           </template>
         </el-table-column>
-        <el-table-column label="执行人" width="150">
+        <el-table-column label="执行人" min-width="160">
           <template #default="{ row }">
-            <span>{{ row.assigneeNames || row.assigneeCount + '人' || '未指派' }}</span>
+            <div v-if="row.assigneeCount && row.assigneeAvatars?.length" class="user-cell">
+              <el-avatar-group v-if="row.assigneeAvatars.length > 1" :size="24" :max="3">
+                <el-avatar v-for="(avatar, i) in row.assigneeAvatars" :key="i" :size="24" :src="avatar" />
+              </el-avatar-group>
+              <el-avatar v-else :size="24" :src="row.assigneeAvatars[0]" />
+              <span class="user-name">{{ row.assigneeNames }}</span>
+            </div>
+            <span v-else>{{ row.assigneeCount ? row.assigneeCount + '人' : '未指派' }}</span>
           </template>
         </el-table-column>
         <el-table-column label="优先级" width="90">
@@ -235,6 +255,24 @@
         </el-form-item>
         <el-form-item label="描述">
           <el-input v-model="createForm.description" type="textarea" :rows="3" placeholder="任务详细描述" />
+        </el-form-item>
+        <el-form-item label="附件上传">
+          <el-upload
+            v-model:file-list="createForm.files"
+            :action="uploadUrl"
+            :headers="uploadHeaders"
+            :on-success="onCreateFileSuccess"
+            :on-error="onCreateFileError"
+            :data="{ projectId: createForm.projectId }"
+            multiple
+            drag
+          >
+            <el-icon class="el-icon--upload"><UploadFilled /></el-icon>
+            <div class="el-upload__text">拖拽文件或<em>点击上传</em></div>
+            <template #tip>
+              <div class="el-upload__tip">支持图片、文档、压缩包等（单文件≤50MB）</div>
+            </template>
+          </el-upload>
         </el-form-item>
         <el-divider content-position="left">指派执行人</el-divider>
         <el-form-item label="技能推荐">
@@ -702,7 +740,7 @@ import {
 import { getMyProjects } from '@/api/project'
 import { getMembers } from '@/api/team'
 import { useUserStore } from '@/stores/user'
-import { withToken } from '@/utils/url'
+import { prefetchFileUrls, getSignedFileUrl, fetchSingleSignedUrl } from '@/utils/url'
 
 const userStore = useUserStore()
 const loading = ref(false)
@@ -754,7 +792,9 @@ const createForm = ref({
   priority: 'MEDIUM',
   deadline: null as string | null,
   description: '',
-  assignees: [] as { userId: number; userName: string; assignmentNote: string }[]
+  assignees: [] as { userId: number; userName: string; assignmentNote: string }[],
+  files: [] as any[],
+  uploadedFileIds: [] as number[]
 })
 const createRules = {
   projectId: [{ required: true, message: '请选择项目', trigger: 'change' }],
@@ -846,8 +886,8 @@ function getFileName(url: string) {
 }
 
 onMounted(() => {
-  loadProjects()
-  loadTasks()
+  // 并行加载项目和任务
+  Promise.all([loadProjects(), loadTasks()])
 })
 
 watch(viewMode, () => loadTasks())
@@ -929,9 +969,8 @@ async function openFlatTaskDetail(taskVo: any) {
     const res = await getTaskDetail(taskVo.id)
     detailTask.value = res.data
     showDetailDialog.value = true
-    // 打开后加载成果和评论
-    loadDetailSubmissions()
-    loadDetailComments()
+    // 预加载文件签名URL，避免JWT token通过URL参数泄露
+    await prefetchDetailFiles()
   } catch (_) { ElMessage.error('加载任务详情失败') }
 }
 
@@ -1044,7 +1083,7 @@ async function onProjectChange(projectId: number | null) {
   if (proj?.teamId) {
     try {
       const res = await getMembers(proj.teamId)
-      currentProjectMembers.value = (res.data || []).map((m: any) => ({ id: m.userId || m.id, name: m.username || m.name }))
+      currentProjectMembers.value = (res.data || []).map((m: any) => ({ id: m.userId || m.id, name: m.userName || m.name }))
     } catch (_) { currentProjectMembers.value = [] }
   }
 }
@@ -1063,7 +1102,7 @@ async function loadRecommendations() {
     const res = await getMembers(proj.teamId)
     const members = (res.data || []).map((m: any) => ({
       userId: m.userId || m.id,
-      userName: m.username || m.name || m.userName,
+      userName: m.userName || m.username || m.name,
       userAvatar: m.avatar
     }))
     // 简单匹配：如果用户技能中包含所需技能则加分
@@ -1130,6 +1169,8 @@ async function openTaskDetail(task: any) {
     const res = await getTaskDetail(task.id)
     detailTask.value = res.data
     showDetailDialog.value = true
+    // 预加载文件签名URL，避免JWT token通过URL参数泄露
+    await prefetchDetailFiles()
   } catch (_) { ElMessage.error('获取任务详情失败') }
 }
 
@@ -1356,9 +1397,39 @@ function isArchiveFile(name?: string, mime?: string): boolean {
   return ['.zip', '.rar', '.7z', '.tar', '.gz', '.bz2', '.xz'].some(ext => n.endsWith(ext))
 }
 
+/**
+ * 从文件URL中提取文件ID（格式 /api/file/{id}/preview 或 /api/file/{id}/download）
+ * 用于适配 FileInfoVO 没有独立id字段的情况
+ */
+function extractFileIdFromUrl(url?: string): number | null {
+  if (!url) return null
+  const match = url.match(/\/file\/(\d+)/)
+  return match ? Number(match[1]) : null
+}
+
+/** 从任务详情成果提交中收集所有文件ID并预加载签名URL */
+async function prefetchDetailFiles() {
+  const fileIds: number[] = []
+  const subs = detailTask.value?.submissions
+  if (Array.isArray(subs)) {
+    subs.forEach((s: any) => {
+      // 优先使用 fileInfos（FileInfoVO列表），兼容旧字段 files
+      const fiList = s.fileInfos || s.files
+      if (Array.isArray(fiList)) {
+        fiList.forEach((fi: any) => {
+          // FileInfoVO 没有id字段，从URL中提取
+          const id = fi.id || extractFileIdFromUrl(fi.previewUrl || fi.downloadUrl)
+          if (id) fileIds.push(Number(id))
+        })
+      }
+    })
+  }
+  if (fileIds.length > 0) await prefetchFileUrls(fileIds)
+}
+
 async function fetchTextContent(url: string) {
   try {
-    const resp = await fetch(withToken(url))
+    const resp = await fetch(url)
     if (resp.ok) {
       textContent.value = await resp.text()
     } else {
@@ -1371,32 +1442,48 @@ async function fetchTextContent(url: string) {
 
 async function previewFile(fi: any) {
   if (!fi) return
-  // 复制一份并附加 token，确保 img/iframe/video/audio 浏览器直接加载时能通过认证
+  // FileInfoVO 没有id字段，从URL中提取文件ID
+  const fileId = fi.id || fi.fileId || extractFileIdFromUrl(fi.previewUrl || fi.downloadUrl)
+  if (!fileId) return
+  // 通过安全签名URL访问文件，避免JWT token通过URL泄露
+  let previewUrl = getSignedFileUrl(fileId, 'preview')
+  let downloadUrl = getSignedFileUrl(fileId, 'download')
+  // 缓存未命中时，同步获取签名URL（浏览器标签不带Authorization header）
+  if (previewUrl.startsWith('/api/file/')) {
+    const signedUrl = await fetchSingleSignedUrl(fileId, 'preview')
+    if (signedUrl) previewUrl = signedUrl
+  }
+  if (downloadUrl.startsWith('/api/file/')) {
+    const signedUrl = await fetchSingleSignedUrl(fileId, 'download')
+    if (signedUrl) downloadUrl = signedUrl
+  }
   previewingFile.value = {
     ...fi,
-    previewUrl: withToken(fi.previewUrl || ''),
-    downloadUrl: withToken(fi.downloadUrl || ''),
+    previewUrl,
+    downloadUrl,
   }
   textContent.value = ''
-  
+
   // 文本/代码文件需要 fetch 内容
   if (isTextLikeMime(fi.mimeType) || isCodeExt(fi.name)) {
-    fetchTextContent(fi.previewUrl)
+    fetchTextContent(getSignedFileUrl(fileId, 'preview'))
   }
-  
+
   showFilePreview.value = true
 }
 
 function downloadFile(fi: any) {
-  if (fi?.downloadUrl) {
-    window.open(withToken(fi.downloadUrl), '_blank')
+  const fileId = fi.id || fi.fileId || extractFileIdFromUrl(fi.previewUrl || fi.downloadUrl)
+  if (fileId) {
+    window.open(getSignedFileUrl(fileId, 'download'), '_blank')
   }
 }
 
 function copyFileLink(fi: any) {
-  const url = fi?.downloadUrl || fi?.previewUrl
-  if (!url) return
-  const fullUrl = window.location.origin + withToken(url)
+  const fileId = fi.id || fi.fileId || extractFileIdFromUrl(fi.previewUrl || fi.downloadUrl)
+  if (!fileId) return
+  const url = getSignedFileUrl(fileId, 'download')
+  const fullUrl = window.location.origin + url
   navigator.clipboard.writeText(fullUrl).then(() => {
     ElMessage.success('链接已复制')
   }).catch(() => {
@@ -1405,7 +1492,7 @@ function copyFileLink(fi: any) {
 }
 
 function openFileUrl(url: string) {
-  window.open(withToken(url), '_blank')
+  window.open(url, '_blank')
 }
 
 // ========== 评论 ==========
@@ -1677,4 +1764,12 @@ async function handleAddComment() {
 .preview-hint { font-size: 12px; color: #909399; margin: 0 0 8px; text-align: center; }
 
 .clickable { cursor: pointer; }
+
+/* 用户单元格（头像 + 姓名） */
+.user-cell {
+  display: flex; align-items: center; gap: 6px;
+}
+.user-name {
+  font-size: 13px; color: #303133; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
 </style>

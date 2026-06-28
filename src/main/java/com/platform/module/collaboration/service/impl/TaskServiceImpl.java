@@ -94,13 +94,15 @@ public class TaskServiceImpl extends ServiceImpl<TaskMapper, Task> implements Ta
             throw BusinessException.notFound("所属项目不存在");
         }
 
-        // 权限校验：项目负责人 或 该团队已审核通过的导师 可以创建任务
+        // 权限校验：项目负责人、ADMIN、或该团队已审核通过的导师 可以创建任务
         Long currentUserId = UserContext.getCurrentUserId();
-        if (currentUserId != null && !currentUserId.equals(project.getLeaderId())) {
+        String currentRole = UserContext.getCurrentUserRole();
+        if (currentUserId != null && !currentUserId.equals(project.getLeaderId())
+                && !"ADMIN".equals(currentRole)) {
             // 检查是否是团队的导师（需审核通过）
             boolean isTeacher = isApprovedTeacher(project.getTeamId(), currentUserId);
             if (!isTeacher) {
-                throw BusinessException.forbidden("只有项目负责人或已审核的导师可以创建任务");
+                throw BusinessException.forbidden("只有项目负责人、管理员或已审核的导师可以创建任务");
             }
         }
 
@@ -120,6 +122,17 @@ public class TaskServiceImpl extends ServiceImpl<TaskMapper, Task> implements Ta
         task.setDeadline(request.getDeadline());
         task.setStatus("TODO");
         save(task);
+
+        // 关联附件文件到任务（将上传好的文件绑定到此任务）
+        if (request.getFileIds() != null && !request.getFileIds().isEmpty()) {
+            for (Long fileId : request.getFileIds()) {
+                FileEntity file = fileMapper.selectById(fileId);
+                if (file != null && file.getIsDeleted() == 0) {
+                    file.setTaskId(task.getId());
+                    fileMapper.updateById(file);
+                }
+            }
+        }
 
         // 通知项目所有团队成员：新任务发布
         notifyProjectMembers(project, task, currentUserId);
@@ -430,9 +443,12 @@ public class TaskServiceImpl extends ServiceImpl<TaskMapper, Task> implements Ta
 
     @Override
     public List<Task> getByProject(Long projectId) {
-        return list(new LambdaQueryWrapper<Task>()
+        List<Task> tasks = list(new LambdaQueryWrapper<Task>()
                 .eq(Task::getProjectId, projectId)
                 .orderByDesc(Task::getCreatedAt));
+        checkAndMarkOverdue(tasks);
+        enrichTasksWithUserInfo(tasks);
+        return tasks;
     }
 
     @Override
@@ -452,21 +468,32 @@ public class TaskServiceImpl extends ServiceImpl<TaskMapper, Task> implements Ta
 
         // 自动检测逾期：截止日期已过且状态为待处理或进行中
         checkAndMarkOverdue(tasks);
+        enrichTasksWithUserInfo(tasks);
         return tasks;
     }
 
     @Override
     public List<Task> getManagedTasks(Long leaderId) {
-        // 获取负责人创建的所有任务
+        // 1. 获取用户作为负责人的项目（排除已关闭的）
+        List<Project> managedProjects = projectMapper.selectList(
+                new LambdaQueryWrapper<Project>()
+                        .eq(Project::getLeaderId, leaderId)
+                        .ne(Project::getStatus, "CLOSED"));
+        if (managedProjects.isEmpty()) return Collections.emptyList();
+
+        List<Long> projectIds = managedProjects.stream()
+                .map(Project::getId)
+                .collect(Collectors.toList());
+
+        // 2. 只获取这些项目中由用户创建的任务
         List<Task> tasks = list(new LambdaQueryWrapper<Task>()
+                .in(Task::getProjectId, projectIds)
                 .eq(Task::getCreatorId, leaderId)
                 .orderByDesc(Task::getCreatedAt));
 
-        // 过滤掉已关闭项目的任务
-        tasks = filterOutClosedProjectTasks(tasks);
-
         // 自动检测逾期：截止日期已过且状态为待处理或进行中
         checkAndMarkOverdue(tasks);
+        enrichTasksWithUserInfo(tasks);
         return tasks;
     }
 
@@ -500,6 +527,7 @@ public class TaskServiceImpl extends ServiceImpl<TaskMapper, Task> implements Ta
 
         // 4. 自动检测逾期
         checkAndMarkOverdue(tasks);
+        enrichTasksWithUserInfo(tasks);
         return tasks;
     }
 
@@ -1214,6 +1242,7 @@ public class TaskServiceImpl extends ServiceImpl<TaskMapper, Task> implements Ta
                 .orderByDesc(Task::getCreatedAt));
 
         checkAndMarkOverdue(tasks);
+        enrichTasksWithUserInfo(tasks);
         return tasks;
     }
 
@@ -1239,5 +1268,80 @@ public class TaskServiceImpl extends ServiceImpl<TaskMapper, Task> implements Ta
                         .in(Project::getTeamId, teamIds)
                         .ne(Project::getStatus, "CLOSED")
                         .orderByDesc(Project::getCreatedAt));
+    }
+
+    /**
+     * 批量注入任务的创建人信息和执行人信息（姓名 + 头像）
+     * 避免前端 N+1 请求逐个查询用户信息
+     */
+    private void enrichTasksWithUserInfo(List<Task> tasks) {
+        if (tasks == null || tasks.isEmpty()) return;
+
+        // 1. 收集所有 creatorId → 批量查用户表
+        Set<Long> creatorIds = tasks.stream()
+                .map(Task::getCreatorId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+        Map<Long, User> creatorMap = new HashMap<>();
+        if (!creatorIds.isEmpty()) {
+            List<User> creators = userMapper.selectBatchIds(creatorIds);
+            for (User u : creators) {
+                creatorMap.put(u.getId(), u);
+            }
+        }
+
+        // 2. 收集所有 taskId → 批量查 task_assignee 表
+        List<Long> taskIds = tasks.stream()
+                .map(Task::getId)
+                .collect(Collectors.toList());
+        Map<Long, List<Long>> taskAssigneeUserIds = new HashMap<>();
+        if (!taskIds.isEmpty()) {
+            List<TaskAssignee> allAssignees = taskAssigneeMapper.selectList(
+                    new LambdaQueryWrapper<TaskAssignee>().in(TaskAssignee::getTaskId, taskIds));
+            for (TaskAssignee a : allAssignees) {
+                taskAssigneeUserIds.computeIfAbsent(a.getTaskId(), k -> new ArrayList<>()).add(a.getUserId());
+            }
+        }
+
+        // 3. 收集所有 assignee userId → 批量查用户表
+        Set<Long> assigneeUserIds = taskAssigneeUserIds.values().stream()
+                .flatMap(List::stream).collect(Collectors.toSet());
+        Map<Long, User> assigneeUserMap = new HashMap<>();
+        if (!assigneeUserIds.isEmpty()) {
+            List<User> assigneeUsers = userMapper.selectBatchIds(assigneeUserIds);
+            for (User u : assigneeUsers) {
+                assigneeUserMap.put(u.getId(), u);
+            }
+        }
+
+        // 4. 回填到每个 Task
+        for (Task task : tasks) {
+            // 创建者信息
+            if (task.getCreatorId() != null) {
+                User creator = creatorMap.get(task.getCreatorId());
+                if (creator != null) {
+                    task.setCreatorName(creator.getUsername());
+                    task.setCreatorAvatar(creator.getAvatar());
+                }
+            }
+
+            // 执行人信息
+            List<Long> uids = taskAssigneeUserIds.getOrDefault(task.getId(), Collections.emptyList());
+            task.setAssigneeCount(uids.size());
+
+            List<String> names = new ArrayList<>();
+            List<String> avatars = new ArrayList<>();
+            for (Long uid : uids) {
+                User user = assigneeUserMap.get(uid);
+                if (user != null) {
+                    names.add(user.getUsername());
+                    if (user.getAvatar() != null) {
+                        avatars.add(user.getAvatar());
+                    }
+                }
+            }
+            task.setAssigneeNames(names.isEmpty() ? null : String.join(", ", names));
+            task.setAssigneeAvatars(avatars);
+        }
     }
 }

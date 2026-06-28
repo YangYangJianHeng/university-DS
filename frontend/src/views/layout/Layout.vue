@@ -96,6 +96,10 @@
             <el-icon><Collection /></el-icon>
             <template #title>成果展厅</template>
           </el-menu-item>
+          <el-menu-item index="/ai-chat">
+            <el-icon><ChatDotRound /></el-icon>
+            <template #title>AI 助手</template>
+          </el-menu-item>
           <el-menu-item index="/profile">
             <el-icon><User /></el-icon>
             <template #title>个人中心</template>
@@ -191,7 +195,7 @@ async function handleRead(n: any) {
 
 function handleLogout() {
   userStore.logout()
-  router.push('/login')
+  router.push('/')
 }
 </script>
 

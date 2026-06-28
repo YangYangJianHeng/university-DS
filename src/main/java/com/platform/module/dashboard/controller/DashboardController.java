@@ -1,6 +1,7 @@
 package com.platform.module.dashboard.controller;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.platform.common.result.Result;
 import com.platform.common.util.UserContext;
 import com.platform.module.recruit.entity.Recruit;
@@ -109,11 +110,12 @@ public class DashboardController {
                         .eq(Recruit::getStatus, "OPEN"));
         data.put("activeRecruitCount", activeRecruitCount);
 
-        // Recent recruits
-        List<Recruit> recruits = recruitMapper.selectList(
+        // Recent recruits (limit 5)
+        List<Recruit> recruits = recruitMapper.selectPage(
+                new Page<>(1, 5),
                 new LambdaQueryWrapper<Recruit>()
-                        .orderByDesc(Recruit::getCreatedAt)
-                        .last("LIMIT 5"));
+                        .orderByDesc(Recruit::getCreatedAt))
+                .getRecords();
         data.put("recentRecruits", recruits);
 
         return Result.success(data);
@@ -187,16 +189,14 @@ public class DashboardController {
                 new LambdaQueryWrapper<Project>().in(Project::getTeamId, userTeamIds));
         stats.put("totalProjects", projectCount);
 
-        // 用户参与的任务数
-        long taskCount = taskAssigneeMapper.selectCount(
+        // 用户参与的任务数 + 已完成任务数（一次查询，避免重复DB调用）
+        List<TaskAssignee> userAssignments = taskAssigneeMapper.selectList(
                 new LambdaQueryWrapper<TaskAssignee>().eq(TaskAssignee::getUserId, userId));
+        long taskCount = userAssignments.size();
         stats.put("totalTasks", taskCount);
 
-        // 已完成任务数
-        List<Long> userTaskIds = taskAssigneeMapper.selectList(
-                        new LambdaQueryWrapper<TaskAssignee>()
-                                .eq(TaskAssignee::getUserId, userId))
-                .stream().map(TaskAssignee::getTaskId).collect(Collectors.toList());
+        List<Long> userTaskIds = userAssignments.stream()
+                .map(TaskAssignee::getTaskId).collect(Collectors.toList());
         long completedTasks = userTaskIds.isEmpty() ? 0 : taskMapper.selectCount(
                 new LambdaQueryWrapper<Task>()
                         .in(Task::getId, userTaskIds)
@@ -239,18 +239,20 @@ public class DashboardController {
         Map<String, Object> result = new HashMap<>();
         result.put("newCertificates", new java.util.ArrayList<>());
         result.put("totalUnlocked", badges.stream().filter(b -> Boolean.TRUE.equals(b.get("unlocked"))).count());
-        
+
+        // 一次性获取所有现有证书，避免N+1查询
+        List<com.platform.module.badge.entity.Certificate> existingCerts =
+                certificateService.getUserCertificates(userId);
+        Set<Long> certBadgeIds = existingCerts.stream()
+                .map(com.platform.module.badge.entity.Certificate::getBadgeId)
+                .collect(Collectors.toSet());
+
         // 自动为每个已解锁但未生成证书的徽章生成证书
         List<Map<String, Object>> newCerts = new java.util.ArrayList<>();
         for (Map<String, Object> badge : badges) {
             if (Boolean.TRUE.equals(badge.get("unlocked"))) {
                 Long badgeId = Long.valueOf(badge.get("id").toString());
-                // 检查是否已有证书
-                List<com.platform.module.badge.entity.Certificate> existingCerts =
-                        certificateService.getUserCertificates(userId);
-                boolean hasCert = existingCerts.stream()
-                        .anyMatch(c -> c.getBadgeId().equals(badgeId));
-                if (!hasCert) {
+                if (!certBadgeIds.contains(badgeId)) {
                     var newCert = certificateService.generateCertificate(userId, badgeId);
                     if (newCert != null) {
                         Map<String, Object> certMap = certificateService.getCertificateViewData(newCert.getId());

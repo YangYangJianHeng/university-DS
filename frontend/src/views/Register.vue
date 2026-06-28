@@ -79,6 +79,23 @@
                 <el-option label="研三" value="研三" />
               </el-select>
             </el-form-item>
+            <el-form-item prop="captchaCode">
+              <div class="captcha-row">
+                <el-input
+                  v-model="form.captchaCode"
+                  placeholder="验证码"
+                  :prefix-icon="PictureFilled"
+                  class="captcha-input"
+                />
+                <img
+                  :src="captchaImage"
+                  class="captcha-img"
+                  alt="验证码"
+                  title="点击刷新验证码"
+                  @click="refreshCaptcha"
+                />
+              </div>
+            </el-form-item>
             <el-form-item>
               <el-button class="register-btn" :loading="loading" @click="handleRegister">
                 注 册
@@ -96,12 +113,12 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive } from 'vue'
+import { ref, reactive, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { register } from '@/api/user'
+import { register, getCaptcha } from '@/api/user'
 import { ElMessage } from 'element-plus'
 import type { FormInstance, FormRules } from 'element-plus'
-import { Iphone, Lock, User, Reading, School } from '@element-plus/icons-vue'
+import { Iphone, Lock, User, Reading, School, PictureFilled } from '@element-plus/icons-vue'
 
 const router = useRouter()
 const formRef = ref<FormInstance>()
@@ -114,7 +131,11 @@ const form = reactive({
   studentId: '',
   major: '',
   grade: '',
+  captchaKey: '',
+  captchaCode: '',
 })
+
+const captchaImage = ref('')
 
 const validatePassword = (_rule: any, value: string, callback: any) => {
   if (value !== form.password) {
@@ -144,9 +165,27 @@ const rules: FormRules = {
   studentId: [{ required: true, message: '请输入学号', trigger: 'blur' }],
   major: [{ required: true, message: '请输入专业', trigger: 'blur' }],
   grade: [{ required: true, message: '请选择年级', trigger: 'change' }],
+  captchaCode: [
+    { required: true, message: '请输入验证码', trigger: 'blur' },
+  ],
 }
 
 const loading = ref(false)
+
+async function refreshCaptcha() {
+  try {
+    const res = await getCaptcha()
+    form.captchaKey = res.data.captchaKey
+    captchaImage.value = res.data.captchaImage
+    form.captchaCode = ''
+  } catch {
+    // error handled by interceptor
+  }
+}
+
+onMounted(() => {
+  refreshCaptcha()
+})
 
 async function handleRegister() {
   if (!formRef.value) return
@@ -159,6 +198,8 @@ async function handleRegister() {
     await register(submitData)
     ElMessage.success('注册成功，请登录')
     router.push('/login')
+  } catch {
+    refreshCaptcha()
   } finally {
     loading.value = false
   }
@@ -347,6 +388,26 @@ async function handleRegister() {
   margin-top: 20px;
   font-size: 14px;
   color: var(--color-text-muted);
+}
+
+.captcha-row {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+.captcha-input {
+  flex: 1;
+}
+.captcha-img {
+  height: 42px;
+  border-radius: 8px;
+  border: 1px solid #e4e7ed;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: opacity 0.2s;
+}
+.captcha-img:hover {
+  opacity: 0.85;
 }
 
 .login-link {

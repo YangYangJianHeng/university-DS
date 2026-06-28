@@ -1,0 +1,45 @@
+# ============================================================
+# 生产环境配置
+# 启动方式: java -jar app.jar --spring.profiles.active=prod
+# ============================================================
+
+# 生产环境必须通过环境变量设置：
+#   MYSQL_URL, MYSQL_USERNAME, MYSQL_PASSWORD
+#   REDIS_HOST, REDIS_PASSWORD
+#   JWT_SECRET (强随机密钥)
+#   MINIO_ENDPOINT, MINIO_ACCESS_KEY, MINIO_SECRET_KEY, MINIO_BUCKET
+# 参考: .env.example
+
+spring:
+  # 生产环境禁用H2控制台
+  h2:
+    console:
+      enabled: false
+  jpa:
+    show-sql: false
+  # 生产环境不执行schema初始化
+  sql:
+    init:
+      mode: never
+
+# 关闭MyBatis SQL日志
+mybatis-plus:
+  configuration:
+    log-impl: org.apache.ibatis.logging.nologging.NoLoggingImpl
+
+# 关闭Knife4j/Swagger文档（生产环境不应暴露API文档）
+knife4j:
+  enable: false
+
+# 强化SpringDoc安全
+springdoc:
+  api-docs:
+    enabled: false
+  swagger-ui:
+    enabled: false
+
+# 日志级别：生产环境仅记录WARN及以上
+logging:
+  level:
+    root: WARN
+    com.platform: INFO

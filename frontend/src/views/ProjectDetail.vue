@@ -28,7 +28,7 @@
         </div>
         <div class="header-right">
           <el-button
-            v-if="project.status !== 'CLOSED'"
+            v-if="project.status !== 'CLOSED' && (isAdmin || isProjectCreator)"
             type="warning"
             size="small"
             @click="handleCloseProject"
@@ -37,7 +37,7 @@
             <el-icon><SwitchButton /></el-icon> 关闭项目
           </el-button>
           <el-button
-            v-if="project.status === 'CLOSED'"
+            v-if="project.status === 'CLOSED' && (isAdmin || isProjectCreator)"
             type="success"
             size="small"
             @click="handleReopenProject"
@@ -101,9 +101,6 @@
             <span>任务列表</span>
             <el-tag size="small" type="info">{{ tasks.length }}</el-tag>
           </div>
-          <el-button type="primary" size="small" @click="showTaskDialog = true">
-            <el-icon><Plus /></el-icon>新建任务
-          </el-button>
         </div>
         <el-table :data="tasks" stripe size="small" class="task-table">
           <el-table-column prop="title" label="任务名称" min-width="200" />
@@ -222,13 +219,13 @@
           </div>
         </div>
         <el-table :data="projectFiles" stripe size="small" class="file-table">
-          <el-table-column label="文件名" min-width="220">
+          <el-table-column label="文件名" min-width="200">
             <template #default="{ row }">
               <div class="file-name-cell">
                 <el-icon :size="18" :style="{ color: getFileColor(row.name) }">
                   <component :is="getFileIcon(row.name)" />
                 </el-icon>
-                <el-link type="primary" :underline="false" @click="handleDownloadFile(row)">{{ row.name }}</el-link>
+                <span class="file-name-text">{{ row.name }}</span>
               </div>
             </template>
           </el-table-column>
@@ -249,46 +246,25 @@
               <span class="file-time">{{ dayjs(row.createdAt).format('YYYY-MM-DD HH:mm') }}</span>
             </template>
           </el-table-column>
-          <el-table-column label="操作" width="80" align="center">
+          <el-table-column label="操作" width="180" align="center" fixed="right">
             <template #default="{ row }">
-              <el-button text type="danger" size="small" @click="handleDeleteProjectFile(row)">删除</el-button>
+              <div class="file-actions">
+                <el-button text type="primary" size="small" @click="handlePreviewFile(row)">
+                  <el-icon><View /></el-icon> 查看
+                </el-button>
+                <el-button text type="success" size="small" @click="handleDownloadFile(row)">
+                  <el-icon><Download /></el-icon> 下载
+                </el-button>
+                <el-button text type="danger" size="small" @click="handleDeleteProjectFile(row)">
+                  <el-icon><Delete /></el-icon> 删除
+                </el-button>
+              </div>
             </template>
           </el-table-column>
         </el-table>
         <el-empty v-if="!projectFiles.length" description="暂无项目资料，点击上传添加" />
       </el-tab-pane>
     </el-tabs>
-
-    <!-- New Task Dialog -->
-    <el-dialog v-model="showTaskDialog" title="新建任务" width="520px">
-      <el-form ref="taskFormRef" :model="taskForm" :rules="taskRules" label-width="100px">
-        <el-form-item label="任务名称" prop="title">
-          <el-input v-model="taskForm.title" placeholder="请输入任务名称" />
-        </el-form-item>
-        <el-form-item label="负责人" prop="assigneeId">
-          <el-select v-model="taskForm.assigneeId" placeholder="请选择负责人" filterable>
-            <el-option v-for="m in project.members || []" :key="m.id" :label="m.name || m.username" :value="m.id" />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="优先级" prop="priority">
-          <el-select v-model="taskForm.priority" placeholder="请选择优先级">
-            <el-option label="高" value="HIGH" />
-            <el-option label="中" value="MEDIUM" />
-            <el-option label="低" value="LOW" />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="截止日期" prop="deadline">
-          <el-date-picker v-model="taskForm.deadline" type="date" placeholder="选择日期" style="width:100%" />
-        </el-form-item>
-        <el-form-item label="描述" prop="description">
-          <el-input v-model="taskForm.description" type="textarea" :rows="3" />
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="showTaskDialog = false">取消</el-button>
-        <el-button type="primary" :loading="taskSubmitting" @click="handleCreateTask">创建</el-button>
-      </template>
-    </el-dialog>
 
     <!-- Add Member Dialog -->
     <el-dialog v-model="showAddMemberDialog" title="添加团队成员" width="420px">
@@ -343,6 +319,57 @@
         </div>
       </div>
     </el-dialog>
+
+    <!-- File Preview Dialog -->
+    <el-dialog
+      v-model="showPreviewDialog"
+      :title="previewFileName"
+      width="80%"
+      :close-on-click-modal="true"
+      destroy-on-close
+      class="file-preview-dialog"
+    >
+      <div class="preview-toolbar" v-if="previewFileId">
+        <el-tag size="small" effect="plain">{{ previewFileType }}</el-tag>
+        <span class="preview-file-size">{{ formatFileSize(previewFileSize) }}</span>
+        <el-button size="small" type="primary" @click="downloadFromPreview">
+          <el-icon><Download /></el-icon> 下载此文件
+        </el-button>
+      </div>
+      <div class="preview-body">
+        <!-- 图片预览 -->
+        <div v-if="previewMode === 'image'" class="preview-image-wrapper">
+          <img :src="previewSrc" :alt="previewFileName" class="preview-image" />
+        </div>
+        <!-- PDF预览 -->
+        <div v-else-if="previewMode === 'pdf'" class="preview-pdf-wrapper">
+          <iframe :src="previewSrc" class="preview-iframe" frameborder="0" />
+        </div>
+        <!-- 视频预览 -->
+        <div v-else-if="previewMode === 'video'" class="preview-video-wrapper">
+          <video :src="previewSrc" controls class="preview-video" />
+        </div>
+        <!-- 音频预览 -->
+        <div v-else-if="previewMode === 'audio'" class="preview-audio-wrapper">
+          <audio :src="previewSrc" controls class="preview-audio" />
+        </div>
+        <!-- 文本预览 -->
+        <div v-else-if="previewMode === 'text'" class="preview-text-wrapper">
+          <pre class="preview-text-content">{{ previewTextContent }}</pre>
+        </div>
+        <!-- 不支持预览 -->
+        <div v-else class="preview-unsupported">
+          <el-empty description="该文件类型暂不支持在线预览">
+            <template #image>
+              <el-icon :size="64" color="#c0c4cc"><WarningFilled /></el-icon>
+            </template>
+            <el-button type="primary" @click="downloadFromPreview">
+              <el-icon><Download /></el-icon> 直接下载
+            </el-button>
+          </el-empty>
+        </div>
+      </div>
+    </el-dialog>
   </div>
 </template>
 
@@ -352,9 +379,9 @@ import { useRouter, useRoute } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import dayjs from 'dayjs'
 import { getProject, getGanttData, getRiskAssessment, addProjectMember, getProjectMembers, closeProject, reopenProject, deleteProject } from '@/api/project'
-import { listTasks, createTask, updateTaskStatus } from '@/api/task'
-import { getProjectFiles, uploadFile, deleteFile, getDownloadUrl } from '@/api/file'
-import { withToken } from '@/utils/url'
+import { listTasks, updateTaskStatus } from '@/api/task'
+import { getProjectFiles, uploadFile, deleteFile, getDownloadUrl, getPreviewUrl } from '@/api/file'
+import { prefetchFileUrls, getSignedFileUrl, fetchSingleSignedUrl } from '@/utils/url'
 import { useUserStore } from '@/stores/user'
 
 const router = useRouter()
@@ -375,8 +402,8 @@ const isProjectCreator = computed(() => project.value?.leaderId === userStore.us
 function projectStatusType(status: string): 'success' | 'warning' | 'danger' | 'info' {
   switch (status) {
     case 'PLANNING': case 'IN_PROGRESS': return 'success'
-    case 'REVIEW': return ''
-    case 'COMPLETED': return ''
+    case 'REVIEW': return 'warning'
+    case 'COMPLETED': return 'success'
     case 'ARCHIVED': return 'warning'
     case 'CLOSED': return 'danger'
     default: return 'info'
@@ -443,15 +470,22 @@ function avatarGradient(name?: string): string {
 }
 
 const tasks = ref<any[]>([])
-const showTaskDialog = ref(false)
-const taskSubmitting = ref(false)
-const taskForm = ref({ title: '', assigneeId: null as number | null, priority: 'MEDIUM', deadline: null as string | null, description: '' })
-const taskRules = { title: [{ required: true, message: '请输入任务名称', trigger: 'blur' }] }
 
 // Files
 const projectFiles = ref<any[]>([])
 const fileInputRef = ref<HTMLInputElement>()
 const uploading = ref(false)
+
+// Preview
+const showPreviewDialog = ref(false)
+const previewMode = ref<'image' | 'pdf' | 'video' | 'audio' | 'text' | 'unsupported'>('unsupported')
+const previewSrc = ref('')
+const previewFileName = ref('')
+const previewFileId = ref<number | null>(null)
+const previewFileType = ref('')
+const previewFileSize = ref(0)
+const previewTextContent = ref('')
+const previewFileRow = ref<any>(null)
 
 // 里程碑数据存储在 description 字段中（JSON数组），需要从description中解析
 const milestones = computed(() => {
@@ -517,7 +551,16 @@ onMounted(async () => {
     router.replace('/projects')
     return
   }
-  await loadProject(); await loadTasks(); await loadGantt(); await loadRisk(); await loadMembers(); await loadFiles()
+  // Phase 1: 先加载项目数据（loadFiles 依赖 project.teamId）
+  await loadProject()
+  // Phase 2: 并行加载其余独立数据，大幅减少页面加载时间
+  await Promise.all([
+    loadTasks(),
+    loadGantt(),
+    loadRisk(),
+    loadMembers(),
+    loadFiles(),
+  ])
 })
 
 async function loadProject() { loading.value = true; try { const res = await getProject(projectId); project.value = res.data || {} } catch (_) { project.value = {} } finally { loading.value = false } }
@@ -588,17 +631,6 @@ async function handleDeleteProject() {
   finally { actionLoading.value = false }
 }
 
-async function handleCreateTask() {
-  taskSubmitting.value = true
-  try {
-    await createTask({ ...taskForm.value, projectId })
-    ElMessage.success('任务创建成功')
-    showTaskDialog.value = false
-    taskForm.value = { title: '', assigneeId: null, priority: 'MEDIUM', deadline: null, description: '' }
-    await loadTasks()
-  } catch (_) {} finally { taskSubmitting.value = false }
-}
-
 async function handleAddMember() {
   if (!addMemberId.value) { ElMessage.warning('请输入用户ID'); return }
   addMemberLoading.value = true
@@ -618,6 +650,9 @@ async function loadFiles() {
     if (!teamId) return
     const res = await getProjectFiles(teamId, projectId)
     projectFiles.value = res.data || []
+    // 预加载文件安全签名URL（await确保后续预览/下载时能获取签名URL）
+    const fileIds = projectFiles.value.map((f: any) => f.id).filter(Boolean)
+    if (fileIds.length > 0) await prefetchFileUrls(fileIds)
   } catch (_) { projectFiles.value = [] }
 }
 
@@ -639,9 +674,15 @@ async function handleFileChange(e: Event) {
   }
 }
 
-function handleDownloadFile(row: any) {
+async function handleDownloadFile(row: any) {
+  let url = getSignedFileUrl(row.id, 'download')
+  // 缓存未命中时，同步获取签名URL（浏览器标签不带Authorization header）
+  if (url.startsWith('/api/file/')) {
+    const signedUrl = await fetchSingleSignedUrl(row.id, 'download')
+    if (signedUrl) url = signedUrl
+  }
   const a = document.createElement('a')
-  a.href = withToken(getDownloadUrl(row.id))
+  a.href = url
   a.download = row.name
   a.click()
 }
@@ -654,6 +695,73 @@ async function handleDeleteProjectFile(row: any) {
     ElMessage.success('文件已删除')
     await loadFiles()
   } catch (_) {}
+}
+
+// ---------- 文件预览 ----------
+const IMG_EXTS = ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'svg', 'webp', 'ico']
+const PDF_EXTS = ['pdf']
+const VIDEO_EXTS = ['mp4', 'webm', 'ogg', 'mov', 'avi', 'mkv', 'wmv', 'flv']
+const AUDIO_EXTS = ['mp3', 'wav', 'aac', 'flac', 'ogg']
+const TEXT_EXTS = ['txt', 'md', 'json', 'xml', 'yaml', 'yml', 'properties', 'log',
+  'java', 'ts', 'js', 'jsx', 'tsx', 'py', 'c', 'cpp', 'h', 'hpp', 'cs', 'go', 'rs', 'rb', 'php',
+  'html', 'htm', 'css', 'less', 'scss', 'sass', 'sql', 'sh', 'bat', 'cmake', 'makefile', 'dockerfile',
+  'conf', 'ini', 'cfg', 'toml', 'env']
+
+function detectPreviewMode(ext: string): 'image' | 'pdf' | 'video' | 'audio' | 'text' | 'unsupported' {
+  if (IMG_EXTS.includes(ext)) return 'image'
+  if (PDF_EXTS.includes(ext)) return 'pdf'
+  if (VIDEO_EXTS.includes(ext)) return 'video'
+  if (AUDIO_EXTS.includes(ext)) return 'audio'
+  if (TEXT_EXTS.includes(ext)) return 'text'
+  return 'unsupported'
+}
+
+async function handlePreviewFile(row: any) {
+  const ext = getFileExtension(row.name).toLowerCase()
+  const mode = detectPreviewMode(ext)
+  let url = getSignedFileUrl(row.id, 'preview')
+  // 缓存未命中时，同步获取签名URL（浏览器标签不带Authorization header）
+  if (url.startsWith('/api/file/')) {
+    const signedUrl = await fetchSingleSignedUrl(row.id, 'preview')
+    if (signedUrl) url = signedUrl
+  }
+
+  // 存储当前预览文件信息，用于下载按钮
+  previewFileRow.value = row
+  previewFileId.value = row.id
+  previewFileName.value = row.name
+  previewFileType.value = ext.toUpperCase()
+  previewFileSize.value = row.fileSize
+  showPreviewDialog.value = true
+
+  if (mode === 'unsupported') {
+    previewMode.value = 'unsupported'
+    previewSrc.value = ''
+    return
+  }
+
+  if (mode === 'text') {
+    // 文本文件需要先获取内容
+    try {
+      const resp = await fetch(url)
+      if (!resp.ok) throw new Error('无法加载文件')
+      previewTextContent.value = await resp.text()
+      previewMode.value = 'text'
+    } catch {
+      ElMessage.error('无法加载文本内容')
+      showPreviewDialog.value = false
+    }
+    return
+  }
+
+  previewMode.value = mode
+  previewSrc.value = url
+}
+
+function downloadFromPreview() {
+  if (previewFileRow.value) {
+    handleDownloadFile(previewFileRow.value)
+  }
 }
 
 function formatFileSize(bytes: number | undefined): string {
@@ -833,7 +941,62 @@ function getFileTagType(filename: string): 'primary' | 'success' | 'warning' | '
 /* Files */
 .file-table :deep(.el-table__header) th { background: #f8f9fb !important; color: #606266; font-weight: 600; }
 .file-name-cell { display: flex; align-items: center; gap: 8px; }
+.file-name-text { font-size: 14px; color: #303133; font-weight: 500; }
 .file-size { color: #909399; font-size: 13px; }
 .file-time { color: #909399; font-size: 13px; }
+.file-actions { display: flex; gap: 2px; white-space: nowrap; }
 .toolbar-actions { display: flex; gap: 8px; }
+
+/* File Preview Dialog */
+.file-preview-dialog :deep(.el-dialog__header) {
+  padding: 16px 20px; border-bottom: 1px solid #ebeef5;
+}
+.file-preview-dialog :deep(.el-dialog__body) { padding: 0; }
+.file-preview-dialog :deep(.el-dialog) { border-radius: 12px; overflow: hidden; }
+
+.preview-toolbar {
+  display: flex; align-items: center; gap: 12px;
+  padding: 10px 20px;
+  background: #f8f9fb;
+  border-bottom: 1px solid #ebeef5;
+}
+.preview-file-size { font-size: 13px; color: #909399; flex: 1; }
+
+.preview-body { min-height: 300px; max-height: 70vh; overflow: auto; background: #f0f2f5; }
+
+.preview-image-wrapper {
+  display: flex; align-items: center; justify-content: center;
+  padding: 20px; min-height: 300px;
+}
+.preview-image { max-width: 100%; max-height: 65vh; border-radius: 4px; box-shadow: 0 2px 12px rgba(0,0,0,.1); }
+
+.preview-pdf-wrapper { width: 100%; height: 70vh; }
+.preview-iframe { width: 100%; height: 100%; min-height: 500px; }
+
+.preview-video-wrapper {
+  display: flex; align-items: center; justify-content: center;
+  padding: 20px; min-height: 300px; background: #000;
+}
+.preview-video { max-width: 100%; max-height: 65vh; border-radius: 4px; }
+
+.preview-audio-wrapper {
+  display: flex; align-items: center; justify-content: center;
+  padding: 40px 20px; min-height: 200px;
+}
+.preview-audio { width: 100%; max-width: 500px; }
+
+.preview-text-wrapper { padding: 16px 20px; }
+.preview-text-content {
+  margin: 0; padding: 16px;
+  background: #fff; border: 1px solid #e4e7ed; border-radius: 8px;
+  font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', 'Consolas', 'Monaco', monospace;
+  font-size: 13px; line-height: 1.6; color: #2c3e50;
+  white-space: pre-wrap; word-wrap: break-word; overflow-wrap: break-word;
+  max-height: 60vh; overflow: auto;
+}
+
+.preview-unsupported {
+  display: flex; align-items: center; justify-content: center;
+  padding: 40px 20px; min-height: 300px;
+}
 </style>

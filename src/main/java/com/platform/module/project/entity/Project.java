@@ -16,6 +16,8 @@ public class Project {
     private String name;
     private String icon;
     private String description;
+    /** 里程碑JSON数组，格式: [{"id":..., "name":"...", "description":"...", "deadline":"...", "status":"..."}] */
+    private String milestones;
     private String status;
     private LocalDate startedAt;
     private LocalDate endedAt;

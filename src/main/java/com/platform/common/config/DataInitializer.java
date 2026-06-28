@@ -127,7 +127,7 @@ public class DataInitializer implements CommandLineRunner {
         User admin = findUserByPhone("13800000000");
         if (admin == null) {
             admin = createUser("13800000000", "ADMIN001", "管理员", "admin123", null, null, "ADMIN", 1);
-            System.out.println("Admin user created: 13800000000 / admin123");
+            System.out.println("Admin user created (id=" + admin.getId() + ")");
         }
 
         // 演示用户
@@ -135,7 +135,7 @@ public class DataInitializer implements CommandLineRunner {
         if (demo == null) {
             demo = createUser("13800000001", "2024001", "张三", "123456",
                     "计算机科学与技术", "2023级", "USER", 1);
-            System.out.println("Demo user created: 13800000001 / 123456");
+            System.out.println("Demo user created (id=" + demo.getId() + ")");
         }
 
         // ---- 学生用户 ----

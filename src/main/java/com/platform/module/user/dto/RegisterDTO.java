@@ -22,4 +22,10 @@ public class RegisterDTO {
     private String studentId;
     private String major;
     private String grade;
+
+    @NotBlank(message = "验证码不能为空")
+    private String captchaKey;
+
+    @NotBlank(message = "验证码不能为空")
+    private String captchaCode;
 }

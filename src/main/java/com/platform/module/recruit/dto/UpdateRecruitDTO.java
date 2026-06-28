@@ -1,5 +1,6 @@
 package com.platform.module.recruit.dto;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.Data;
 
 import java.time.LocalDateTime;
@@ -22,5 +23,6 @@ public class UpdateRecruitDTO {
 
     private Integer maxMembers;
 
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "Asia/Shanghai")
     private LocalDateTime deadline;
 }

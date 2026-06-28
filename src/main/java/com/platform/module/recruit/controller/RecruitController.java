@@ -6,8 +6,8 @@ import com.platform.common.util.UserContext;
 import com.platform.module.recruit.dto.ConvertToProjectDTO;
 import com.platform.module.recruit.dto.CreateRecruitDTO;
 import com.platform.module.recruit.dto.UpdateRecruitDTO;
-import com.platform.module.recruit.entity.Application;
 import com.platform.module.recruit.service.RecruitService;
+import com.platform.module.recruit.vo.RecruitApplicationVO;
 import com.platform.module.recruit.vo.RecruitVO;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -109,8 +109,8 @@ public class RecruitController {
      * Get applications for a specific recruit (publisher only).
      */
     @GetMapping("/{id}/applications")
-    public Result<List<Application>> getApplications(@PathVariable Long id) {
-        List<Application> applications = recruitService.getApplications(id);
+    public Result<List<RecruitApplicationVO>> getApplications(@PathVariable Long id) {
+        List<RecruitApplicationVO> applications = recruitService.getApplications(id);
         return Result.success(applications);
     }
 

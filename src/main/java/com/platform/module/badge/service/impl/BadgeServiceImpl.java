@@ -21,6 +21,8 @@ import com.platform.module.user.entity.UserExperience;
 import com.platform.module.user.entity.UserSkill;
 import com.platform.module.user.mapper.UserExperienceMapper;
 import com.platform.module.user.mapper.UserSkillMapper;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
@@ -78,12 +80,14 @@ public class BadgeServiceImpl extends ServiceImpl<BadgeMapper, Badge> implements
     }
 
     @Override
+    @CacheEvict(value = "badge", allEntries = true)
     public Badge createBadge(Badge badge) {
         this.save(badge);
         return badge;
     }
 
     @Override
+    @CacheEvict(value = "badge", allEntries = true)
     public Badge updateBadge(Long id, Badge badge) {
         badge.setId(id);
         this.updateById(badge);

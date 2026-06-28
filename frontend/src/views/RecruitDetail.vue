@@ -27,7 +27,7 @@
               <div class="meta-item">
                 <div class="meta-label">发布人</div>
                 <div class="meta-value">
-                  <el-avatar :size="24" style="vertical-align:middle;margin-right:6px;background:var(--gradient-primary)">
+                  <el-avatar :size="24" :src="recruit.publisherAvatar" style="vertical-align:middle;margin-right:6px;background:var(--gradient-primary)">
                     {{ recruit.publisherName?.charAt(0) || '?' }}
                   </el-avatar>
                   {{ recruit.publisherName || '未知' }}
@@ -118,7 +118,7 @@
             <div class="application-list">
               <div v-for="app in applications" :key="app.id" class="application-item">
                 <div class="app-user">
-                  <el-avatar :size="32" class="app-avatar">{{ app.applicantName?.charAt(0) || '?' }}</el-avatar>
+                  <el-avatar :size="32" class="app-avatar" :src="app.applicantAvatar">{{ app.applicantName?.charAt(0) || '?' }}</el-avatar>
                   <span class="app-name">{{ app.applicantName || '未知用户' }}</span>
                 </div>
                 <div class="app-actions" v-if="app.status === 'PENDING'">
@@ -217,7 +217,7 @@
             <div v-else class="match-list">
               <div v-for="item in matchResults" :key="item.userId || item.id" class="match-card">
                 <div class="match-user">
-                  <el-avatar :size="40" class="match-avatar">{{ item.username?.charAt(0) || '?' }}</el-avatar>
+                  <el-avatar :size="40" class="match-avatar" :src="item.avatar">{{ item.username?.charAt(0) || '?' }}</el-avatar>
                   <div class="match-user-info">
                     <span class="match-username">{{ item.username || '未知' }}</span>
                     <span class="match-desc">{{ item.major || '' }}</span>
@@ -579,7 +579,11 @@ async function handleConvertToProject() {
   }
 }
 
-onMounted(() => { fetchDetail().then(() => { loadApplications(); loadMatches() }) })
+onMounted(async () => {
+  await fetchDetail()
+  // 并行加载申请列表和匹配列表
+  await Promise.all([loadApplications(), loadMatches()])
+})
 </script>
 
 <style scoped>

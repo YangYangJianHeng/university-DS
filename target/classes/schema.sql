@@ -130,6 +130,7 @@ CREATE TABLE IF NOT EXISTS `project` (
     `name` VARCHAR(200) NOT NULL,
     `icon` VARCHAR(500) COMMENT '项目图标URL',
     `description` TEXT,
+    `milestones` TEXT COMMENT '里程碑JSON数组',
     `status` VARCHAR(20) DEFAULT 'ONGOING',
     `started_at` DATE,
     `ended_at` DATE,
@@ -261,6 +262,7 @@ CREATE TABLE IF NOT EXISTS `file` (
     `id` BIGINT AUTO_INCREMENT PRIMARY KEY,
     `team_id` BIGINT,
     `project_id` BIGINT COMMENT '关联项目ID',
+    `task_id` BIGINT COMMENT '关联任务ID，上传时可为空，创建任务后关联',
     `parent_id` BIGINT,
     `name` VARCHAR(255) NOT NULL,
     `type` VARCHAR(10) DEFAULT 'FILE',
@@ -376,6 +378,42 @@ CREATE TABLE IF NOT EXISTS `certificate` (
     FOREIGN KEY (`badge_id`) REFERENCES `badge`(`id`),
     UNIQUE KEY `uk_user_badge` (`user_id`, `badge_id`),
     INDEX `idx_user_id` (`user_id`)
+);
+
+-- =============================================
+-- AI 聊天相关表
+-- =============================================
+
+-- 23. AI 聊天会话表
+CREATE TABLE IF NOT EXISTS `ai_chat_session` (
+    `id` BIGINT AUTO_INCREMENT PRIMARY KEY,
+    `user_id` BIGINT NOT NULL COMMENT '用户ID',
+    `title` VARCHAR(200) DEFAULT '新的对话' COMMENT '会话标题（由AI自动生成）',
+    `summary` TEXT COMMENT '历史对话摘要（压缩后的旧消息）',
+    `message_count` INT DEFAULT 0 COMMENT '消息总数',
+    `status` VARCHAR(20) DEFAULT 'ACTIVE' COMMENT 'ACTIVE/ARCHIVED',
+    `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+    `updated_at` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (`user_id`) REFERENCES `user`(`id`),
+    INDEX `idx_user_id` (`user_id`),
+    INDEX `idx_updated_at` (`updated_at`)
+);
+
+-- 24. AI 聊天消息表
+CREATE TABLE IF NOT EXISTS `ai_chat_message` (
+    `id` BIGINT AUTO_INCREMENT PRIMARY KEY,
+    `session_id` BIGINT NOT NULL COMMENT '会话ID',
+    `user_id` BIGINT NOT NULL COMMENT '用户ID（冗余，方便按用户查询）',
+    `role` VARCHAR(20) NOT NULL COMMENT 'user / assistant / system',
+    `content` TEXT NOT NULL COMMENT '消息内容',
+    `compressed` TINYINT DEFAULT 0 COMMENT '是否已被压缩（1=已压缩到摘要中）',
+    `token_count` INT DEFAULT 0 COMMENT '估算token数',
+    `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (`session_id`) REFERENCES `ai_chat_session`(`id`),
+    FOREIGN KEY (`user_id`) REFERENCES `user`(`id`),
+    INDEX `idx_session_id` (`session_id`),
+    INDEX `idx_user_id` (`user_id`),
+    INDEX `idx_created_at` (`created_at`)
 );
 
 -- =============================================
