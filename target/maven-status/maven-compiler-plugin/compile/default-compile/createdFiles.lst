@@ -27,6 +27,7 @@ com\platform\module\achievement\controller\AchievementController.class
 com\platform\module\file\mapper\FileMapper.class
 com\platform\module\team\entity\TeamMember.class
 com\platform\module\collaboration\service\TaskService.class
+com\platform\module\ai\service\ContextEnrichmentService.class
 com\platform\common\result\Result.class
 com\platform\module\teacher\service\impl\TeacherServiceImpl.class
 com\platform\common\config\WebConfig.class
@@ -77,6 +78,7 @@ com\platform\module\collaboration\entity\TaskComment.class
 com\platform\module\user\entity\UserSkill.class
 com\platform\module\ai\config\AiProviderConfig.class
 com\platform\module\recruit\mapper\ApplicationMapper.class
+com\platform\module\ai\controller\RagKnowledgeController.class
 com\platform\common\util\FileAccessSigner.class
 com\platform\module\ai\service\OpenAIClient.class
 com\platform\module\file\controller\FileController.class
@@ -125,6 +127,7 @@ com\platform\module\admin\entity\Announcement.class
 com\platform\module\ai\config\RagConfig.class
 com\platform\module\collaboration\dto\TaskDetailVO$CommentVO.class
 com\platform\module\competition\service\CompetitionService.class
+com\platform\module\ai\service\ContextEnrichmentService$TimeInfo.class
 com\platform\common\interceptor\AdminInterceptor.class
 com\platform\module\team\entity\TeamTeacher.class
 com\platform\module\recruit\entity\Recruit.class

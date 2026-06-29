@@ -1,0 +1,81 @@
+<!--pages/ai-chat/index/index.wxml-->
+<view class="chat-page">
+  <!-- 消息列表 -->
+  <scroll-view
+    class="chat-scroll"
+    scroll-y
+    scroll-into-view="{{scrollToView}}"
+    scroll-with-animation
+    enhanced
+    show-scrollbar="{{false}}"
+  >
+    <!-- 空状态 -->
+    <view wx:if="{{messages.length === 0}}" class="chat-empty">
+      <view class="chat-avatar-lg">🤖</view>
+      <view class="chat-title-lg">你好！我是青创协同AI助手</view>
+      <view class="chat-desc">我可以帮你解答竞赛相关问题、提供组队建议、项目规划等</view>
+      <view class="suggestions">
+        <view class="suggest-item" wx:for="{{suggestions}}" wx:key="*this" bindtap="sendSuggestion" data-text="{{item}}">
+          {{item}}
+        </view>
+      </view>
+    </view>
+
+    <!-- 消息气泡 -->
+    <block wx:for="{{messages}}" wx:key="index">
+      <!-- AI消息 -->
+      <view wx:if="{{item.role === 'assistant'}}" class="msg-row msg-ai" id="msg-{{index}}">
+        <view class="msg-avatar ai-avatar">🤖</view>
+        <view class="msg-bubble msg-bubble-ai">
+          <text class="msg-text" user-select>{{item.content}}</text>
+        </view>
+      </view>
+      <!-- 用户消息 -->
+      <view wx:else class="msg-row msg-user" id="msg-{{index}}">
+        <view class="msg-bubble msg-bubble-user">
+          <text class="msg-text">{{item.content}}</text>
+        </view>
+        <view class="msg-avatar user-avatar">{{userInitial}}</view>
+      </view>
+    </block>
+
+    <!-- 加载中 -->
+    <view wx:if="{{loading}}" class="msg-row msg-ai">
+      <view class="msg-avatar ai-avatar">🤖</view>
+      <view class="msg-bubble msg-bubble-ai msg-loading">
+        <view class="typing-dots">
+          <view class="dot"></view>
+          <view class="dot"></view>
+          <view class="dot"></view>
+        </view>
+      </view>
+    </view>
+
+    <view class="chat-bottom-space"></view>
+  </scroll-view>
+
+  <!-- 输入区域 -->
+  <view class="chat-input-bar safe-bottom">
+    <view class="input-wrapper">
+      <input
+        class="chat-input"
+        type="text"
+        placeholder="输入你的问题..."
+        placeholder-class="input-placeholder"
+        value="{{inputValue}}"
+        bindinput="onInputChange"
+        bindconfirm="handleSend"
+        confirm-type="send"
+        adjust-position="{{true}}"
+        cursor-spacing="20"
+      />
+      <button
+        class="send-btn"
+        disabled="{{!inputValue || loading}}"
+        bindtap="handleSend"
+      >
+        发送
+      </button>
+    </view>
+  </view>
+</view>

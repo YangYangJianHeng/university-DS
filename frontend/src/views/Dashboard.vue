@@ -3,12 +3,12 @@
     <!-- Welcome Banner -->
     <div class="welcome-banner">
       <div class="banner-content">
-        <div>
+        <div class="banner-text">
           <h2>欢迎回来，{{ userStore.username }}</h2>
-          <p class="welcome-sub">今日又是充满活力的一天！</p>
+          <p>今日又是充满活力的一天！查看你的团队和任务进展</p>
         </div>
         <div class="banner-actions">
-          <el-button type="primary" size="large" :icon="Plus" @click="router.push('/recruit/create')" class="banner-btn">
+          <el-button class="banner-btn" size="large" :icon="Plus" @click="router.push('/recruit/create')">
             发布招募
           </el-button>
         </div>
@@ -18,25 +18,19 @@
     <!-- Stat Cards -->
     <el-row :gutter="20" class="stat-row">
       <el-col :xs="12" :sm="12" :md="6" v-for="card in statCards" :key="card.label">
-        <el-card class="stat-card" shadow="never" :style="{ background: card.bg }">
-          <div class="stat-content">
+        <div class="stat-card" :style="{ '--card-accent': card.accent }">
+          <div class="stat-inner">
             <div class="stat-info">
-              <div class="stat-label">{{ card.label }}</div>
-              <div class="stat-value">{{ card.value }}</div>
+              <span class="stat-label">{{ card.label }}</span>
+              <span class="stat-value">{{ card.value }}</span>
             </div>
             <div class="stat-icon-wrap">
-              <el-icon :size="32" class="stat-icon">
+              <el-icon :size="24">
                 <component :is="card.icon" />
               </el-icon>
             </div>
           </div>
-          <div class="stat-trend" v-if="card.trend !== undefined">
-            <span :class="card.trend >= 0 ? 'up' : 'down'">
-              {{ card.trend >= 0 ? '↑' : '↓' }} {{ Math.abs(card.trend) }}%
-            </span>
-            <span>较上周</span>
-          </div>
-        </el-card>
+        </div>
       </el-col>
     </el-row>
 
@@ -48,9 +42,7 @@
           <template #header>
             <div class="card-header">
               <div class="card-header-left">
-                <div class="header-icon" style="background:linear-gradient(135deg,#667eea,#764ba2)">
-                  <el-icon :size="16" color="#fff"><Timer /></el-icon>
-                </div>
+                <div class="header-dot" />
                 <span>最新招募</span>
               </div>
               <el-button text type="primary" @click="router.push('/recruit')">查看全部</el-button>
@@ -63,17 +55,17 @@
             <div
               v-for="recruit in recentRecruits"
               :key="recruit.id"
-              class="recruit-card-item"
+              class="recruit-item"
               @click="router.push(`/recruit/${recruit.id}`)"
             >
-              <div class="recruit-item-left">
-                <div class="recruit-status-dot" :class="recruit.status === 'OPEN' ? 'open' : 'closed'" />
-                <div class="recruit-item-info">
-                  <div class="recruit-item-title">{{ recruit.title }}</div>
-                  <div class="recruit-item-meta">
-                    <span v-if="recruit.creator?.username">
-                      <el-icon><User /></el-icon>{{ recruit.creator.username }}
-                    </span>
+              <div class="recruit-left">
+                <span class="recruit-dot" :class="recruit.status === 'OPEN' ? 'open' : 'closed'" />
+                <div class="recruit-info">
+                  <div class="recruit-title">{{ recruit.title }}</div>
+                  <div class="recruit-meta">
+                    <el-icon :size="13"><User /></el-icon>
+                    <span>{{ recruit.publisherName || '未知用户' }}</span>
+                    <span class="meta-divider">·</span>
                     <span>{{ formatDate(recruit.createdAt) }}</span>
                   </div>
                 </div>
@@ -81,7 +73,8 @@
               <el-tag
                 size="small"
                 :type="recruit.status === 'OPEN' ? 'success' : 'info'"
-                effect="plain"
+                effect="light"
+                round
               >
                 {{ recruit.status === 'OPEN' ? '招募中' : '已关闭' }}
               </el-tag>
@@ -90,64 +83,32 @@
         </el-card>
       </el-col>
 
-      <!-- Quick Actions + Info -->
+      <!-- Quick Actions -->
       <el-col :xs="24" :md="8">
         <el-card class="content-card" shadow="never">
           <template #header>
             <div class="card-header">
               <div class="card-header-left">
-                <div class="header-icon" style="background:linear-gradient(135deg,#43e97b,#38f9d7)">
-                  <el-icon :size="16" color="#fff"><Lightning /></el-icon>
-                </div>
+                <div class="header-dot accent-green" />
                 <span>快捷操作</span>
               </div>
             </div>
           </template>
           <div class="quick-actions">
-            <div class="quick-action-item" @click="router.push('/recruit/create')">
-              <div class="qa-icon" style="background:linear-gradient(135deg,#667eea,#764ba2)">
-                <el-icon color="#fff"><Plus /></el-icon>
+            <div
+              v-for="action in quickActions"
+              :key="action.label"
+              class="qa-item"
+              @click="router.push(action.path)"
+            >
+              <div class="qa-icon" :style="{ background: action.gradient }">
+                <el-icon :size="18" color="#fff"><component :is="action.icon" /></el-icon>
               </div>
               <div class="qa-info">
-                <div class="qa-title">发布招募</div>
-                <div class="qa-desc">寻找志同道合的队友</div>
+                <div class="qa-title">{{ action.label }}</div>
+                <div class="qa-desc">{{ action.desc }}</div>
               </div>
-            </div>
-            <div class="quick-action-item" @click="router.push('/recruit')">
-              <div class="qa-icon" style="background:linear-gradient(135deg,#43e97b,#38f9d7)">
-                <el-icon color="#fff"><Search /></el-icon>
-              </div>
-              <div class="qa-info">
-                <div class="qa-title">浏览招募</div>
-                <div class="qa-desc">查看最新的组队信息</div>
-              </div>
-            </div>
-            <div class="quick-action-item" @click="router.push('/teams')">
-              <div class="qa-icon" style="background:linear-gradient(135deg,#fa709a,#fee140)">
-                <el-icon color="#fff"><UserFilled /></el-icon>
-              </div>
-              <div class="qa-info">
-                <div class="qa-title">我的团队</div>
-                <div class="qa-desc">管理你的团队成员</div>
-              </div>
-            </div>
-            <div class="quick-action-item" @click="router.push('/tasks')">
-              <div class="qa-icon" style="background:linear-gradient(135deg,#a18cd1,#fbc2eb)">
-                <el-icon color="#fff"><List /></el-icon>
-              </div>
-              <div class="qa-info">
-                <div class="qa-title">任务中心</div>
-                <div class="qa-desc">查看和管理你的任务</div>
-              </div>
-            </div>
-            <div class="quick-action-item" @click="router.push('/achievements')">
-              <div class="qa-icon" style="background:linear-gradient(135deg,#f093fb,#f5576c)">
-                <el-icon color="#fff"><Collection /></el-icon>
-              </div>
-              <div class="qa-info">
-                <div class="qa-title">成果展厅</div>
-                <div class="qa-desc">展示你的项目成果</div>
-              </div>
+              <el-icon class="qa-arrow" :size="16"><ArrowRight /></el-icon>
             </div>
           </div>
         </el-card>
@@ -162,8 +123,8 @@ import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { getDashboard } from '@/api/dashboard'
 import {
-  Timer, Lightning, User, Plus, Search,
-  UserFilled, List, Collection, Bell,
+  Timer, Lightning, User, Plus, Search, ArrowRight,
+  UserFilled, List, Collection, Bell, Trophy,
 } from '@element-plus/icons-vue'
 
 const router = useRouter()
@@ -173,14 +134,12 @@ interface StatCard {
   label: string
   value: number | string
   icon: any
-  bg: string
-  trend?: number
+  accent: string
 }
 
 const statCards = reactive<StatCard[]>([])
 const recentRecruits = ref<any[]>([])
 
-// Map icon names to actual component references
 const iconMap: Record<string, any> = {
   UserFilled: markRaw(UserFilled),
   List: markRaw(List),
@@ -188,32 +147,21 @@ const iconMap: Record<string, any> = {
   Search: markRaw(Search),
 }
 
+const quickActions = [
+  { label: '发布招募', desc: '寻找志同道合的队友', path: '/recruit/create', icon: markRaw(Plus), gradient: 'linear-gradient(135deg, #5B6FF5, #8B5CF6)' },
+  { label: '浏览招募', desc: '查看最新的组队信息', path: '/recruit', icon: markRaw(Search), gradient: 'linear-gradient(135deg, #22C55E, #10B981)' },
+  { label: '我的团队', desc: '管理团队成员', path: '/teams', icon: markRaw(UserFilled), gradient: 'linear-gradient(135deg, #F59E0B, #F97316)' },
+  { label: '任务中心', desc: '查看和管理任务', path: '/tasks', icon: markRaw(List), gradient: 'linear-gradient(135deg, #8B5CF6, #A78BFA)' },
+  { label: '竞赛中心', desc: '了解最新竞赛资讯', path: '/competitions', icon: markRaw(Trophy), gradient: 'linear-gradient(135deg, #3B82F6, #06B6D4)' },
+  { label: '成果展厅', desc: '展示项目成果', path: '/achievements', icon: markRaw(Collection), gradient: 'linear-gradient(135deg, #EC4899, #F43F5E)' },
+]
+
 function updateStatCards(counts: any) {
   const cards: StatCard[] = [
-    {
-      label: '我的团队',
-      value: counts.teamCount ?? counts.teams?.length ?? 0,
-      icon: iconMap.UserFilled,
-      bg: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-    },
-    {
-      label: '我的任务',
-      value: counts.taskCount ?? counts.tasks?.length ?? 0,
-      icon: iconMap.List,
-      bg: 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)',
-    },
-    {
-      label: '未读通知',
-      value: counts.unreadNotificationCount ?? 0,
-      icon: iconMap.Bell,
-      bg: 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)',
-    },
-    {
-      label: '活跃招募',
-      value: counts.activeRecruitCount ?? 0,
-      icon: iconMap.Search,
-      bg: 'linear-gradient(135deg, #a18cd1 0%, #fbc2eb 100%)',
-    },
+    { label: '我的团队', value: counts.teamCount ?? counts.teams?.length ?? 0, icon: iconMap.UserFilled, accent: '#5B6FF5' },
+    { label: '我的任务', value: counts.taskCount ?? counts.tasks?.length ?? 0, icon: iconMap.List, accent: '#22C55E' },
+    { label: '未读通知', value: counts.unreadNotificationCount ?? 0, icon: iconMap.Bell, accent: '#F59E0B' },
+    { label: '活跃招募', value: counts.activeRecruitCount ?? 0, icon: iconMap.Search, accent: '#8B5CF6' },
   ]
   statCards.length = 0
   statCards.push(...cards)
@@ -223,7 +171,7 @@ function formatDate(dateStr: string | undefined): string {
   if (!dateStr) return ''
   const d = new Date(dateStr)
   const pad = (n: number) => n.toString().padStart(2, '0')
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
 }
 
 async function fetchDashboard() {
@@ -232,157 +180,121 @@ async function fetchDashboard() {
     const data = res.data || {}
     recentRecruits.value = data.recentRecruits ?? data.recentActivities ?? []
     updateStatCards(data)
-  } catch {
-    // Error handled by interceptor
-  }
+  } catch { /* handled by interceptor */ }
 }
 
-onMounted(() => {
-  fetchDashboard()
-})
+onMounted(() => { fetchDashboard() })
 </script>
 
 <style scoped>
 .dashboard { padding: 0; }
 
-/* ===== Welcome Banner ===== */
+/* Welcome Banner */
 .welcome-banner {
-  background: var(--gradient-primary);
-  border-radius: var(--radius-md);
-  padding: 32px 36px;
+  background: var(--color-card);
+  border: 1px solid var(--color-border-light);
+  border-radius: var(--radius-xl);
+  padding: 36px 40px;
   margin-bottom: 24px;
-  color: #fff;
   position: relative;
   overflow: hidden;
 }
-
 .welcome-banner::before {
   content: '';
   position: absolute;
-  width: 300px;
-  height: 300px;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.05);
-  top: -100px;
-  right: -50px;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  background: var(--gradient-primary);
+  border-radius: 4px 0 0 4px;
 }
-
-.welcome-banner::after {
-  content: '';
-  position: absolute;
-  width: 200px;
-  height: 200px;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.05);
-  bottom: -60px;
-  right: 200px;
-}
-
 .banner-content {
   display: flex;
   align-items: center;
   justify-content: space-between;
   position: relative;
   z-index: 1;
+  flex-wrap: wrap;
+  gap: 16px;
 }
-
-.banner-content h2 {
+.banner-text h2 {
   font-size: 24px;
   font-weight: 700;
   margin: 0 0 6px;
+  color: var(--color-text-primary);
 }
-
-.welcome-sub {
+.banner-text p {
   margin: 0;
-  font-size: 15px;
-  opacity: 0.85;
+  font-size: 14px;
+  color: var(--color-text-muted);
 }
-
 .banner-btn {
-  border-radius: 10px;
-  font-weight: 600;
-  border: none;
-  background: rgba(255, 255, 255, 0.2) !important;
-  backdrop-filter: blur(4px);
-  transition: all 0.3s;
+  border-radius: var(--radius-sm) !important;
+  font-weight: 600 !important;
 }
 
-.banner-btn:hover {
-  background: rgba(255, 255, 255, 0.3) !important;
-  transform: translateY(-1px);
-}
-
-/* ===== Stat Cards ===== */
+/* Stat Cards */
 .stat-row { margin-bottom: 24px; }
-
 .stat-card {
-  border: none;
-  border-radius: var(--radius-md);
-  color: #fff;
+  background: var(--color-card);
+  border: 1px solid var(--color-border-light);
+  border-radius: var(--radius-lg);
+  padding: 24px;
   margin-bottom: 16px;
-  padding: 4px;
+  transition: all var(--transition-base);
   position: relative;
   overflow: hidden;
 }
-
-.stat-card::after {
+.stat-card::before {
   content: '';
   position: absolute;
-  width: 100px;
-  height: 100px;
-  border-radius: 50%;
-  background: rgba(255,255,255,0.08);
-  bottom: -30px;
-  right: -20px;
+  top: 0; left: 0;
+  width: 4px; height: 40%;
+  background: var(--card-accent);
+  border-radius: 0 2px 2px 0;
 }
-
-.stat-content {
+.stat-card:hover {
+  box-shadow: var(--shadow-md);
+  transform: translateY(-2px);
+}
+.stat-inner {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
 }
-
-.stat-info { flex: 1; }
-
+.stat-info {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
 .stat-label {
   font-size: 13px;
-  opacity: 0.85;
-  margin-bottom: 4px;
+  color: var(--color-text-muted);
+  font-weight: 500;
 }
-
 .stat-value {
-  font-size: 30px;
-  font-weight: 700;
-  line-height: 1.2;
+  font-size: 32px;
+  font-weight: 800;
+  color: var(--color-text-primary);
+  line-height: 1;
+  font-feature-settings: 'tnum';
+  letter-spacing: -0.5px;
 }
-
 .stat-icon-wrap {
-  width: 48px;
-  height: 48px;
+  width: 44px; height: 44px;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(255,255,255,0.15);
-  border-radius: 12px;
-  flex-shrink: 0;
-}
-
-.stat-trend {
-  margin-top: 12px;
-  font-size: 12px;
-  opacity: 0.8;
-  display: flex;
-  gap: 6px;
-}
-
-.stat-trend .up { color: var(--color-success); }
-.stat-trend .down { color: var(--color-danger); }
-
-/* ===== Content Cards ===== */
-.main-row { margin-bottom: 24px; }
-
-.content-card {
+  background: var(--color-bg);
   border-radius: var(--radius-md);
+  color: var(--card-accent);
+}
+
+/* Content Cards */
+.main-row { margin-bottom: 24px; }
+.content-card {
+  border-radius: var(--radius-lg) !important;
   margin-bottom: 20px;
 }
 
@@ -391,7 +303,6 @@ onMounted(() => {
   align-items: center;
   justify-content: space-between;
 }
-
 .card-header-left {
   display: flex;
   align-items: center;
@@ -400,66 +311,43 @@ onMounted(() => {
   font-weight: 600;
   color: var(--color-text-primary);
 }
-
-.header-icon {
-  width: 32px;
-  height: 32px;
-  border-radius: 8px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
+.header-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: var(--color-primary);
 }
-
+.header-dot.accent-green { background: var(--color-success); }
 .empty-state { padding: 20px 0; }
 
-/* ===== Recruit List ===== */
-.recruit-list {
-  display: flex;
-  flex-direction: column;
-}
-
-.recruit-card-item {
+/* Recruit List */
+.recruit-list { display: flex; flex-direction: column; }
+.recruit-item {
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 14px 16px;
-  border-radius: 10px;
+  border-radius: var(--radius-sm);
   cursor: pointer;
-  transition: all 0.2s;
-  border: 1px solid transparent;
+  transition: all var(--transition-fast);
 }
-
-.recruit-card-item:hover {
-  background: var(--color-bg);
-  border-color: var(--color-border);
-}
-
-.recruit-card-item + .recruit-card-item {
-  margin-top: 4px;
-}
-
-.recruit-item-left {
+.recruit-item:hover { background: var(--color-bg-hover); }
+.recruit-item + .recruit-item { margin-top: 2px; }
+.recruit-left {
   display: flex;
   align-items: center;
   gap: 12px;
   flex: 1;
   min-width: 0;
 }
-
-.recruit-status-dot {
-  width: 8px;
-  height: 8px;
+.recruit-dot {
+  width: 8px; height: 8px;
   border-radius: 50%;
   flex-shrink: 0;
 }
-
-.recruit-status-dot.open { background: var(--color-success); }
-.recruit-status-dot.closed { background: var(--color-text-placeholder); }
-
-.recruit-item-info { flex: 1; min-width: 0; }
-
-.recruit-item-title {
+.recruit-dot.open { background: var(--color-success); }
+.recruit-dot.closed { background: var(--color-text-placeholder); }
+.recruit-info { flex: 1; min-width: 0; }
+.recruit-title {
   font-size: 14px;
   font-weight: 600;
   color: var(--color-text-primary);
@@ -468,63 +356,61 @@ onMounted(() => {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-
-.recruit-item-meta {
+.recruit-meta {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 6px;
   font-size: 12px;
   color: var(--color-text-muted);
 }
+.meta-divider { margin: 0 2px; }
 
-.recruit-item-meta span {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-}
-
-/* ===== Quick Actions ===== */
-.quick-actions {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.quick-action-item {
+/* Quick Actions */
+.quick-actions { display: flex; flex-direction: column; gap: 4px; }
+.qa-item {
   display: flex;
   align-items: center;
   gap: 14px;
-  padding: 12px 14px;
-  border-radius: 10px;
+  padding: 14px;
+  border-radius: var(--radius-sm);
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all var(--transition-fast);
+  border: 1px solid transparent;
 }
-
-.quick-action-item:hover {
+.qa-item:hover {
   background: var(--color-bg);
+  border-color: var(--color-border-light);
 }
-
 .qa-icon {
-  width: 40px;
-  height: 40px;
-  border-radius: 10px;
+  width: 42px; height: 42px;
+  border-radius: var(--radius-sm);
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
 }
-
 .qa-info { flex: 1; }
-
 .qa-title {
   font-size: 14px;
   font-weight: 600;
   color: var(--color-text-primary);
   margin-bottom: 2px;
 }
-
 .qa-desc {
   font-size: 12px;
   color: var(--color-text-muted);
+}
+.qa-arrow {
+  color: var(--color-text-placeholder);
+  transition: transform var(--transition-fast);
+}
+.qa-item:hover .qa-arrow {
+  transform: translateX(3px);
+  color: var(--color-primary);
+}
+
+@media (max-width: 768px) {
+  .welcome-banner { padding: 24px; }
+  .banner-text h2 { font-size: 20px; }
 }
 </style>

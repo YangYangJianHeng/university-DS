@@ -188,12 +188,25 @@ async function handleCreate() {
 
 .page-header-bar {
   display: flex; align-items: center; justify-content: space-between;
-  background: var(--gradient-primary);
+  background: var(--color-card);
+  border: 1px solid var(--color-border-light);
   border-radius: 16px; padding: 24px 32px;
-  margin-bottom: 20px; color: #fff;
+  margin-bottom: 20px;
+  position: relative;
+  overflow: hidden;
 }
-.page-header-bar h2 { font-size: 22px; font-weight: 700; margin: 0 0 4px; }
-.page-desc { margin: 0; font-size: 14px; opacity: 0.8; }
+.page-header-bar::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  background: var(--gradient-primary);
+  border-radius: 4px 0 0 4px;
+}
+.page-header-bar h2 { font-size: 22px; font-weight: 700; margin: 0 0 4px; color: var(--color-text-primary); }
+.page-desc { margin: 0; font-size: 14px; color: var(--color-text-muted); }
 
 .create-btn {
   border-radius: 10px; font-weight: 600;
@@ -208,8 +221,11 @@ async function handleCreate() {
   gap: 16px;
 }
 
-.project-card { cursor: pointer; transition: all 0.25s; border-radius: 12px; }
-.project-card:hover { transform: translateY(-3px); box-shadow: 0 8px 24px rgba(0,0,0,0.1); }
+.project-card {
+  cursor: pointer; transition: all var(--transition-base);
+  border-radius: var(--radius-lg); border: 1px solid var(--color-border-light);
+}
+.project-card:hover { transform: translateY(-3px); box-shadow: var(--shadow-lg); border-color: var(--color-border); }
 
 .card-top { display: flex; align-items: center; gap: 14px; margin-bottom: 14px; }
 
@@ -221,30 +237,33 @@ async function handleCreate() {
 }
 
 .project-info { flex: 1; min-width: 0; }
-.project-name { font-size: 15px; font-weight: 600; color: #1a1a2e; margin-bottom: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.project-name {
+  font-size: 15px; font-weight: 600; color: var(--color-text-primary);
+  margin-bottom: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
 
 .card-body { margin-bottom: 12px; }
 
-.card-stat-row { display: flex; flex-direction: column; gap: 6px; font-size: 13px; color: #909399; }
+.card-stat-row { display: flex; flex-direction: column; gap: 6px; font-size: 13px; color: var(--color-text-muted); }
 .card-stat-row span { display: flex; align-items: center; gap: 4px; }
 
 .card-footer {
   display: flex; gap: 24px;
-  padding-top: 12px; border-top: 1px solid #f0f2f5;
+  padding-top: 12px; border-top: 1px solid var(--color-border-light);
 }
 
 .footer-stat { display: flex; flex-direction: column; align-items: center; }
-.footer-num { font-size: 16px; font-weight: 700; color: #1a1a2e; }
-.footer-lbl { font-size: 11px; color: #909399; margin-top: 2px; }
+.footer-num { font-size: 16px; font-weight: 700; color: var(--color-text-primary); }
+.footer-lbl { font-size: 11px; color: var(--color-text-muted); margin-top: 2px; }
 
 .create-dialog :deep(.el-dialog__body) { padding: 24px 32px; }
-.dialog-btn { border-radius: 8px; }
+.dialog-btn { border-radius: var(--radius-md); }
 .form-hint { font-size: 12px; color: var(--color-text-muted); margin-top: 4px; display: block; }
 
 /* ========== 骨架屏 ========== */
 .skeleton-card {
-  background: #fff; border-radius: 12px; padding: 20px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+  background: var(--color-card); border-radius: var(--radius-lg); padding: 20px;
+  box-shadow: var(--shadow-sm);
   display: flex; flex-direction: column; gap: 14px;
 }
 .skeleton-avatar {
@@ -254,11 +273,11 @@ async function handleCreate() {
 .skeleton-body { display: flex; flex-direction: column; }
 .skeleton-footer {
   display: flex; gap: 24px;
-  padding-top: 12px; border-top: 1px solid #f0f2f5;
+  padding-top: 12px; border-top: 1px solid var(--color-border-light);
 }
 .skeleton-line { height: 14px; border-radius: 4px; }
 .skeleton-pulse {
-  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background: linear-gradient(90deg, var(--color-bg) 25%, var(--color-border-light) 50%, var(--color-bg) 75%);
   background-size: 200% 100%;
   animation: skeletonShimmer 1.5s infinite ease-in-out;
 }

@@ -19,6 +19,7 @@ public class ProjectTasksVO {
         private Long projectId;
         private Long creatorId;
         private String creatorName;
+        private String creatorAvatar;
         private String title;
         private String description;
         private String requiredSkills;

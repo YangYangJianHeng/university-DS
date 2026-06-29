@@ -184,45 +184,61 @@ function parseResearchFields(val: any): string[] {
 .teacher-list-page { max-width: 1200px; margin: 0 auto; }
 
 .page-header-bar {
-  background: var(--gradient-primary);
+  background: var(--color-card);
+  border: 1px solid var(--color-border-light);
   border-radius: 16px; padding: 24px 32px;
-  margin-bottom: 20px; color: #fff;
+  margin-bottom: 20px;
+  position: relative;
+  overflow: hidden;
 }
-.page-header-bar h2 { font-size: 22px; font-weight: 700; margin: 0 0 4px; }
-.page-desc { margin: 0; font-size: 14px; opacity: 0.8; }
+.page-header-bar::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  background: var(--gradient-primary);
+  border-radius: 4px 0 0 4px;
+}
+.page-header-bar h2 { font-size: 22px; font-weight: 700; margin: 0 0 4px; color: var(--color-text-primary); }
+.page-desc { margin: 0; font-size: 14px; color: var(--color-text-muted); }
 
-.filter-card { border-radius: 14px; margin-bottom: 16px; }
+.filter-card { border-radius: var(--radius-lg); margin-bottom: 16px; border: 1px solid var(--color-border-light); }
 
 .teacher-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px; }
 
-.teacher-card { transition: all 0.25s; border-radius: 12px; }
-.teacher-card:hover { transform: translateY(-3px); box-shadow: 0 8px 24px rgba(0,0,0,0.1); }
+.teacher-card { transition: all var(--transition-base); border-radius: var(--radius-lg); border: 1px solid var(--color-border-light); }
+.teacher-card:hover { transform: translateY(-3px); box-shadow: var(--shadow-lg); border-color: var(--color-border); }
 
 .card-top { display: flex; align-items: center; gap: 14px; margin-bottom: 12px; }
 
 .teacher-avatar { background: var(--gradient-primary) !important; font-size: 20px; font-weight: 600; color: #fff; flex-shrink: 0; }
 
 .teacher-meta { display: flex; flex-direction: column; }
-.teacher-name { font-size: 16px; font-weight: 600; color: #1a1a2e; }
-.teacher-dept { font-size: 12px; color: #909399; margin-top: 2px; }
+.teacher-name { font-size: 16px; font-weight: 600; color: var(--color-text-primary); }
+.teacher-dept { font-size: 12px; color: var(--color-text-muted); margin-top: 2px; }
 
 .card-title { margin-bottom: 10px; }
 
 .card-fields { margin-bottom: 10px; display: flex; flex-wrap: wrap; gap: 4px; }
 .field-tag { margin: 0 !important; }
-.no-data { font-size: 12px; color: #c0c4cc; }
+.no-data { font-size: 12px; color: var(--color-text-placeholder); }
 
 .card-rating { margin-bottom: 10px; }
-.card-teams { font-size: 12px; color: #606266; }
+.card-teams { font-size: 12px; color: var(--color-text-secondary); }
 .team-info { margin-bottom: 4px; }
 
-.card-actions { margin-top: 12px; padding-top: 12px; border-top: 1px solid #f5f7fa; text-align: center; }
+.card-actions { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--color-border-light); text-align: center; }
 
 /* invite dialog */
 .invite-dialog-content { padding: 4px 0; }
-.invite-preview { display: flex; align-items: center; gap: 14px; margin-bottom: 20px; padding: 16px; background: #f8fafc; border-radius: 10px; }
+.invite-preview {
+  display: flex; align-items: center; gap: 14px; margin-bottom: 20px;
+  padding: 16px; background: var(--color-bg); border-radius: var(--radius-md);
+}
 .invite-avatar { background: var(--gradient-primary) !important; font-size: 20px; color: #fff; }
-.invite-name { font-size: 16px; font-weight: 600; color: #1a1a2e; }
-.invite-dept { font-size: 12px; color: #909399; margin-top: 4px; }
+.invite-name { font-size: 16px; font-weight: 600; color: var(--color-text-primary); }
+.invite-dept { font-size: 12px; color: var(--color-text-muted); margin-top: 4px; }
 .invite-form { margin-top: 4px; }
 </style>

@@ -681,7 +681,7 @@ watch(activeTab, (tab) => {
   align-items: center;
   justify-content: center;
 }
-.badge-icon-locked { background: #f0f2f5; }
+.badge-icon-locked { background: var(--color-bg); }
 
 .badge-name { font-size: 14px; font-weight: 600; color: var(--color-text-primary); margin-bottom: 4px; }
 .badge-desc { font-size: 12px; color: var(--color-text-muted); line-height: 1.4; margin-bottom: 4px; }

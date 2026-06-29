@@ -32,6 +32,9 @@ public class OllamaClient {
     private volatile long lastEmbedFailLogTime = 0;
     private static final long FAIL_LOG_INTERVAL_MS = 60_000; // 60秒内只报一次
 
+    /** 自动检测到的有效模型名称（优先使用 .env 配置的，否则取 Ollama 中第一个可用模型） */
+    private volatile String detectedChatModel = null;
+
     // ==================== Chat API ====================
 
     /**
@@ -57,11 +60,13 @@ public class OllamaClient {
 
     /**
      * 调用 Ollama Chat API（流式，逐块回调）
+     * 自动检测模型名称
      */
     public void chatStream(String model, List<Map<String, String>> messages, Consumer<String> onChunk, Runnable onDone) {
+        String effectiveModel = getEffectiveChatModel(model);
         try {
             JSONObject body = new JSONObject();
-            body.put("model", model);
+            body.put("model", effectiveModel);
             body.put("messages", messages);
             body.put("stream", true);
 
@@ -84,6 +89,152 @@ public class OllamaClient {
             onChunk.accept("抱歉，AI 服务调用失败：" + e.getMessage());
             onDone.run();
         }
+    }
+
+    // ==================== 健康检测 ====================
+
+    /**
+     * 获取有效的聊天模型名称
+     * 优先使用 .env 配置的模型 → 配置的不可用则自动检测 Ollama 中第一个聊天模型
+     * 关键：自动检测时跳过嵌入模型（nomic-embed-text 等），只选聊天模型
+     */
+    private String getEffectiveChatModel(String configuredModel) {
+        if (detectedChatModel != null) {
+            return detectedChatModel;
+        }
+        synchronized (this) {
+            if (detectedChatModel != null) {
+                return detectedChatModel;
+            }
+            // 1. 先尝试解析配置的模型名 → 获取 Ollama 中的完整名称（如 mymodel → mymodel:latest）
+            String resolved = resolveModelName(configuredModel);
+            if (isModelAvailable(configuredModel)) {
+                detectedChatModel = resolved;
+                log.info("Ollama chat model: {} (from .env, resolved to '{}')", configuredModel, detectedChatModel);
+                return detectedChatModel;
+            }
+            // 2. 配置的模型不可用 → 从 Ollama 中自动检测第一个聊天模型
+            try {
+                URL url = URI.create(config.getBaseUrl() + "/api/tags").toURL();
+                HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+                conn.setRequestMethod("GET");
+                conn.setConnectTimeout(3000);
+                conn.setReadTimeout(5000);
+                String body = readStream(conn.getInputStream());
+                conn.disconnect();
+
+                JSONObject resp = JSON.parseObject(body);
+                JSONArray models = resp.getJSONArray("models");
+                if (models != null && !models.isEmpty()) {
+                    for (int i = 0; i < models.size(); i++) {
+                        JSONObject m = models.getJSONObject(i);
+                        String name = m.getString("name");
+                        // 跳过嵌入模型（它们不支持 /api/chat）
+                        String lower = name.toLowerCase();
+                        if (lower.contains("embed") || lower.contains("nomic") || lower.contains("bert")) {
+                            log.debug("Skipping embedding model: {}", name);
+                            continue;
+                        }
+                        detectedChatModel = name;
+                        log.info("Ollama chat model auto-detected: {} (configured '{}' not found)",
+                                detectedChatModel, configuredModel);
+                        break;
+                    }
+                }
+            } catch (Exception e) {
+                log.warn("Unable to auto-detect Ollama model: {}", e.getMessage());
+            }
+            if (detectedChatModel == null) {
+                detectedChatModel = configuredModel; // 回退到配置值，让后续调用报错
+            }
+            return detectedChatModel;
+        }
+    }
+
+    /**
+     * 检测 Ollama 服务是否运行中
+     * 调用 /api/tags 接口，返回 HTTP 200 即为可用
+     */
+    public boolean isRunning() {
+        try {
+            URL url = URI.create(config.getBaseUrl() + "/api/tags").toURL();
+            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+            conn.setRequestMethod("GET");
+            conn.setConnectTimeout(3000);
+            conn.setReadTimeout(3000);
+            int code = conn.getResponseCode();
+            conn.disconnect();
+            return code == 200;
+        } catch (Exception e) {
+            log.debug("Ollama health check failed: {}", e.getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * 检测指定模型是否已拉取到 Ollama（支持模糊匹配，如 "mymodel" 可匹配 "mymodel:latest"）
+     * @param modelName 模型名称，如 "qwen2.5:7b"、"mymodel"
+     */
+    public boolean isModelAvailable(String modelName) {
+        try {
+            URL url = URI.create(config.getBaseUrl() + "/api/tags").toURL();
+            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+            conn.setRequestMethod("GET");
+            conn.setConnectTimeout(3000);
+            conn.setReadTimeout(5000);
+            String body = readStream(conn.getInputStream());
+            conn.disconnect();
+
+            if (body.isEmpty()) return false;
+            JSONObject resp = JSON.parseObject(body);
+            JSONArray models = resp.getJSONArray("models");
+            if (models == null) return false;
+
+            for (int i = 0; i < models.size(); i++) {
+                JSONObject m = models.getJSONObject(i);
+                String name = m.getString("name");
+                // 完全匹配 或 作为前缀匹配（mymodel 可匹配 mymodel:latest）
+                if (modelName.equals(name) || name.startsWith(modelName + ":")) {
+                    return true;
+                }
+            }
+            return false;
+        } catch (Exception e) {
+            log.debug("Ollama model check failed for '{}': {}", modelName, e.getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * 精确查找模型名称（支持模糊匹配，返回 Ollama 中的完整名称如 "mymodel:latest"）
+     */
+    private String resolveModelName(String modelName) {
+        try {
+            URL url = URI.create(config.getBaseUrl() + "/api/tags").toURL();
+            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+            conn.setRequestMethod("GET");
+            conn.setConnectTimeout(3000);
+            conn.setReadTimeout(5000);
+            String body = readStream(conn.getInputStream());
+            conn.disconnect();
+
+            if (body.isEmpty()) return modelName;
+            JSONObject resp = JSON.parseObject(body);
+            JSONArray models = resp.getJSONArray("models");
+            if (models == null) return modelName;
+
+            for (int i = 0; i < models.size(); i++) {
+                JSONObject m = models.getJSONObject(i);
+                String name = m.getString("name");
+                // 完全匹配或前缀匹配 → 返回 Ollama 中的完整名称
+                if (modelName.equals(name) || name.startsWith(modelName + ":")) {
+                    return name;
+                }
+            }
+        } catch (Exception e) {
+            log.debug("resolveModelName failed for '{}': {}", modelName, e.getMessage());
+        }
+        return modelName;
     }
 
     // ==================== Embeddings API ====================

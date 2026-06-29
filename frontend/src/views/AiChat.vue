@@ -319,8 +319,8 @@ loadSessions()
 .chat-sidebar {
   width: 280px;
   min-width: 280px;
-  background: #fff;
-  border-right: 1px solid #e4e7ed;
+  background: var(--color-card);
+  border-right: 1px solid var(--color-border-light);
   display: flex;
   flex-direction: column;
   transition: all 0.3s;
@@ -359,11 +359,11 @@ loadSessions()
   transition: background 0.2s;
 }
 .session-item:hover {
-  background: #f0f2f5;
+  background: var(--color-bg);
 }
 .session-item.active {
-  background: #ecf5ff;
-  border: 1px solid #d9ecff;
+  background: var(--color-primary-light);
+  border: 1px solid var(--color-primary-light);
 }
 
 .session-title {
@@ -414,12 +414,12 @@ loadSessions()
 .welcome-area h1 {
   font-size: 28px;
   font-weight: 700;
-  color: #303133;
+  color: var(--color-text-primary);
   margin: 0;
 }
 .welcome-area p {
   font-size: 16px;
-  color: #909399;
+  color: var(--color-text-muted);
   margin: 0;
 }
 
@@ -466,7 +466,7 @@ loadSessions()
   justify-content: center;
   gap: 8px;
   padding: 40px;
-  color: #909399;
+  color: var(--color-text-muted);
 }
 
 .message-row {
@@ -544,7 +544,7 @@ loadSessions()
 
 .message-time {
   font-size: 11px;
-  color: #c0c4cc;
+  color: var(--color-text-placeholder);
   margin-top: 4px;
 }
 
@@ -553,7 +553,7 @@ loadSessions()
   display: inline-block;
   width: 2px;
   height: 16px;
-  background: #409eff;
+  background: var(--color-primary);
   margin-left: 2px;
   vertical-align: text-bottom;
   animation: cursorBlink 0.6s infinite;
@@ -582,9 +582,9 @@ loadSessions()
 
 /* ---- Input ---- */
 .input-area {
-  border-top: 1px solid #e4e7ed;
+  border-top: 1px solid var(--color-border-light);
   padding: 12px 16px;
-  background: #fff;
+  background: var(--color-card);
 }
 
 .input-wrapper {
@@ -598,16 +598,16 @@ loadSessions()
   padding: 10px 16px;
   font-size: 14px;
   line-height: 1.5;
-  border-color: #dcdfe6;
+  border-color: var(--color-border);
 }
 .input-wrapper :deep(.el-textarea__inner:focus) {
-  border-color: #409eff;
+  border-color: var(--color-primary);
 }
 
 .input-tips {
   text-align: center;
   font-size: 12px;
-  color: #c0c4cc;
+  color: var(--color-text-placeholder);
   margin-top: 6px;
 }
 

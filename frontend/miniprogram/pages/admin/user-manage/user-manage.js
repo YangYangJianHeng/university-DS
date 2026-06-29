@@ -1,129 +1,89 @@
 // pages/admin/user-manage/user-manage.js
-const app = getApp()
 const { adminApi } = require('../../../utils/api')
-const { getRoleLabel } = require('../../../utils/util')
 
 Page({
   data: {
     users: [],
-    filteredUsers: [],
-    searchKey: '',
-    currentFilter: 'all',
-    totalUsers: 0,
-    loading: true
+    loading: true,
+    currentPage: 1,
+    pageSize: 20,
+    total: 0,
+    keyword: '',
+    showRolePicker: false,
+    selectedUser: null,
+    roleOptions: ['USER', 'TEACHER', 'ADMIN', 'REVIEWER']
   },
 
-  onShow() {
-    if (!app.globalData.isLoggedIn || app.globalData.userInfo?.role !== 'ADMIN') {
-      wx.showToast({ title: '无管理员权限', icon: 'none' })
-      setTimeout(() => wx.navigateBack(), 1500)
-      return
-    }
-    this.loadUsers()
-  },
+  onShow() { this.fetchUsers() },
 
-  async loadUsers() {
+  async fetchUsers() {
     this.setData({ loading: true })
     try {
-      const res = await adminApi.getUsers({ page: 1, size: 100 })
-      if (res.code === 200) {
-        const data = res.data
-        const users = data.records || data.list || data || []
-        this.setData({
-          users,
-          totalUsers: users.length,
-          loading: false
-        })
-        this.applyFilter()
-      }
-    } catch (e) {
-      this.setData({ loading: false })
-    }
+      const res = await adminApi.getUsers({ page: this.data.currentPage, size: this.data.pageSize })
+      const records = res && res.records ? res.records : (Array.isArray(res) ? res : [])
+      const total = res && res.total ? res.total : records.length
+      this.setData({ users: records, total })
+    } catch (e) { console.error(e) }
+    finally { this.setData({ loading: false }) }
   },
 
-  applyFilter() {
-    let list = [...this.data.users]
-    const { searchKey, currentFilter } = this.data
+  onSearchInput(e) { this.setData({ keyword: e.detail.value }) },
+  onSearch() { this.setData({ currentPage: 1 }); this.fetchUsers() },
 
-    if (searchKey) {
-      const kw = searchKey.toLowerCase()
-      list = list.filter(u =>
-        (u.username && u.username.toLowerCase().includes(kw)) ||
-        (u.name && u.name.toLowerCase().includes(kw)) ||
-        (u.major && u.major.toLowerCase().includes(kw))
-      )
-    }
-
-    if (currentFilter === 'ACTIVE') {
-      list = list.filter(u => u.status === 'ACTIVE' || u.status === 1 || u.status === '1')
-    } else if (currentFilter === 'DISABLED') {
-      list = list.filter(u => u.status === 'DISABLED' || u.status === 0 || u.status === '0')
-    }
-
-    this.setData({ filteredUsers: list })
+  // 角色管理
+  showRoleChange(e) {
+    const { user } = e.currentTarget.dataset
+    this.setData({ showRolePicker: true, selectedUser: user })
   },
-
-  onSearchChange(e) {
-    this.setData({ searchKey: e.detail.value || '' })
-    this.applyFilter()
-  },
-
-  onFilterChange(e) {
-    const filter = e.currentTarget.dataset.filter
-    this.setData({ currentFilter: filter })
-    this.applyFilter()
-  },
-
-  async handleToggleStatus(e) {
-    const { id, status } = e.currentTarget.dataset
-    const isActive = status === 'ACTIVE' || status === 1 || status === '1'
-    const newStatus = isActive ? 0 : 1
-
+  async onRoleChange(e) {
+    const role = this.data.roleOptions[e.detail.value]
     try {
-      await adminApi.updateUserStatus(id, newStatus)
-      wx.showToast({ title: '已更新', icon: 'success' })
-      this.loadUsers()
-    } catch (e) {
-      // ignore
-    }
+      await adminApi.updateUserRole(this.data.selectedUser.id, role)
+      wx.showToast({ title: '角色更新成功', icon: 'success' })
+      this.setData({ showRolePicker: false })
+      this.fetchUsers()
+    } catch (e) { /* 忽略 */ }
   },
 
-  handleChangeRole(e) {
-    const user = e.currentTarget.dataset.user
-    const roles = ['STUDENT', 'USER', 'ADMIN', 'TEACHER', 'REVIEWER']
-    const roleNames = ['学生', '普通用户', '管理员', '导师', '审核员']
-    const currentRole = user.role || 'STUDENT'
-    const currentIndex = roles.indexOf(currentRole)
-
-    wx.showActionSheet({
-      itemList: roleNames.map((name, i) => i === currentIndex ? `${name}(当前)` : name),
+  // 设为导师
+  async setTeacher(e) {
+    const { id } = e.currentTarget.dataset
+    wx.showModal({
+      title: '设为导师',
+      content: '确认将该用户设为导师？设置后将拥有导师权限。',
       success: async (res) => {
-        const newRole = roles[res.tapIndex]
-        if (newRole === currentRole) return
-
-        try {
-          await adminApi.updateUserRole(user.id, newRole)
-          wx.showToast({ title: '角色已更新', icon: 'success' })
-          this.loadUsers()
-        } catch (e) {
-          // ignore
+        if (res.confirm) {
+          try {
+            await adminApi.updateUserRole(id, 'TEACHER')
+            wx.showToast({ title: '已设为导师', icon: 'success' })
+            this.fetchUsers()
+          } catch (e) { /* 忽略 */ }
         }
       }
     })
   },
 
-  roleLabel(role) {
-    return getRoleLabel(role)
+  // 设为管理员
+  async setAdmin(e) {
+    const { id } = e.currentTarget.dataset
+    try {
+      await adminApi.updateUserRole(id, 'ADMIN')
+      wx.showToast({ title: '已设为管理员', icon: 'success' })
+      this.fetchUsers()
+    } catch (e) { /* 忽略 */ }
   },
 
-  roleTheme(role) {
-    const map = {
-      'ADMIN': 'danger',
-      'TEACHER': 'warning',
-      'REVIEWER': 'primary',
-      'USER': 'default',
-      'STUDENT': 'success'
-    }
-    return map[role] || 'default'
-  }
+  // 状态切换
+  async toggleStatus(e) {
+    const { id, status } = e.currentTarget.dataset
+    const newStatus = status === 1 ? 0 : 1
+    try {
+      await adminApi.updateUserStatus(id, newStatus)
+      wx.showToast({ title: newStatus ? '已启用' : '已禁用', icon: 'success' })
+      this.fetchUsers()
+    } catch (e) { /* 忽略 */ }
+  },
+
+  roleLabel(r) { return { USER: '用户', TEACHER: '导师', ADMIN: '管理员', REVIEWER: '审核员' }[r] || r },
+  roleTagClass(r) { return { ADMIN: 'tag-warning', TEACHER: 'tag-success', REVIEWER: 'tag-info', USER: '' }[r] || '' }
 })

@@ -1,41 +1,37 @@
 <template>
   <div class="login-page">
-    <div class="login-bg">
-      <div class="bg-shape bg-shape-1"></div>
-      <div class="bg-shape bg-shape-2"></div>
-      <div class="bg-shape bg-shape-3"></div>
+    <!-- Floating balls background -->
+    <div class="floating-balls">
+      <div class="ball ball-1" />
+      <div class="ball ball-2" />
+      <div class="ball ball-3" />
+      <div class="ball ball-4" />
+      <div class="ball ball-5" />
+      <div class="ball ball-6" />
     </div>
+
     <div class="login-container">
-      <div class="login-left">
-        <div class="left-content">
-          <div class="brand-icon-box">
-            <svg viewBox="0 0 24 24" width="48" height="48" fill="none" stroke="currentColor" stroke-width="1.5">
-              <path d="M12 2L2 7l10 5 10-5-10-5z"/>
-              <path d="M2 17l10 5 10-5"/>
-              <path d="M2 12l10 5 10-5"/>
-            </svg>
+      <!-- Brand Side -->
+      <div class="login-brand">
+        <div class="brand-content">
+          <div class="brand-icon-wrap">
+            <img src="/icon.png" width="48" height="48" alt="青创协同" />
           </div>
-          <h1 class="left-title">竞赛组队平台</h1>
-          <p class="left-desc">连接志同道合的伙伴，一起征战各类学科竞赛</p>
-          <div class="left-features">
-            <div class="feature-item">
-              <div class="feature-dot"></div>
-              <span>寻找优秀队友，组队参加竞赛</span>
-            </div>
-            <div class="feature-item">
-              <div class="feature-dot"></div>
-              <span>展示项目成果，积累竞赛经验</span>
-            </div>
-            <div class="feature-item">
-              <div class="feature-dot"></div>
-              <span>对接专业导师，获取竞赛指导</span>
+          <h1 class="brand-title">青创协同</h1>
+          <p class="brand-desc">连接志同道合的伙伴<br />一起征战各类学科竞赛</p>
+          <div class="brand-features">
+            <div class="bf-item" v-for="item in features" :key="item">
+              <div class="bf-dot" />
+              <span>{{ item }}</span>
             </div>
           </div>
         </div>
       </div>
-      <div class="login-right">
-        <div class="login-card">
-          <div class="card-header">
+
+      <!-- Form Side -->
+      <div class="login-form-wrap">
+        <div class="form-card">
+          <div class="form-header">
             <h2>欢迎回来</h2>
             <p>请登录您的账号</p>
           </div>
@@ -92,9 +88,9 @@
               </el-button>
             </el-form-item>
           </el-form>
-          <div class="card-footer">
+          <div class="form-footer">
             <span>还没有账号？</span>
-            <router-link to="/register" class="register-link">立即注册</router-link>
+            <router-link to="/register" class="link">立即注册</router-link>
           </div>
         </div>
       </div>
@@ -123,6 +119,7 @@ const form = reactive({
 })
 
 const captchaImage = ref('')
+const features = ['寻找优秀队友，组队参加竞赛', '展示项目成果，积累竞赛经验', '对接专业导师，获取竞赛指导']
 
 const rules: FormRules = {
   phone: [
@@ -133,9 +130,7 @@ const rules: FormRules = {
     { required: true, message: '请输入密码', trigger: 'blur' },
     { min: 6, max: 32, message: '密码长度为 6-32 位', trigger: 'blur' },
   ],
-  captchaCode: [
-    { required: true, message: '请输入验证码', trigger: 'blur' },
-  ],
+  captchaCode: [{ required: true, message: '请输入验证码', trigger: 'blur' }],
 }
 
 const loading = ref(false)
@@ -146,14 +141,10 @@ async function refreshCaptcha() {
     form.captchaKey = res.data.captchaKey
     captchaImage.value = res.data.captchaImage
     form.captchaCode = ''
-  } catch {
-    // error handled by interceptor
-  }
+  } catch { /* handled by interceptor */ }
 }
 
-onMounted(() => {
-  refreshCaptcha()
-})
+onMounted(() => { refreshCaptcha() })
 
 async function handleLogin() {
   if (!formRef.value) return
@@ -166,8 +157,6 @@ async function handleLogin() {
     userStore.setToken(res.data.token)
     userStore.setUserInfo(res.data.userInfo)
     ElMessage.success('登录成功')
-    // 先导航到Dashboard（确保路由守卫能读到token），
-    // 再异步拉取profile（login响应已包含完整userInfo，profile调用非必需）
     router.push('/dashboard')
     setTimeout(() => userStore.fetchProfile().catch(() => {}), 300)
   } catch {
@@ -184,44 +173,92 @@ async function handleLogin() {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #eef1f5 0%, #dfe3e8 100%);
+  background: #f2f3f5;
   position: relative;
   overflow: hidden;
 }
 
-.login-bg {
+/* ---------- Floating balls ---------- */
+.floating-balls {
   position: absolute;
   inset: 0;
   pointer-events: none;
+  z-index: 0;
 }
-
-.bg-shape {
+.ball {
   position: absolute;
   border-radius: 50%;
+  opacity: 0.35;
+}
+.ball-1 {
+  width: 420px; height: 420px;
+  background: radial-gradient(circle at 40% 40%, #e8e9eb, #d5d7db);
+  top: -120px; left: -80px;
+  animation: drift1 18s ease-in-out infinite;
+}
+.ball-2 {
+  width: 260px; height: 260px;
+  background: radial-gradient(circle at 50% 50%, #e0e2e6, #cccfd4);
+  bottom: -60px; right: -40px;
+  animation: drift2 22s ease-in-out infinite;
+}
+.ball-3 {
+  width: 180px; height: 180px;
+  background: radial-gradient(circle at 30% 60%, #e5e7eb, #d0d3d8);
+  top: 50%; left: 50%;
+  animation: drift3 15s ease-in-out infinite;
+}
+.ball-4 {
+  width: 140px; height: 140px;
+  background: radial-gradient(circle at 60% 30%, #edeeef, #d8dade);
+  top: 15%; right: 20%;
+  animation: drift4 20s ease-in-out infinite;
+}
+.ball-5 {
+  width: 100px; height: 100px;
+  background: radial-gradient(circle at 50% 50%, #e2e4e8, #c8cbd0);
+  bottom: 25%; left: 15%;
+  animation: drift5 16s ease-in-out infinite;
+}
+.ball-6 {
+  width: 200px; height: 200px;
+  background: radial-gradient(circle at 45% 55%, #e6e8ec, #cdd0d5);
+  top: 10%; left: 35%;
+  animation: drift6 24s ease-in-out infinite;
 }
 
-.bg-shape-1 {
-  width: 600px;
-  height: 600px;
-  background: linear-gradient(135deg, rgba(91, 127, 149, 0.06) 0%, rgba(122, 143, 166, 0.04) 100%);
-  top: -200px;
-  right: -100px;
+@keyframes drift1 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  25% { transform: translate(60px, 40px) scale(1.05); }
+  50% { transform: translate(20px, 80px) scale(0.95); }
+  75% { transform: translate(-30px, 20px) scale(1.03); }
 }
-
-.bg-shape-2 {
-  width: 400px;
-  height: 400px;
-  background: linear-gradient(135deg, rgba(91, 127, 149, 0.04) 0%, rgba(176, 190, 197, 0.06) 100%);
-  bottom: -100px;
-  left: -100px;
+@keyframes drift2 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  25% { transform: translate(-50px, -30px) scale(1.06); }
+  50% { transform: translate(-80px, -60px) scale(0.94); }
+  75% { transform: translate(-20px, -20px) scale(1.02); }
 }
-
-.bg-shape-3 {
-  width: 200px;
-  height: 200px;
-  background: linear-gradient(135deg, rgba(107, 158, 133, 0.05) 0%, rgba(184, 160, 110, 0.05) 100%);
-  top: 30%;
-  left: 10%;
+@keyframes drift3 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33% { transform: translate(40px, -50px) scale(1.04); }
+  66% { transform: translate(-40px, -20px) scale(0.96); }
+}
+@keyframes drift4 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  25% { transform: translate(-30px, 50px) scale(0.97); }
+  50% { transform: translate(-60px, 20px) scale(1.05); }
+  75% { transform: translate(-20px, 30px) scale(0.98); }
+}
+@keyframes drift5 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(50px, -40px) scale(1.08); }
+}
+@keyframes drift6 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  25% { transform: translate(-40px, -30px) scale(1.03); }
+  50% { transform: translate(20px, -60px) scale(0.95); }
+  75% { transform: translate(50px, -20px) scale(1.04); }
 }
 
 .login-container {
@@ -229,161 +266,102 @@ async function handleLogin() {
   width: 900px;
   max-width: 95vw;
   min-height: 560px;
-  background: #fff;
-  border-radius: 18px;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.08);
+  background: var(--color-card);
+  border-radius: var(--radius-2xl);
+  box-shadow: var(--shadow-xl);
   overflow: hidden;
   z-index: 1;
 }
 
-.login-left {
+/* Brand Side */
+.login-brand {
   flex: 1;
-  background: var(--gradient-primary);
+  background: #e8eaed;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 48px;
+  padding: 56px 48px;
   position: relative;
   overflow: hidden;
 }
-
-.login-left::before {
+.login-brand::before {
   content: '';
   position: absolute;
-  width: 300px;
-  height: 300px;
+  width: 300px; height: 300px;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.05);
-  top: -80px;
-  right: -80px;
+  background: rgba(0,0,0,0.02);
+  top: -80px; right: -80px;
 }
-
-.login-left::after {
+.login-brand::after {
   content: '';
   position: absolute;
-  width: 200px;
-  height: 200px;
+  width: 200px; height: 200px;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.05);
-  bottom: -40px;
-  left: -40px;
+  background: rgba(0,0,0,0.02);
+  bottom: -40px; left: -40px;
 }
-
-.left-content {
-  color: #fff;
+.brand-content {
+  color: var(--color-text-primary);
   z-index: 1;
 }
-
-.brand-icon-box {
-  width: 64px;
-  height: 64px;
+.brand-icon-wrap {
+  width: 64px; height: 64px;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(255, 255, 255, 0.15);
-  border-radius: 16px;
-  margin-bottom: 28px;
-  backdrop-filter: blur(4px);
+  background: rgba(0,0,0,0.06);
+  color: var(--color-text-secondary);
+  border-radius: var(--radius-md);
+  margin-bottom: 24px;
 }
-
-.left-title {
-  font-size: 28px;
-  font-weight: 700;
+.brand-title {
+  font-size: 30px;
+  font-weight: 800;
   margin-bottom: 12px;
+  letter-spacing: -0.5px;
 }
-
-.left-desc {
+.brand-desc {
   font-size: 15px;
-  opacity: 0.85;
-  line-height: 1.6;
-  margin-bottom: 32px;
+  color: var(--color-text-muted);
+  line-height: 1.7;
+  margin-bottom: 36px;
 }
-
-.left-features {
+.brand-features {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 14px;
 }
-
-.feature-item {
+.bf-item {
   display: flex;
   align-items: center;
   gap: 12px;
   font-size: 14px;
-  opacity: 0.9;
+  color: var(--color-text-secondary);
 }
-
-.feature-dot {
-  width: 8px;
-  height: 8px;
+.bf-dot {
+  width: 8px; height: 8px;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.6);
+  background: var(--color-text-placeholder);
   flex-shrink: 0;
 }
 
-.login-right {
+/* Form Side */
+.login-form-wrap {
   width: 420px;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 48px;
 }
-
-.login-card {
-  width: 100%;
-}
-
-.card-header {
-  margin-bottom: 32px;
-}
-
-.card-header h2 {
+.form-card { width: 100%; }
+.form-header { margin-bottom: 36px; }
+.form-header h2 {
   font-size: 24px;
   font-weight: 700;
   color: var(--color-text-primary);
-  margin-bottom: 8px;
+  margin-bottom: 6px;
 }
-
-.card-header p {
-  font-size: 14px;
-  color: var(--color-text-muted);
-}
-
-.login-form :deep(.el-input__wrapper) {
-  border-radius: 10px;
-  padding: 0 12px;
-  box-shadow: 0 0 0 1px #e4e7ed inset;
-  transition: box-shadow 0.2s;
-}
-
-.login-form :deep(.el-input__wrapper.is-focus) {
-  box-shadow: 0 0 0 1px var(--color-primary) inset;
-}
-
-.login-form :deep(.el-form-item) {
-  margin-bottom: 22px;
-}
-
-.login-btn {
-  width: 100%;
-  height: 46px;
-  font-size: 16px;
-  font-weight: 600;
-  border-radius: 8px;
-  background: var(--color-primary);
-  border: none;
-  letter-spacing: 4px;
-  transition: all 0.3s;
-}
-
-.login-btn:hover {
-  box-shadow: 0 4px 20px rgba(91, 127, 149, 0.35);
-  transform: translateY(-1px);
-}
-
-.card-footer {
-  text-align: center;
-  margin-top: 24px;
+.form-header p {
   font-size: 14px;
   color: var(--color-text-muted);
 }
@@ -393,54 +371,46 @@ async function handleLogin() {
   gap: 10px;
   align-items: center;
 }
-.captcha-input {
-  flex: 1;
-}
+.captcha-input { flex: 1; }
 .captcha-img {
-  height: 42px;
-  border-radius: 8px;
-  border: 1px solid #e4e7ed;
+  height: 40px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border);
   cursor: pointer;
   flex-shrink: 0;
-  transition: opacity 0.2s;
+  transition: opacity var(--transition-fast);
 }
-.captcha-img:hover {
-  opacity: 0.85;
+.captcha-img:hover { opacity: 0.85; }
+
+.login-btn {
+  width: 100%;
+  height: 46px;
+  font-size: 16px;
+  font-weight: 600;
+  border-radius: var(--radius-sm);
+  letter-spacing: 4px;
 }
 
-.register-link {
+.form-footer {
+  text-align: center;
+  margin-top: 28px;
+  font-size: 14px;
+  color: var(--color-text-muted);
+}
+.link {
   color: var(--color-primary);
   text-decoration: none;
   font-weight: 600;
   margin-left: 4px;
 }
+.link:hover { text-decoration: underline; }
 
-.register-link:hover {
-  text-decoration: underline;
-}
-
-/* Responsive */
 @media (max-width: 768px) {
-  .login-container {
-    flex-direction: column;
-    max-width: 95vw;
-    min-height: auto;
-  }
-  .login-left {
-    padding: 32px 24px;
-  }
-  .login-right {
-    width: 100%;
-    padding: 32px 24px;
-  }
-  .left-title {
-    font-size: 22px;
-  }
-  .left-features {
-    display: none;
-  }
-  .left-desc {
-    margin-bottom: 0;
-  }
+  .login-container { flex-direction: column; min-height: auto; }
+  .login-brand { padding: 32px 24px; }
+  .login-form-wrap { width: 100%; padding: 32px 24px; }
+  .brand-features { display: none; }
+  .brand-desc { margin-bottom: 0; }
+  .brand-title { font-size: 22px; }
 }
 </style>

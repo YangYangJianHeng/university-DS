@@ -342,7 +342,7 @@
           <img :src="previewSrc" :alt="previewFileName" class="preview-image" />
         </div>
         <!-- PDF预览 -->
-        <div v-else-if="previewMode === 'pdf'" class="preview-pdf-wrapper">
+        <div v-else-if="previewMode === 'pdf' && previewSrc" class="preview-pdf-wrapper">
           <iframe :src="previewSrc" class="preview-iframe" frameborder="0" />
         </div>
         <!-- 视频预览 -->
@@ -380,8 +380,8 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import dayjs from 'dayjs'
 import { getProject, getGanttData, getRiskAssessment, addProjectMember, getProjectMembers, closeProject, reopenProject, deleteProject } from '@/api/project'
 import { listTasks, updateTaskStatus } from '@/api/task'
-import { getProjectFiles, uploadFile, deleteFile, getDownloadUrl, getPreviewUrl } from '@/api/file'
-import { prefetchFileUrls, getSignedFileUrl, fetchSingleSignedUrl } from '@/utils/url'
+import { getProjectFiles, uploadFile, deleteFile } from '@/api/file'
+import { prefetchFileUrls, fetchSingleSignedUrl } from '@/utils/url'
 import { useUserStore } from '@/stores/user'
 
 const router = useRouter()
@@ -675,16 +675,36 @@ async function handleFileChange(e: Event) {
 }
 
 async function handleDownloadFile(row: any) {
-  let url = getSignedFileUrl(row.id, 'download')
-  // 缓存未命中时，同步获取签名URL（浏览器标签不带Authorization header）
-  if (url.startsWith('/api/file/')) {
-    const signedUrl = await fetchSingleSignedUrl(row.id, 'download')
-    if (signedUrl) url = signedUrl
+  // 总是获取新鲜签名URL（token 5分钟过期，不能依赖缓存）
+  const signedUrl = await fetchSingleSignedUrl(row.id, 'download')
+  if (signedUrl) {
+    const a = document.createElement('a')
+    a.href = signedUrl
+    a.download = row.name || ''
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+  } else {
+    // 签名URL获取失败，降级用fetch请求下载（带Authorization header）
+    try {
+      const token = localStorage.getItem('token')
+      const resp = await fetch(`/api/file/${row.id}/download`, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      if (!resp.ok) throw new Error('下载失败')
+      const blob = await resp.blob()
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = row.name || ''
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(url)
+    } catch {
+      ElMessage.error('文件下载失败，请刷新页面重试')
+    }
   }
-  const a = document.createElement('a')
-  a.href = url
-  a.download = row.name
-  a.click()
 }
 
 async function handleDeleteProjectFile(row: any) {
@@ -719,11 +739,12 @@ function detectPreviewMode(ext: string): 'image' | 'pdf' | 'video' | 'audio' | '
 async function handlePreviewFile(row: any) {
   const ext = getFileExtension(row.name).toLowerCase()
   const mode = detectPreviewMode(ext)
-  let url = getSignedFileUrl(row.id, 'preview')
-  // 缓存未命中时，同步获取签名URL（浏览器标签不带Authorization header）
-  if (url.startsWith('/api/file/')) {
-    const signedUrl = await fetchSingleSignedUrl(row.id, 'preview')
-    if (signedUrl) url = signedUrl
+
+  // 始终获取新鲜签名URL（token 5分钟过期，不能依赖缓存）
+  const signedUrl = await fetchSingleSignedUrl(row.id, 'preview')
+  if (!signedUrl) {
+    ElMessage.error('获取文件预览链接失败，请刷新页面重试')
+    return
   }
 
   // 存储当前预览文件信息，用于下载按钮
@@ -743,7 +764,7 @@ async function handlePreviewFile(row: any) {
   if (mode === 'text') {
     // 文本文件需要先获取内容
     try {
-      const resp = await fetch(url)
+      const resp = await fetch(signedUrl)
       if (!resp.ok) throw new Error('无法加载文件')
       previewTextContent.value = await resp.text()
       previewMode.value = 'text'
@@ -755,7 +776,7 @@ async function handlePreviewFile(row: any) {
   }
 
   previewMode.value = mode
-  previewSrc.value = url
+  previewSrc.value = signedUrl
 }
 
 function downloadFromPreview() {
@@ -832,8 +853,9 @@ function getFileTagType(filename: string): 'primary' | 'success' | 'warning' | '
 
 /* ===== Project Header ===== */
 .project-header-card {
-  border-radius: 14px;
+  border-radius: var(--radius-lg);
   margin-bottom: 16px;
+  border: 1px solid var(--color-border-light);
 }
 
 .header-content { display: flex; align-items: center; justify-content: space-between; }
@@ -849,21 +871,21 @@ function getFileTagType(filename: string): 'primary' | 'success' | 'warning' | '
 
 .header-text { flex: 1; }
 .header-title-row { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; }
-.header-title-row h2 { font-size: 20px; font-weight: 700; color: #1a1a2e; margin: 0; }
+.header-title-row h2 { font-size: 20px; font-weight: 700; color: var(--color-text-primary); margin: 0; }
 
-.project-desc { font-size: 14px; color: #606266; margin: 0 0 8px; }
+.project-desc { font-size: 14px; color: var(--color-text-secondary); margin: 0 0 8px; }
 
-.header-meta { display: flex; gap: 20px; font-size: 13px; color: #909399; }
+.header-meta { display: flex; gap: 20px; font-size: 13px; color: var(--color-text-muted); }
 .header-meta span { display: flex; align-items: center; gap: 4px; }
 
 /* ===== Tabs ===== */
-.project-tabs { margin-top: 16px; border-radius: 12px; overflow: hidden; }
+.project-tabs { margin-top: 16px; border-radius: var(--radius-lg); overflow: hidden; }
 
 .tab-toolbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
 
-.toolbar-title { display: flex; align-items: center; gap: 8px; font-size: 15px; font-weight: 600; color: #1a1a2e; }
+.toolbar-title { display: flex; align-items: center; gap: 8px; font-size: 15px; font-weight: 600; color: var(--color-text-primary); }
 
-.task-table :deep(.el-table__header) th { background: #f8f9fb !important; color: #606266; font-weight: 600; }
+.task-table :deep(.el-table__header) th { background: var(--color-bg) !important; color: var(--color-text-secondary); font-weight: 600; }
 
 .assignee-cell { display: flex; align-items: center; }
 
@@ -871,20 +893,20 @@ function getFileTagType(filename: string): 'primary' | 'success' | 'warning' | '
 
 /* Milestones */
 .milestone-item { display: flex; align-items: center; gap: 8px; }
-.milestone-name { font-weight: 600; font-size: 14px; }
-.milestone-desc { font-size: 12px; color: #909399; margin-top: 4px; }
+.milestone-name { font-weight: 600; font-size: 14px; color: var(--color-text-primary); }
+.milestone-desc { font-size: 12px; color: var(--color-text-muted); margin-top: 4px; }
 
 /* Gantt */
 .gantt-container { overflow-x: auto; }
 .gantt-header, .gantt-row { display: flex; align-items: center; min-height: 36px; }
-.gantt-task-header { width: 160px; flex-shrink: 0; font-weight: 600; font-size: 13px; color: #606266; }
-.gantt-task-name { width: 160px; flex-shrink: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; color: #303133; }
+.gantt-task-header { width: 160px; flex-shrink: 0; font-weight: 600; font-size: 13px; color: var(--color-text-secondary); }
+.gantt-task-name { width: 160px; flex-shrink: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; color: var(--color-text-primary); }
 .gantt-bar-area { display: flex; flex: 1; position: relative; height: 36px; }
-.gantt-day-label { font-size: 10px; color: #c0c4cc; flex-shrink: 0; border-left: 1px solid #ebeef5; padding-left: 2px; line-height: 36px; }
-.gantt-bar { position: absolute; top: 8px; height: 20px; background: linear-gradient(90deg, #409eff, #79bbff); border-radius: 10px; display: flex; align-items: center; justify-content: center; min-width: 40px; }
+.gantt-day-label { font-size: 10px; color: var(--color-text-placeholder); flex-shrink: 0; border-left: 1px solid var(--color-border-light); padding-left: 2px; line-height: 36px; }
+.gantt-bar { position: absolute; top: 8px; height: 20px; background: linear-gradient(90deg, var(--color-primary), #a5b4fc); border-radius: 10px; display: flex; align-items: center; justify-content: center; min-width: 40px; }
 .gantt-bar-done { background: linear-gradient(90deg, #67c23a, #95d475); }
 .gantt-bar-label { font-size: 11px; color: #fff; white-space: nowrap; }
-.gantt-body .gantt-row:nth-child(even) { background: #fafafa; }
+.gantt-body .gantt-row:nth-child(even) { background: var(--color-bg); }
 
 /* Risk */
 .risk-overall {
@@ -895,14 +917,14 @@ function getFileTagType(filename: string): 'primary' | 'success' | 'warning' | '
   border: 1px solid var(--color-border-light);
   margin-bottom: 16px; font-size: 15px;
 }
-.risk-overall span:first-child { font-weight: 600; color: #303133; }
+.risk-overall span:first-child { font-weight: 600; color: var(--color-text-primary); }
 .risk-score { margin-left: auto; font-weight: 600; color: #e6a23c; }
 .risk-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 12px; }
-.risk-card { cursor: default; border-radius: 10px; }
+.risk-card { cursor: default; border-radius: var(--radius-md); }
 .risk-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
-.risk-name { font-weight: 600; font-size: 14px; color: #1a1a2e; }
-.risk-desc { font-size: 13px; color: #606266; margin-bottom: 8px; }
-.risk-meta { display: flex; flex-wrap: wrap; gap: 12px; font-size: 12px; color: #909399; }
+.risk-name { font-weight: 600; font-size: 14px; color: var(--color-text-primary); }
+.risk-desc { font-size: 13px; color: var(--color-text-secondary); margin-bottom: 8px; }
+.risk-meta { display: flex; flex-wrap: wrap; gap: 12px; font-size: 12px; color: var(--color-text-muted); }
 
 /* Members */
 .member-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px; }
@@ -930,39 +952,49 @@ function getFileTagType(filename: string): 'primary' | 'success' | 'warning' | '
 .detail-avatar { font-weight: 700; font-size: 28px; color: #fff; flex-shrink: 0; }
 .detail-avatar :deep(img) { object-fit: cover; }
 .detail-header-info { display: flex; flex-direction: column; gap: 6px; }
-.detail-name { margin: 0; font-size: 18px; font-weight: 700; color: #1a1a2e; }
+.detail-name { margin: 0; font-size: 18px; font-weight: 700; color: var(--color-text-primary); }
 .detail-section { margin-bottom: 20px; }
-.section-title { display: flex; align-items: center; gap: 6px; font-size: 14px; font-weight: 600; color: #303133; margin: 0 0 10px 0; }
-.detail-bio { font-size: 14px; color: #606266; line-height: 1.6; margin: 0; padding: 10px 12px; background: #f8f9fb; border-radius: 8px; }
+.section-title {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 14px; font-weight: 600; color: var(--color-text-primary);
+  margin: 0 0 10px 0;
+}
+.detail-bio {
+  font-size: 14px; color: var(--color-text-secondary); line-height: 1.6;
+  margin: 0; padding: 10px 12px; background: var(--color-bg); border-radius: var(--radius-md);
+}
 .detail-skills { display: flex; flex-wrap: wrap; gap: 8px; }
-.skill-item { display: flex; align-items: center; gap: 8px; padding: 6px 12px; background: #f0f2f5; border-radius: 8px; }
-.skill-name { font-size: 13px; color: #303133; font-weight: 500; }
+.skill-item {
+  display: flex; align-items: center; gap: 8px;
+  padding: 6px 12px; background: var(--color-bg); border-radius: var(--radius-md);
+}
+.skill-name { font-size: 13px; color: var(--color-text-primary); font-weight: 500; }
 
 /* Files */
-.file-table :deep(.el-table__header) th { background: #f8f9fb !important; color: #606266; font-weight: 600; }
+.file-table :deep(.el-table__header) th { background: var(--color-bg) !important; color: var(--color-text-secondary); font-weight: 600; }
 .file-name-cell { display: flex; align-items: center; gap: 8px; }
-.file-name-text { font-size: 14px; color: #303133; font-weight: 500; }
-.file-size { color: #909399; font-size: 13px; }
-.file-time { color: #909399; font-size: 13px; }
+.file-name-text { font-size: 14px; color: var(--color-text-primary); font-weight: 500; }
+.file-size { color: var(--color-text-muted); font-size: 13px; }
+.file-time { color: var(--color-text-muted); font-size: 13px; }
 .file-actions { display: flex; gap: 2px; white-space: nowrap; }
 .toolbar-actions { display: flex; gap: 8px; }
 
 /* File Preview Dialog */
 .file-preview-dialog :deep(.el-dialog__header) {
-  padding: 16px 20px; border-bottom: 1px solid #ebeef5;
+  padding: 16px 20px; border-bottom: 1px solid var(--color-border-light);
 }
 .file-preview-dialog :deep(.el-dialog__body) { padding: 0; }
-.file-preview-dialog :deep(.el-dialog) { border-radius: 12px; overflow: hidden; }
+.file-preview-dialog :deep(.el-dialog) { border-radius: var(--radius-lg); overflow: hidden; }
 
 .preview-toolbar {
   display: flex; align-items: center; gap: 12px;
   padding: 10px 20px;
-  background: #f8f9fb;
-  border-bottom: 1px solid #ebeef5;
+  background: var(--color-bg);
+  border-bottom: 1px solid var(--color-border-light);
 }
-.preview-file-size { font-size: 13px; color: #909399; flex: 1; }
+.preview-file-size { font-size: 13px; color: var(--color-text-muted); flex: 1; }
 
-.preview-body { min-height: 300px; max-height: 70vh; overflow: auto; background: #f0f2f5; }
+.preview-body { min-height: 300px; max-height: 70vh; overflow: auto; background: var(--color-bg); }
 
 .preview-image-wrapper {
   display: flex; align-items: center; justify-content: center;

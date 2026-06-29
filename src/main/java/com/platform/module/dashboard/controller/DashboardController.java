@@ -20,6 +20,7 @@ import com.platform.module.notification.mapper.NotificationMapper;
 import com.platform.module.project.entity.Project;
 import com.platform.module.project.mapper.ProjectMapper;
 import com.platform.module.user.mapper.UserMapper;
+import com.platform.module.user.entity.User;
 import com.platform.module.user.entity.UserExperience;
 import com.platform.module.user.entity.UserSkill;
 import com.platform.module.user.mapper.UserExperienceMapper;
@@ -116,7 +117,25 @@ public class DashboardController {
                 new LambdaQueryWrapper<Recruit>()
                         .orderByDesc(Recruit::getCreatedAt))
                 .getRecords();
-        data.put("recentRecruits", recruits);
+        // Batch lookup publisher names
+        Set<Long> publisherIds = recruits.stream().map(Recruit::getPublisherId).collect(Collectors.toSet());
+        Map<Long, String> usernameMap = Collections.emptyMap();
+        if (!publisherIds.isEmpty()) {
+            List<User> publishers = userMapper.selectBatchIds(publisherIds);
+            usernameMap = publishers.stream().collect(Collectors.toMap(User::getId, User::getUsername, (a, b) -> a));
+        }
+        Map<Long, String> finalUsernameMap = usernameMap;
+        List<Map<String, Object>> recentRecruits = recruits.stream().map(r -> {
+            Map<String, Object> item = new HashMap<>();
+            item.put("id", r.getId());
+            item.put("title", r.getTitle());
+            item.put("status", r.getStatus());
+            item.put("createdAt", r.getCreatedAt());
+            item.put("publisherId", r.getPublisherId());
+            item.put("publisherName", finalUsernameMap.getOrDefault(r.getPublisherId(), "未知用户"));
+            return item;
+        }).collect(Collectors.toList());
+        data.put("recentRecruits", recentRecruits);
 
         return Result.success(data);
     }

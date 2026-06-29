@@ -20,6 +20,7 @@
     "pages/achievement/list/list",
     "pages/achievement/detail/detail",
     "pages/notification/index/index",
+    "pages/ai-chat/index/index",
     "pages/admin/dashboard/dashboard",
     "pages/admin/user-manage/user-manage",
     "pages/admin/recruit-audit/recruit-audit",
@@ -31,16 +32,15 @@
     "pages/admin/teacher-manage/teacher-manage"
   ],
   "window": {
-    "backgroundTextStyle": "light",
-    "navigationBarBackgroundColor": "#f5f6f7",
-    "navigationBarTitleText": "竞赛组队平台",
-    "navigationBarTextStyle": "black",
-    "backgroundColor": "#f5f6f7"
+    "navigationBarTextStyle": "white",
+    "navigationBarTitleText": "青创协同",
+    "navigationBarBackgroundColor": "#5B6FF5",
+    "backgroundColor": "#F8F9FB"
   },
   "tabBar": {
-    "color": "#8c8c8c",
-    "selectedColor": "#4e6ef2",
-    "backgroundColor": "#ffffff",
+    "color": "#94A3B8",
+    "selectedColor": "#5B6FF5",
+    "backgroundColor": "#FFFFFF",
     "borderStyle": "white",
     "list": [
       {
@@ -75,8 +75,38 @@
       }
     ]
   },
-  "permission": {},
-  "usingComponents": {},
+  "usingComponents": {
+    "t-button": "tdesign-miniprogram/button/button",
+    "t-icon": "tdesign-miniprogram/icon/icon",
+    "t-tag": "tdesign-miniprogram/tag/tag",
+    "t-avatar": "tdesign-miniprogram/avatar/avatar",
+    "t-cell": "tdesign-miniprogram/cell/cell",
+    "t-cell-group": "tdesign-miniprogram/cell-group/cell-group",
+    "t-input": "tdesign-miniprogram/input/input",
+    "t-textarea": "tdesign-miniprogram/textarea/textarea",
+    "t-search": "tdesign-miniprogram/search/search",
+    "t-tabs": "tdesign-miniprogram/tabs/tabs",
+    "t-tab-panel": "tdesign-miniprogram/tab-panel/tab-panel",
+    "t-dialog": "tdesign-miniprogram/dialog/dialog",
+    "t-loading": "tdesign-miniprogram/loading/loading",
+    "t-empty": "tdesign-miniprogram/empty/empty",
+    "t-popup": "tdesign-miniprogram/popup/popup",
+    "t-swiper": "tdesign-miniprogram/swiper/swiper",
+    "t-swiper-item": "tdesign-miniprogram/swiper-item/swiper-item",
+    "t-image": "tdesign-miniprogram/image/image",
+    "t-divider": "tdesign-miniprogram/divider/divider",
+    "t-checkbox": "tdesign-miniprogram/checkbox/checkbox",
+    "t-radio": "tdesign-miniprogram/radio/radio",
+    "t-radio-group": "tdesign-miniprogram/radio-group/radio-group",
+    "t-switch": "tdesign-miniprogram/switch/switch",
+    "t-progress": "tdesign-miniprogram/progress/progress",
+    "t-upload": "tdesign-miniprogram/upload/upload",
+    "t-badge": "tdesign-miniprogram/badge/badge",
+    "t-picker": "tdesign-miniprogram/picker/picker",
+    "t-picker-item": "tdesign-miniprogram/picker-item/picker-item",
+    "t-toast": "tdesign-miniprogram/toast/toast",
+    "t-skeleton": "tdesign-miniprogram/skeleton/skeleton"
+  },
   "sitemapLocation": "sitemap.json",
   "lazyCodeLoading": "requiredComponents"
 }

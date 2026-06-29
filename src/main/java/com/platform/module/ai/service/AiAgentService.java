@@ -49,6 +49,7 @@ public class AiAgentService {
     private final ChatConfig chatConfig;
     private final RagKnowledgeService ragService;
     private final ChatCompressionService compressionService;
+    private final ContextEnrichmentService contextEnrichmentService;
     private final AIChatSessionMapper sessionMapper;
     private final AIChatMessageMapper messageMapper;
     private final ProjectMapper projectMapper;
@@ -263,6 +264,10 @@ public class AiAgentService {
         // System Prompt: 角色和语气规范
         messages.add(Map.of("role", "system", "content", buildSystemPrompt()));
 
+        // 实时上下文注入（时间/天气等真实数据）
+        String realTimeContext = contextEnrichmentService.buildEnrichedContext();
+        messages.add(Map.of("role", "system", "content", realTimeContext));
+
         // 意图引导：告诉LLM当前用户意图是什么，应该如何应答
         String intentGuidance = buildIntentGuidance(intent, ctx);
         if (!intentGuidance.isEmpty()) {
@@ -344,7 +349,7 @@ public class AiAgentService {
 
     private String buildSystemPrompt() {
         return """
-        你是「组队星」平台的 AI 智能助手，名字叫"小星"，像一个热心亲切的学长/学姐。
+        你是「青创协同」平台的 AI 智能助手，名字叫"小青"，像一个热心亲切的学长/学姐。
         - 始终保持中文回复，语气亲切温暖
         
         ## 通用对话场景（用户闲聊、问知识、写代码等非平台问题）
@@ -489,13 +494,22 @@ public class AiAgentService {
     }
 
     /**
-     * 流式调用 - 保持原有方式（OpenAIClient/OllamaClient）
-     * 同步已切换到 LangChain4j
+     * 流式调用 — 自动检测 Ollama 可用性
+     * 优先本地方案（Ollama Client），Ollama 不可用时回退到 OpenAI 兼容 API
      */
     private void doChatStream(List<Map<String, String>> messages,
                                java.util.function.Consumer<String> onChunk,
                                Runnable onDone) {
-        // 使用原有 OpenAIClient 进行流式调用（它直接从 .env 读取 Key）
+        // —— 优先尝试 Ollama 流式 ——
+        if (ollamaClient.isRunning()) {
+            String model = ollamaConfig.getChatModel();
+            log.info("🔵 Streaming via Ollama: model={}", model);
+            ollamaClient.chatStream(model, messages, onChunk, onDone);
+            return;
+        }
+
+        // —— 回退到 OpenAI 兼容 API 流式（DeepSeek 等） ——
+        log.info("🟠 Ollama not available, streaming via OpenAIClient");
         openAIClient.chatStream(messages, onChunk, onDone);
     }
 

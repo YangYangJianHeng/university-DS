@@ -1,5 +1,5 @@
 # ===================================================
-# 组队星 (TeamStar) - Qdrant 向量数据库
+# 青创协同 (QingChuangXieTong) - Qdrant 向量数据库
 # 本地单机部署，数据持久化到 D 盘项目根目录
 # ===================================================
 # 
@@ -15,7 +15,7 @@ version: "3.8"
 services:
   qdrant:
     image: qdrant/qdrant:latest
-    container_name: teamstar-qdrant
+    container_name: qingchuang-qdrant
     restart: unless-stopped
     ports:
       - "6333:6333"   # REST API（HTTP）
@@ -27,9 +27,9 @@ services:
       - QDRANT__SERVICE__GRPC_PORT=6334
       - QDRANT__SERVICE__HTTP_PORT=6333
       - QDRANT__LOG_LEVEL=INFO
-    # 健康检查
+    # 健康检查（Qdrant 镜像不含 curl，用 wget 替代）
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:6333/health"]
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:6333/healthz"]
       interval: 30s
       timeout: 10s
       retries: 3

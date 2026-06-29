@@ -1,63 +1,56 @@
 // pages/admin/dashboard/dashboard.js
-const app = getApp()
 const { adminApi } = require('../../../utils/api')
 
 Page({
   data: {
-    stats: {},
-    weeklyReport: null,
-    announcements: []
+    stats: { userCount: 0, recruitCount: 0, projectCount: 0, teacherCount: 0 },
+    weekly: { newUsers: 0, newRecruits: 0, newProjects: 0, newTeams: 0 },
+    loading: true
   },
 
-  onShow() {
-    // 校验管理员权限
-    if (!app.globalData.isLoggedIn || app.globalData.userInfo?.role !== 'ADMIN') {
-      wx.showToast({ title: '无管理员权限', icon: 'none' })
-      setTimeout(() => wx.navigateBack(), 1500)
-      return
-    }
-    this.loadStats()
-    this.loadWeeklyReport()
-    this.loadAnnouncements()
+  onShow() { this.fetchData() },
+
+  onPullDownRefresh() {
+    this.fetchData().finally(() => wx.stopPullDownRefresh())
   },
 
-  async loadStats() {
+  async fetchData() {
+    this.setData({ loading: true })
     try {
-      const res = await adminApi.getStats()
-      if (res.code === 200) {
-        this.setData({ stats: res.data || {} })
-      }
+      const [stats, weekly] = await Promise.allSettled([
+        adminApi.getStats().catch(() => ({})),
+        adminApi.getWeeklyReport().catch(() => ({}))
+      ])
+      const statsData = stats.status === 'fulfilled' ? (stats.value || {}) : {}
+      const weeklyData = weekly.status === 'fulfilled' ? (weekly.value || {}) : {}
+
+      this.setData({
+        stats: {
+          userCount: statsData.userCount || statsData.totalUsers || 0,
+          recruitCount: statsData.recruitCount || statsData.activeRecruits || 0,
+          projectCount: statsData.projectCount || statsData.activeProjects || 0,
+          teacherCount: statsData.teacherCount || statsData.teachers || 0
+        },
+        weekly: {
+          newUsers: weeklyData.newUsers || 0,
+          newRecruits: weeklyData.newRecruits || 0,
+          newProjects: weeklyData.newProjects || 0,
+          newTeams: weeklyData.newTeams || 0
+        }
+      })
     } catch (e) {
-      // ignore
+      console.error('获取管理统计数据失败:', e)
+    } finally {
+      this.setData({ loading: false })
     }
   },
 
-  async loadWeeklyReport() {
-    try {
-      const res = await adminApi.getWeeklyReport()
-      if (res.code === 200) {
-        this.setData({ weeklyReport: res.data || {} })
-      }
-    } catch (e) {
-      // ignore
-    }
-  },
-
-  async loadAnnouncements() {
-    try {
-      const res = await adminApi.getAnnouncements()
-      if (res.code === 200) {
-        this.setData({ announcements: res.data || [] })
-      }
-    } catch (e) {
-      // ignore
-    }
-  },
-
-  navigateTo(e) {
-    const url = e.currentTarget.dataset.url
-    if (url) {
-      wx.navigateTo({ url })
-    }
-  }
+  goUsers() { wx.navigateTo({ url: '/pages/admin/user-manage/user-manage' }) },
+  goRecruits() { wx.navigateTo({ url: '/pages/admin/recruit-audit/recruit-audit' }) },
+  goProjects() { wx.navigateTo({ url: '/pages/admin/project-manage/project-manage' }) },
+  goTeams() { wx.navigateTo({ url: '/pages/admin/team-manage/team-manage' }) },
+  goTasks() { wx.navigateTo({ url: '/pages/admin/task-manage/task-manage' }) },
+  goTeachers() { wx.navigateTo({ url: '/pages/admin/teacher-manage/teacher-manage' }) },
+  goAudit() { wx.navigateTo({ url: '/pages/admin/audit-log/audit-log' }) },
+  goAnnouncement() { wx.navigateTo({ url: '/pages/admin/announcement/announcement' }) }
 })

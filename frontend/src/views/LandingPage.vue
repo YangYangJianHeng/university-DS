@@ -1,31 +1,24 @@
 <template>
-  <div class="landing-page" @mousemove="handleMouseMove" @mouseleave="handleMouseLeave">
-    <!-- 3D Background -->
+  <div class="landing-page">
     <ThreeBackground />
 
-    <!-- ===== NAVIGATION ===== -->
+    <!-- Navigation -->
     <nav class="nav" :class="{ 'nav-scrolled': scrolled }">
       <div class="nav-inner">
-        <a href="/" class="nav-logo" @click.prevent>
-          <svg viewBox="0 0 32 32" width="28" height="28" fill="none" class="logo-icon">
-            <rect width="32" height="32" rx="8" fill="url(#logoGrad)"/>
-            <path d="M10 22V12l6 4 6-4v10" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
-            <defs>
-              <linearGradient id="logoGrad" x1="0" y1="0" x2="32" y2="32">
-                <stop offset="0%" stop-color="#7c3aed"/>
-                <stop offset="100%" stop-color="#6366f1"/>
-              </linearGradient>
-            </defs>
-          </svg>
-          <span class="logo-text">TeamStar</span>
-        </a>
-        <div class="nav-center">
-          <a href="#" class="nav-link" @click.prevent>赛事</a>
-          <a href="#" class="nav-link" @click.prevent>发现</a>
+        <div class="nav-logo">
+          <div class="logo-icon-wrap">
+            <img src="/icon.png" width="24" height="24" alt="青创协同" />
+          </div>
+          <span class="logo-text">青创协同</span>
+        </div>
+        <div class="nav-links">
+          <a href="#" class="nav-link" @click.prevent>首页</a>
+          <a href="#" class="nav-link" @click.prevent>竞赛</a>
           <a href="#" class="nav-link" @click.prevent>社区</a>
         </div>
-        <div class="nav-right">
-          <button class="nav-cta" @click="$router.push('/login')">
+        <div class="nav-actions">
+          <button class="nav-btn-secondary" @click="$router.push('/login')">登录</button>
+          <button class="nav-btn-primary" @click="$router.push('/login')">
             开始使用
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
               <path d="M5 12h14M12 5l7 7-7 7"/>
@@ -35,34 +28,34 @@
       </div>
     </nav>
 
-    <!-- ===== HERO ===== -->
+    <!-- Hero -->
     <section class="hero">
       <div class="hero-grid">
-        <!-- Left: Content -->
         <div class="hero-content">
           <div class="hero-badge">
-            <span class="badge-dot"></span>
-            大学生计算机竞赛 · 组队匹配平台
+            <span class="badge-dot" />
+            <span>大学生竞赛 · 智能组队平台</span>
           </div>
           <h1 class="hero-title">
-            找到你的<span class="title-accent">梦之队</span>
+            找到你的<span class="title-gradient">梦之队</span>
           </h1>
           <p class="hero-desc">
-            基于技能图谱与竞赛偏好的智能匹配引擎，<br/>
-            让每一次组队都精准高效。
+            基于技能图谱与AI匹配引擎，让每一次组队都精准高效，<br />
+            帮助大学生找到最合适的竞赛搭档。
           </p>
           <div class="hero-actions">
-            <button class="hero-cta-primary" @click="$router.push('/login')">
+            <button class="hero-btn-primary" @click="$router.push('/login')">
               立即开始
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
                 <path d="M5 12h14M12 5l7 7-7 7"/>
               </svg>
             </button>
-            <button class="hero-cta-secondary" @click="scrollToContent">
+            <button class="hero-btn-secondary" @click="scrollToFeatures">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8" fill="currentColor" stroke="none"/>
+                <circle cx="12" cy="12" r="10"/>
+                <polygon points="10 8 16 12 10 16 10 8" fill="currentColor" stroke="none"/>
               </svg>
-              观看演示
+              了解更多
             </button>
           </div>
           <div class="hero-stats">
@@ -70,48 +63,43 @@
               <span class="stat-value">{{ stats.totalUsers.toLocaleString() }}+</span>
               <span class="stat-label">注册用户</span>
             </div>
-            <div class="stat-divider"></div>
+            <div class="stat-divider" />
             <div class="stat-item">
               <span class="stat-value">{{ stats.totalTeams.toLocaleString() }}+</span>
               <span class="stat-label">成功组队</span>
             </div>
-            <div class="stat-divider"></div>
+            <div class="stat-divider" />
             <div class="stat-item">
               <span class="stat-value">{{ stats.totalCompetitions.toLocaleString() }}+</span>
               <span class="stat-label">竞赛项目</span>
             </div>
           </div>
         </div>
-
-        <!-- Right: Visual space (3D shapes render behind this) -->
-        <div class="hero-visual"></div>
+        <div class="hero-visual" />
       </div>
     </section>
 
-    <!-- ===== FEATURES ===== -->
+    <!-- Features -->
     <section ref="featuresRef" class="features-section">
-      <div class="section-header">
+      <div class="features-header">
+        <span class="section-label">核心功能</span>
         <h2 class="section-title">智能匹配，精准组队</h2>
-        <p class="section-desc">从技能评估到团队组建，一站式解决方案</p>
+        <p class="section-desc">从技能评估到团队组建，一站式解决竞赛组队难题</p>
       </div>
       <div class="features-grid">
-        <div class="feature-card" v-for="(feat, i) in features" :key="i" :style="{ '--delay': i * 0.1 + 's' }">
-          <!--
-            安全说明: feat.icon 为硬编码SVG字符串，非用户输入，不存在XSS风险
-            若将来改为从API获取，请务必使用DOMPurify/sanitize-html净化
-          -->
-          <div class="feature-icon" v-html="feat.icon"></div>
+        <div class="feature-card" v-for="(feat, i) in features" :key="i" :style="{ '--i': i }">
+          <div class="feature-icon" v-html="feat.icon" />
           <h3 class="feature-title">{{ feat.title }}</h3>
           <p class="feature-desc">{{ feat.desc }}</p>
         </div>
       </div>
     </section>
 
-    <!-- ===== CTA ===== -->
+    <!-- CTA -->
     <section class="cta-section">
       <div class="cta-card">
         <h2 class="cta-heading">准备好找到你的队友了吗？</h2>
-        <p class="cta-sub">加入大学生竞赛社区，开启你的团队征程</p>
+        <p class="cta-sub">加入青创协同，开启你的竞赛征程</p>
         <button class="cta-btn" @click="$router.push('/login')">
           免费注册
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
@@ -121,21 +109,22 @@
       </div>
     </section>
 
-    <!-- ===== FOOTER ===== -->
+    <!-- Footer -->
     <footer class="footer">
       <div class="footer-inner">
         <div class="footer-brand">
-          <span class="footer-logo">TeamStar</span>
-          <span class="footer-tagline">大学生计算机竞赛组队匹配平台</span>
+          <span class="footer-logo">青创协同</span>
+          <span class="footer-tagline">大学生竞赛智能组队匹配平台</span>
         </div>
         <div class="footer-links">
           <a href="#">赛事日历</a>
           <a href="#">平台规则</a>
+          <a href="#">关于我们</a>
           <a href="#">联系我们</a>
         </div>
       </div>
       <div class="footer-bottom">
-        <p>&copy; 2026 TeamStar. All rights reserved.</p>
+        <p>&copy; 2026 青创协同. All rights reserved.</p>
       </div>
     </footer>
   </div>
@@ -146,61 +135,49 @@ import { ref, onMounted, onBeforeUnmount } from 'vue'
 import ThreeBackground from '@/components/ThreeBackground.vue'
 import { getPlatformStats } from '@/api/public'
 
-// ===== State =====
 const scrolled = ref(false)
 const featuresRef = ref<HTMLElement>()
 const stats = ref({ totalUsers: 0, totalTeams: 0, totalCompetitions: 0 })
 
-// ===== Features =====
 const features = [
   {
-    icon: '<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>',
+    icon: '<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#5B6FF5" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>',
     title: '智能匹配',
-    desc: '基于技能标签与竞赛偏好，算法自动推荐最佳队友',
+    desc: '基于技能标签与竞赛偏好，AI算法自动推荐最合适的队友',
   },
   {
-    icon: '<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="1.5"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>',
+    icon: '<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#5B6FF5" stroke-width="1.5"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>',
     title: '团队协作',
-    desc: '内置项目管理工具，支持任务分配与进度追踪',
+    desc: '内置项目管理工具，任务分配、进度追踪一站搞定',
   },
   {
-    icon: '<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="1.5"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>',
+    icon: '<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#5B6FF5" stroke-width="1.5"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>',
     title: '竞赛日历',
-    desc: '实时同步各大竞赛时间节点，不再错过报名截止',
+    desc: '实时同步各大竞赛时间节点，不再错过报名截止日期',
   },
   {
-    icon: '<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="1.5"><path d="M21.21 15.89A10 10 0 1 1 8 2.83"/><path d="M22 12A10 10 0 0 0 12 2v10z"/></svg>',
+    icon: '<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#5B6FF5" stroke-width="1.5"><path d="M21.21 15.89A10 10 0 1 1 8 2.83"/><path d="M22 12A10 10 0 0 0 12 2v10z"/></svg>',
     title: '数据分析',
-    desc: '可视化团队技能分布，精准定位能力短板',
+    desc: '可视化团队技能分布，精准定位团队能力短板',
   },
   {
-    icon: '<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="1.5"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>',
+    icon: '<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#5B6FF5" stroke-width="1.5"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>',
     title: '在线协作',
-    desc: '支持代码共享、文档协同与实时通讯的完整工作区',
+    desc: '代码共享、文档协同与实时通讯，完整协作工作区',
   },
   {
-    icon: '<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="1.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>',
+    icon: '<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#5B6FF5" stroke-width="1.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>',
     title: '认证保障',
-    desc: '实名认证与竞赛成绩背书，确保队友真实可靠',
+    desc: '实名认证与竞赛成绩背书，确保每位队友真实可靠',
   },
 ]
 
-// ===== Scroll =====
 function handleScroll() {
   scrolled.value = window.scrollY > 40
 }
 
-function scrollToContent() {
+function scrollToFeatures() {
   featuresRef.value?.scrollIntoView({ behavior: 'smooth' })
-}
-
-// ===== Mouse move =====
-function handleMouseMove(_e: MouseEvent) {
-  // Mouse tracking is handled by ThreeBackground
-}
-
-function handleMouseLeave() {
-  // Mouse tracking is handled by ThreeBackground
 }
 
 async function fetchStats() {
@@ -222,23 +199,17 @@ onBeforeUnmount(() => {
 })
 </script>
 
-<style>
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Noto+Sans+SC:wght@400;500;700;900&display=swap');
-</style>
-
 <style scoped>
-/* ===== BASE ===== */
 .landing-page {
   position: relative;
   min-height: 100vh;
-  background: #f5f6fa;
-  color: #0f0f1a;
-  font-family: 'Inter', 'Noto Sans SC', -apple-system, sans-serif;
+  background: var(--color-bg);
+  color: var(--color-text-primary);
+  font-family: var(--font-family);
   overflow-x: hidden;
-  -webkit-font-smoothing: antialiased;
 }
 
-/* ===== NAVIGATION ===== */
+/* ===== Navigation ===== */
 .nav {
   position: fixed;
   top: 0; left: 0; right: 0;
@@ -247,7 +218,7 @@ onBeforeUnmount(() => {
   transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
 }
 .nav-scrolled {
-  background: rgba(255,255,255,0.78);
+  background: var(--glass-bg);
   backdrop-filter: blur(20px) saturate(180%);
   -webkit-backdrop-filter: blur(20px) saturate(180%);
   border-bottom: 1px solid rgba(0,0,0,0.05);
@@ -266,18 +237,15 @@ onBeforeUnmount(() => {
   align-items: center;
   gap: 10px;
   text-decoration: none;
-  color: #0f0f1a;
+  color: var(--color-text-primary);
 }
-.logo-icon {
-  flex-shrink: 0;
-}
+.logo-icon-wrap { flex-shrink: 0; }
 .logo-text {
-  font-family: 'Inter', sans-serif;
   font-size: 20px;
   font-weight: 800;
-  letter-spacing: -0.6px;
+  letter-spacing: -0.5px;
 }
-.nav-center {
+.nav-links {
   display: flex;
   align-items: center;
   gap: 36px;
@@ -285,20 +253,35 @@ onBeforeUnmount(() => {
 .nav-link {
   font-size: 14px;
   font-weight: 500;
-  color: #555;
+  color: var(--color-text-secondary);
   text-decoration: none;
-  transition: color 0.2s;
+  transition: color var(--transition-fast);
   letter-spacing: 0.2px;
 }
-.nav-link:hover {
-  color: #7c3aed;
-}
-.nav-right {
+.nav-link:hover { color: var(--color-primary); }
+.nav-actions {
   display: flex;
   align-items: center;
-  gap: 20px;
+  gap: 12px;
 }
-.nav-cta {
+.nav-btn-secondary {
+  padding: 9px 20px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  background: transparent;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  font-family: inherit;
+}
+.nav-btn-secondary:hover {
+  color: var(--color-primary);
+  border-color: var(--color-primary);
+  background: var(--color-primary-light);
+}
+.nav-btn-primary {
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -306,23 +289,21 @@ onBeforeUnmount(() => {
   font-size: 14px;
   font-weight: 600;
   color: #fff;
-  background: linear-gradient(135deg, #7c3aed 0%, #6366f1 100%);
+  background: var(--gradient-primary);
   border: none;
-  border-radius: 10px;
+  border-radius: var(--radius-sm);
   cursor: pointer;
-  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: all var(--transition-fast);
   font-family: inherit;
-  letter-spacing: 0.2px;
+  box-shadow: 0 2px 10px rgba(91,111,245,0.3);
 }
-.nav-cta:hover {
+.nav-btn-primary:hover {
   transform: translateY(-1px);
-  box-shadow: 0 4px 20px rgba(124,58,237,0.35);
+  box-shadow: 0 4px 20px rgba(91,111,245,0.4);
 }
-.nav-cta:active {
-  transform: scale(0.97);
-}
+.nav-btn-primary:active { transform: scale(0.97); }
 
-/* ===== HERO ===== */
+/* ===== Hero ===== */
 .hero {
   position: relative;
   z-index: 1;
@@ -340,9 +321,7 @@ onBeforeUnmount(() => {
   align-items: center;
   gap: 60px;
 }
-.hero-content {
-  max-width: 560px;
-}
+.hero-content { max-width: 560px; }
 .hero-badge {
   display: inline-flex;
   align-items: center;
@@ -350,41 +329,39 @@ onBeforeUnmount(() => {
   padding: 6px 16px;
   font-size: 13px;
   font-weight: 500;
-  color: #7c3aed;
-  background: rgba(124,58,237,0.06);
-  border: 1px solid rgba(124,58,237,0.12);
+  color: var(--color-primary);
+  background: var(--color-primary-light);
+  border: 1px solid rgba(91,111,245,0.15);
   border-radius: 100px;
   margin-bottom: 32px;
   letter-spacing: 0.3px;
 }
 .badge-dot {
-  width: 6px;
-  height: 6px;
+  width: 6px; height: 6px;
   border-radius: 50%;
-  background: #7c3aed;
+  background: var(--color-primary);
 }
 .hero-title {
-  font-family: 'Inter', 'Noto Sans SC', sans-serif;
   font-size: clamp(44px, 6.5vw, 76px);
   font-weight: 900;
   letter-spacing: -2.5px;
   line-height: 1.1;
   margin-bottom: 24px;
-  color: #0f0f1a;
+  color: var(--color-text-primary);
 }
-.title-accent {
-  background: linear-gradient(135deg, #7c3aed 0%, #6366f1 40%, #06b6d4 100%);
+.title-gradient {
+  background: var(--gradient-primary);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
 }
 .hero-desc {
-  font-size: clamp(16px, 1.4vw, 19px);
-  color: #666;
+  font-size: clamp(16px, 1.4vw, 18px);
+  color: var(--color-text-secondary);
   line-height: 1.75;
   font-weight: 400;
   margin-bottom: 40px;
-  max-width: 460px;
+  max-width: 480px;
 }
 .hero-actions {
   display: flex;
@@ -392,7 +369,7 @@ onBeforeUnmount(() => {
   gap: 16px;
   margin-bottom: 52px;
 }
-.hero-cta-primary {
+.hero-btn-primary {
   display: inline-flex;
   align-items: center;
   gap: 8px;
@@ -400,41 +377,39 @@ onBeforeUnmount(() => {
   font-size: 16px;
   font-weight: 700;
   color: #fff;
-  background: linear-gradient(135deg, #7c3aed 0%, #6366f1 100%);
+  background: var(--gradient-primary);
   border: none;
   border-radius: 12px;
   cursor: pointer;
   transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
   font-family: inherit;
   letter-spacing: 0.3px;
-  box-shadow: 0 4px 24px rgba(124,58,237,0.3);
+  box-shadow: 0 4px 24px rgba(91,111,245,0.3);
 }
-.hero-cta-primary:hover {
+.hero-btn-primary:hover {
   transform: translateY(-2px);
-  box-shadow: 0 8px 36px rgba(124,58,237,0.4);
+  box-shadow: 0 8px 36px rgba(91,111,245,0.4);
 }
-.hero-cta-primary:active {
-  transform: scale(0.97);
-}
-.hero-cta-secondary {
+.hero-btn-primary:active { transform: scale(0.97); }
+.hero-btn-secondary {
   display: inline-flex;
   align-items: center;
   gap: 8px;
   padding: 15px 24px;
   font-size: 15px;
   font-weight: 600;
-  color: #555;
+  color: var(--color-text-secondary);
   background: transparent;
-  border: 1px solid rgba(0,0,0,0.1);
+  border: 1px solid var(--color-border);
   border-radius: 12px;
   cursor: pointer;
   transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
   font-family: inherit;
 }
-.hero-cta-secondary:hover {
-  color: #7c3aed;
-  border-color: rgba(124,58,237,0.3);
-  background: rgba(124,58,237,0.03);
+.hero-btn-secondary:hover {
+  color: var(--color-primary);
+  border-color: rgba(91,111,245,0.3);
+  background: var(--color-primary-light);
 }
 .hero-stats {
   display: flex;
@@ -447,28 +422,28 @@ onBeforeUnmount(() => {
   gap: 2px;
 }
 .stat-value {
-  font-family: 'Inter', sans-serif;
   font-size: 28px;
   font-weight: 800;
-  color: #0f0f1a;
+  color: var(--color-text-primary);
   letter-spacing: -1px;
+  font-feature-settings: 'tnum';
 }
 .stat-label {
   font-size: 13px;
-  color: #888;
+  color: var(--color-text-muted);
   font-weight: 500;
 }
 .stat-divider {
   width: 1px;
   height: 40px;
-  background: rgba(0,0,0,0.08);
+  background: var(--color-border);
 }
 .hero-visual {
   position: relative;
   min-height: 500px;
 }
 
-/* ===== FEATURES ===== */
+/* ===== Features ===== */
 .features-section {
   position: relative;
   z-index: 1;
@@ -476,21 +451,32 @@ onBeforeUnmount(() => {
   max-width: 1400px;
   margin: 0 auto;
 }
-.section-header {
+.features-header {
   text-align: center;
   margin-bottom: 64px;
 }
+.section-label {
+  display: inline-block;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-primary);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  padding: 4px 14px;
+  background: var(--color-primary-light);
+  border-radius: 100px;
+  margin-bottom: 16px;
+}
 .section-title {
-  font-family: 'Inter', 'Noto Sans SC', sans-serif;
-  font-size: clamp(28px, 4vw, 44px);
+  font-size: clamp(28px, 4vw, 42px);
   font-weight: 800;
-  color: #0f0f1a;
+  color: var(--color-text-primary);
   margin-bottom: 12px;
   letter-spacing: -1px;
 }
 .section-desc {
-  font-size: 17px;
-  color: #777;
+  font-size: 16px;
+  color: var(--color-text-muted);
   font-weight: 400;
 }
 .features-grid {
@@ -499,45 +485,43 @@ onBeforeUnmount(() => {
   gap: 24px;
 }
 .feature-card {
-  background: #fff;
-  border: 1px solid rgba(0,0,0,0.05);
-  border-radius: 20px;
+  background: var(--color-card);
+  border: 1px solid var(--color-border-light);
+  border-radius: var(--radius-xl);
   padding: 36px 32px;
   transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
   opacity: 0;
   transform: translateY(24px);
   animation: card-in 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-  animation-delay: var(--delay);
+  animation-delay: calc(var(--i) * 0.1s);
 }
 @keyframes card-in {
   to { opacity: 1; transform: translateY(0); }
 }
 .feature-card:hover {
   transform: translateY(-4px);
-  border-color: rgba(124,58,237,0.15);
+  border-color: rgba(91,111,245,0.2);
   box-shadow: 0 12px 40px rgba(0,0,0,0.06);
 }
 .feature-icon {
   display: flex;
-  width: 52px;
-  height: 52px;
+  width: 52px; height: 52px;
   align-items: center;
   justify-content: center;
-  background: rgba(124,58,237,0.06);
-  border-radius: 14px;
+  background: var(--color-primary-light);
+  border-radius: var(--radius-md);
   margin-bottom: 20px;
 }
 .feature-title {
-  font-family: 'Inter', sans-serif;
   font-size: 18px;
   font-weight: 700;
-  color: #0f0f1a;
+  color: var(--color-text-primary);
   margin-bottom: 8px;
   letter-spacing: -0.3px;
 }
 .feature-desc {
   font-size: 14px;
-  color: #777;
+  color: var(--color-text-muted);
   line-height: 1.7;
 }
 
@@ -552,21 +536,21 @@ onBeforeUnmount(() => {
   margin: 0 auto;
   text-align: center;
   padding: 64px 48px;
-  background: linear-gradient(135deg, rgba(124,58,237,0.04) 0%, rgba(99,102,241,0.04) 100%);
-  border: 1px solid rgba(124,58,237,0.08);
-  border-radius: 28px;
+  background: var(--color-card);
+  border: 1px solid var(--color-border-light);
+  border-radius: var(--radius-2xl);
+  box-shadow: var(--shadow-md);
 }
 .cta-heading {
-  font-family: 'Inter', 'Noto Sans SC', sans-serif;
   font-size: clamp(28px, 4vw, 40px);
   font-weight: 800;
-  color: #0f0f1a;
+  color: var(--color-text-primary);
   margin-bottom: 12px;
   letter-spacing: -1px;
 }
 .cta-sub {
   font-size: 16px;
-  color: #777;
+  color: var(--color-text-muted);
   margin-bottom: 36px;
 }
 .cta-btn {
@@ -577,29 +561,26 @@ onBeforeUnmount(() => {
   font-size: 16px;
   font-weight: 700;
   color: #fff;
-  background: linear-gradient(135deg, #7c3aed 0%, #6366f1 100%);
+  background: var(--gradient-primary);
   border: none;
   border-radius: 12px;
   cursor: pointer;
   transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
   font-family: inherit;
-  box-shadow: 0 4px 24px rgba(124,58,237,0.3);
+  box-shadow: 0 4px 24px rgba(91,111,245,0.3);
 }
 .cta-btn:hover {
   transform: translateY(-2px);
-  box-shadow: 0 8px 36px rgba(124,58,237,0.4);
-}
-.cta-btn:active {
-  transform: scale(0.97);
+  box-shadow: 0 8px 36px rgba(91,111,245,0.4);
 }
 
-/* ===== FOOTER ===== */
+/* ===== Footer ===== */
 .footer {
   position: relative;
   z-index: 1;
   padding: 48px 48px 32px;
-  background: #fff;
-  border-top: 1px solid rgba(0,0,0,0.04);
+  background: var(--color-card);
+  border-top: 1px solid var(--color-border-light);
 }
 .footer-inner {
   max-width: 1400px;
@@ -618,11 +599,11 @@ onBeforeUnmount(() => {
 .footer-logo {
   font-weight: 800;
   font-size: 18px;
-  color: #0f0f1a;
+  color: var(--color-text-primary);
 }
 .footer-tagline {
   font-size: 12px;
-  color: #999;
+  color: var(--color-text-muted);
 }
 .footer-links {
   display: flex;
@@ -630,77 +611,39 @@ onBeforeUnmount(() => {
 }
 .footer-links a {
   font-size: 13px;
-  color: #777;
+  color: var(--color-text-muted);
   text-decoration: none;
-  transition: color 0.2s;
+  transition: color var(--transition-fast);
   font-weight: 500;
 }
-.footer-links a:hover {
-  color: #7c3aed;
-}
+.footer-links a:hover { color: var(--color-primary); }
 .footer-bottom {
   text-align: center;
   margin-top: 28px;
   padding-top: 20px;
-  border-top: 1px solid rgba(0,0,0,0.03);
+  border-top: 1px solid var(--color-border-light);
 }
 .footer-bottom p {
   font-size: 12px;
-  color: #aaa;
+  color: var(--color-text-placeholder);
 }
 
-/* ===== MOBILE ===== */
+/* ===== Responsive ===== */
 @media (max-width: 1024px) {
-  .hero-grid {
-    grid-template-columns: 1fr;
-    gap: 40px;
-  }
-  .hero-visual {
-    min-height: 300px;
-  }
-  .features-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
+  .hero-grid { grid-template-columns: 1fr; gap: 40px; }
+  .hero-visual { min-height: 300px; }
+  .features-grid { grid-template-columns: repeat(2, 1fr); }
 }
 @media (max-width: 768px) {
-  .nav-inner {
-    padding: 0 20px;
-  }
-  .nav-center {
-    display: none;
-  }
-  .hero {
-    padding: 120px 20px 60px;
-  }
-  .hero-actions {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-  .hero-stats {
-    flex-wrap: wrap;
-    gap: 16px;
-  }
-  .stat-divider {
-    display: none;
-  }
-  .features-section {
-    padding: 60px 20px;
-  }
-  .features-grid {
-    grid-template-columns: 1fr;
-  }
-  .cta-section {
-    padding: 60px 20px 80px;
-  }
-  .cta-card {
-    padding: 40px 24px;
-  }
-  .footer {
-    padding: 36px 20px 24px;
-  }
-  .footer-inner {
-    flex-direction: column;
-    text-align: center;
-  }
+  .nav-inner { padding: 0 20px; }
+  .nav-links { display: none; }
+  .hero { padding: 120px 20px 60px; }
+  .hero-actions { flex-direction: column; align-items: flex-start; }
+  .hero-stats { flex-wrap: wrap; gap: 16px; }
+  .stat-divider { display: none; }
+  .features-section { padding: 60px 20px; }
+  .features-grid { grid-template-columns: 1fr; }
+  .cta-section { padding: 60px 20px 80px; }
+  .cta-card { padding: 40px 24px; }
 }
 </style>

@@ -1,15 +1,14 @@
 <template>
   <div class="recruit-list-container">
-    <!-- Page Header with Gradient -->
+    <!-- Page Header -->
     <div class="page-header-bar">
-      <div class="page-header-content">
+      <div class="header-content">
         <div>
           <h2>招募广场</h2>
-          <p class="page-desc">浏览所有招募项目，找到适合你的团队</p>
+          <p>浏览所有招募项目，找到适合你的团队</p>
         </div>
-        <el-button type="primary" size="large" @click="router.push('/recruit/create')" class="create-btn">
-          <el-icon><Plus /></el-icon>
-          发布招募
+        <el-button class="header-btn" size="large" @click="router.push('/recruit/create')">
+          <el-icon><Plus /></el-icon>发布招募
         </el-button>
       </div>
     </div>
@@ -38,7 +37,7 @@
             v-model="filters.keyword"
             placeholder="搜索标题..."
             clearable
-            style="width: 220px"
+            style="width:220px"
             :prefix-icon="Search"
             @keyup.enter="handleSearch"
           />
@@ -51,63 +50,61 @@
     </el-card>
 
     <!-- Recruit Cards -->
-    <div v-loading="loading">
+    <div v-loading="loading" class="recruit-grid-wrapper">
       <el-row v-if="recruits.length > 0" :gutter="20">
-        <el-col v-for="item in recruits" :key="item.id" :xs="24" :sm="12" :lg="8" style="margin-bottom: 20px">
-          <el-card shadow="hover" class="recruit-card" @click="router.push(`/recruit/${item.id}`)">
-            <div class="card-type-badge">
-              <el-tag :type="projectTypeType(item.projectType)" size="small" effect="dark">
-                {{ item.projectType }}
+        <el-col v-for="item in recruits" :key="item.id" :xs="24" :sm="12" :lg="8" style="margin-bottom:20px">
+          <div class="recruit-card card-hover" @click="router.push(`/recruit/${item.id}`)">
+            <!-- Type Badge -->
+            <div class="card-top">
+              <el-tag :type="projectTypeTag(item.projectType)" size="small" effect="dark" round>
+                {{ item.projectType || '其他' }}
               </el-tag>
             </div>
+            <!-- Card Body -->
             <div class="card-body">
-              <div class="card-title">{{ item.title }}</div>
+              <h3 class="card-title">{{ item.title }}</h3>
               <div class="card-publisher">
-                <el-avatar :size="18" :src="item.publisherAvatar" style="margin-right:4px;flex-shrink:0">
+                <el-avatar :size="20" :src="item.publisherAvatar" class="pub-avatar">
                   {{ item.publisherName?.charAt(0) || '?' }}
                 </el-avatar>
-                {{ item.publisherName || item.publisher?.username || '未知' }}
+                <span>{{ item.publisherName || item.publisher?.username || '未知' }}</span>
               </div>
               <div class="card-skills" v-if="item.requiredSkills?.length">
                 <el-tag
                   v-for="skill in item.requiredSkills.slice(0, 4)"
                   :key="skill"
-                  type="info"
                   size="small"
-                  effect="plain"
+                  class="skill-tag"
                 >
                   {{ skill }}
                 </el-tag>
-                <span v-if="item.requiredSkills.length > 4" class="more-skills">+{{ item.requiredSkills.length - 4 }}</span>
+                <span v-if="item.requiredSkills.length > 4" class="more-tag">
+                  +{{ item.requiredSkills.length - 4 }}
+                </span>
               </div>
             </div>
+            <!-- Card Footer -->
             <div class="card-footer">
-              <div class="footer-left">
-                <div class="member-count">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+              <div class="footer-stats">
+                <span class="footer-stat">
+                  <el-icon :size="14"><User /></el-icon>
                   {{ item.currentMembers || 0 }}/{{ item.maxMembers }}
-                </div>
-                <div class="deadline">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                  <template v-if="item.deadline">{{ getCountdown(item.deadline) }}</template>
-                  <template v-else>无截止</template>
-                </div>
+                </span>
+                <span class="footer-stat">
+                  <el-icon :size="14"><Clock /></el-icon>
+                  {{ item.deadline ? getCountdown(item.deadline) : '无截止' }}
+                </span>
               </div>
-              <el-tag
-                :type="statusType(item.status)"
-                size="small"
-                effect="dark"
-              >
+              <el-tag :type="statusTag(item.status)" size="small" effect="dark" round>
                 {{ statusLabel(item.status) }}
               </el-tag>
             </div>
-          </el-card>
+          </div>
         </el-col>
       </el-row>
 
-      <el-empty v-else-if="!loading" description="暂无招募信息" />
+      <el-empty v-else-if="!loading" description="暂无招募信息" :image-size="120" />
 
-      <!-- Pagination -->
       <div class="pagination-wrapper" v-if="total > 0">
         <el-pagination
           v-model:current-page="currentPage"
@@ -126,7 +123,7 @@ import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import dayjs from 'dayjs'
 import { listRecruits } from '@/api/recruit'
-import { Search } from '@element-plus/icons-vue'
+import { Search, User, Clock } from '@element-plus/icons-vue'
 
 const router = useRouter()
 
@@ -136,11 +133,7 @@ const currentPage = ref(1)
 const pageSize = ref(12)
 const total = ref(0)
 
-const filters = ref({
-  projectType: '',
-  status: '',
-  keyword: '',
-})
+const filters = ref({ projectType: '', status: '', keyword: '' })
 
 async function fetchRecruits() {
   loading.value = true
@@ -153,52 +146,29 @@ async function fetchRecruits() {
     const data = res.data || {}
     recruits.value = data.records || data.list || []
     total.value = data.total || 0
-  } catch (_) {
-    recruits.value = []
-  } finally {
-    loading.value = false
-  }
+  } catch { recruits.value = [] } finally { loading.value = false }
 }
 
 function handleSearch() { currentPage.value = 1; fetchRecruits() }
-
 function handleReset() {
-  filters.value.projectType = ''
-  filters.value.status = ''
-  filters.value.keyword = ''
+  filters.value = { projectType: '', status: '', keyword: '' }
   currentPage.value = 1
   fetchRecruits()
 }
-
 function handlePageChange(page: number) { currentPage.value = page; fetchRecruits() }
 
-function statusType(status: string): 'success' | 'info' | 'warning' | 'danger' {
-  switch (status) {
-    case 'OPEN': return 'success'
-    case 'CLOSED': return 'info'
-    case 'FULL': return 'warning'
-    default: return 'info'
-  }
+function statusTag(status: string) {
+  const map: Record<string, any> = { OPEN: 'success', CLOSED: 'info', FULL: 'warning' }
+  return map[status] || 'info'
 }
-
-function statusLabel(status: string): string {
-  switch (status) {
-    case 'OPEN': return '招募中'
-    case 'CLOSED': return '已关闭'
-    case 'FULL': return '已满员'
-    default: return status || '未知'
-  }
+function statusLabel(status: string) {
+  const map: Record<string, string> = { OPEN: '招募中', CLOSED: '已关闭', FULL: '已满员' }
+  return map[status] || status || '未知'
 }
-
-function projectTypeType(type: string): 'success' | 'warning' | 'primary' {
-  switch (type) {
-    case '竞赛': return 'warning'
-    case '科研': return 'primary'
-    case '创新创业': return 'success'
-    default: return 'primary'
-  }
+function projectTypeTag(type: string) {
+  const map: Record<string, any> = { '竞赛': '', '科研': '', '创新创业': 'success' }
+  return map[type] || ''
 }
-
 function getCountdown(deadline: string): string {
   const diff = dayjs(deadline).diff(dayjs(), 'day')
   if (diff < 0) return '已截止'
@@ -213,135 +183,147 @@ onMounted(() => fetchRecruits())
 <style scoped>
 .recruit-list-container { max-width: 1200px; margin: 0 auto; }
 
-/* ===== Page Header ===== */
+/* Page Header */
 .page-header-bar {
-  background: var(--gradient-primary);
-  border-radius: var(--radius-md);
-  padding: 28px 32px;
-  margin-bottom: 20px;
-  color: #fff;
+  background: var(--color-card);
+  border: 1px solid var(--color-border-light);
+  border-radius: var(--radius-xl);
+  padding: 32px 36px;
+  margin-bottom: 24px;
+  position: relative;
+  overflow: hidden;
 }
-
-.page-header-content {
+.page-header-bar::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  background: var(--gradient-primary);
+  border-radius: 4px 0 0 4px;
+}
+.page-header-bar::after {
+  content: '';
+  position: absolute;
+  width: 200px; height: 200px;
+  border-radius: 50%;
+  background: rgba(91,111,245,0.03);
+  top: -60px; right: -40px;
+}
+.header-content {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  position: relative;
+  z-index: 1;
+  flex-wrap: wrap;
+  gap: 16px;
 }
+.header-content h2 { font-size: 24px; font-weight: 700; margin: 0 0 4px; color: var(--color-text-primary); }
+.header-content p { margin: 0; font-size: 14px; color: var(--color-text-muted); }
+.header-btn {
+  border-radius: var(--radius-sm) !important;
+  font-weight: 600 !important;
+}
+.header-btn:hover { opacity: 0.9; }
 
-.page-header-content h2 {
-  font-size: 22px;
-  font-weight: 700;
-  margin: 0 0 4px;
-}
-
-.page-desc {
-  margin: 0;
-  font-size: 14px;
-  opacity: 0.8;
-}
-
-.create-btn {
-  border-radius: 10px;
-  font-weight: 600;
-  border: none;
-  background: rgba(255,255,255,0.2) !important;
-  backdrop-filter: blur(4px);
-}
-.create-btn:hover {
-  background: rgba(255,255,255,0.3) !important;
-  transform: translateY(-1px);
-}
-
-/* ===== Filter ===== */
+/* Filter */
 .filter-card {
-  border-radius: var(--radius-md);
-  margin-bottom: 20px;
+  border-radius: var(--radius-lg) !important;
+  margin-bottom: 24px;
 }
 
-/* ===== Recruit Cards ===== */
+/* Recruit Cards */
+.recruit-grid-wrapper { min-height: 200px; }
 .recruit-card {
-  cursor: pointer;
-  transition: all 0.25s;
-  height: 100%;
-  border-radius: var(--radius-sm);
+  background: var(--color-card);
+  border: 1px solid var(--color-border-light);
+  border-radius: var(--radius-lg);
   overflow: hidden;
+  cursor: pointer;
   display: flex;
   flex-direction: column;
+  height: 100%;
 }
 .recruit-card:hover {
-  transform: translateY(-3px);
-  box-shadow: var(--shadow-lg);
+  border-color: rgba(91,111,245,0.15);
 }
 
-.card-type-badge {
-  padding: 12px 16px 0;
+.card-top {
+  padding: 16px 20px 0;
 }
-
 .card-body {
-  padding: 8px 16px 12px;
+  padding: 12px 20px;
   flex: 1;
 }
-
 .card-title {
   font-size: 16px;
-  font-weight: 600;
+  font-weight: 700;
   color: var(--color-text-primary);
-  margin-bottom: 8px;
+  margin: 0 0 10px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-
 .card-publisher {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 6px;
   font-size: 13px;
   color: var(--color-text-muted);
   margin-bottom: 10px;
 }
-
+.pub-avatar { background: var(--gradient-primary) !important; font-size: 12px; font-weight: 600; color: #fff; }
 .card-skills {
   display: flex;
   flex-wrap: wrap;
   gap: 4px;
   align-items: center;
 }
-
-.more-skills {
+.skill-tag {
+  background: var(--color-bg) !important;
+  border-color: var(--color-border-light) !important;
+  color: var(--color-text-secondary) !important;
+}
+.more-tag {
   font-size: 11px;
   color: var(--color-text-muted);
-  padding: 2px 6px;
+  padding: 2px 8px;
   background: var(--color-bg);
-  border-radius: 4px;
+  border-radius: 10px;
 }
 
+/* Card Footer */
 .card-footer {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 12px 16px;
+  padding: 14px 20px;
   border-top: 1px solid var(--color-border-light);
+  background: var(--color-bg);
 }
-
-.footer-left {
+.footer-stats {
   display: flex;
   align-items: center;
-  gap: 14px;
-  font-size: 12px;
-  color: var(--color-text-muted);
+  gap: 16px;
 }
-
-.member-count, .deadline {
+.footer-stat {
   display: flex;
   align-items: center;
   gap: 4px;
+  font-size: 12px;
+  color: var(--color-text-muted);
 }
 
 .pagination-wrapper {
   display: flex;
   justify-content: center;
-  margin-top: 20px;
+  margin-top: 32px;
   padding: 20px 0;
+}
+
+@media (max-width: 768px) {
+  .page-header-bar { padding: 24px; }
 }
 </style>

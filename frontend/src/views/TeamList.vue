@@ -3,9 +3,11 @@
     <div class="page-header-bar">
       <div>
         <h2>我的团队</h2>
-        <p class="page-desc">管理和查看你创建或加入的所有团队</p>
+        <p>管理和查看你创建或加入的所有团队</p>
       </div>
-      <el-button type="primary" :icon="Plus" @click="openCreateDialog">创建团队</el-button>
+      <el-button type="primary" :icon="Plus" @click="openCreateDialog" class="header-btn">
+        创建团队
+      </el-button>
     </div>
 
     <el-card shadow="never" class="main-card">
@@ -14,14 +16,16 @@
           <div v-loading="loading.created">
             <el-row v-if="createdTeams.length > 0" :gutter="20">
               <el-col v-for="team in createdTeams" :key="team.id" :xs="24" :sm="12" :lg="8" style="margin-bottom:20px">
-                <el-card shadow="hover" class="team-card" @click="router.push(`/team/${team.id}`)">
+                <div class="team-card card-hover" @click="router.push(`/team/${team.id}`)">
                   <div class="card-top">
-                    <div class="card-avatar" style="background:linear-gradient(135deg,#667eea,#764ba2)">
+                    <div class="card-avatar" style="background:var(--gradient-primary)">
                       {{ team.name?.charAt(0) || 'T' }}
                     </div>
                     <div class="card-titles">
                       <div class="card-name">{{ team.name }}</div>
-                      <el-tag :type="teamStatusType(team.status)" size="small" effect="plain">{{ teamStatusLabel(team.status) }}</el-tag>
+                      <el-tag :type="teamStatusType(team.status)" size="small" effect="light" round>
+                        {{ teamStatusLabel(team.status) }}
+                      </el-tag>
                     </div>
                   </div>
                   <div class="card-stats">
@@ -39,13 +43,13 @@
                     </div>
                   </div>
                   <div class="card-footer" v-if="team.projectName">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+                    <el-icon :size="14"><FolderOpened /></el-icon>
                     {{ team.projectName }}
                   </div>
-                </el-card>
+                </div>
               </el-col>
             </el-row>
-            <el-empty v-else description="暂无创建的团队" />
+            <el-empty v-else description="暂无创建的团队" :image-size="100" />
           </div>
         </el-tab-pane>
 
@@ -53,14 +57,16 @@
           <div v-loading="loading.joined">
             <el-row v-if="joinedTeams.length > 0" :gutter="20">
               <el-col v-for="team in joinedTeams" :key="team.id" :xs="24" :sm="12" :lg="8" style="margin-bottom:20px">
-                <el-card shadow="hover" class="team-card" @click="router.push(`/team/${team.id}`)">
+                <div class="team-card card-hover" @click="router.push(`/team/${team.id}`)">
                   <div class="card-top">
-                    <div class="card-avatar" style="background:linear-gradient(135deg,#43e97b,#38f9d7)">
+                    <div class="card-avatar card-avatar-joined">
                       {{ team.name?.charAt(0) || 'T' }}
                     </div>
                     <div class="card-titles">
                       <div class="card-name">{{ team.name }}</div>
-                      <el-tag :type="teamStatusType(team.status)" size="small" effect="plain">{{ teamStatusLabel(team.status) }}</el-tag>
+                      <el-tag :type="teamStatusType(team.status)" size="small" effect="light" round>
+                        {{ teamStatusLabel(team.status) }}
+                      </el-tag>
                     </div>
                   </div>
                   <div class="card-stats">
@@ -78,13 +84,13 @@
                     </div>
                   </div>
                   <div class="card-footer" v-if="team.leaderName">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                    <el-icon :size="14"><Star /></el-icon>
                     队长：{{ team.leaderName }}
                   </div>
-                </el-card>
+                </div>
               </el-col>
             </el-row>
-            <el-empty v-else description="暂未加入任何团队" />
+            <el-empty v-else description="暂未加入任何团队" :image-size="100" />
           </div>
         </el-tab-pane>
       </el-tabs>
@@ -112,7 +118,7 @@
 import { ref, reactive, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import dayjs from 'dayjs'
-import { Plus } from '@element-plus/icons-vue'
+import { Plus, FolderOpened, Star } from '@element-plus/icons-vue'
 import { ElMessage, type FormInstance, type FormRules } from 'element-plus'
 import { getMyTeams, getJoinedTeams, createTeam } from '@/api/team'
 
@@ -124,7 +130,6 @@ const joinedTeams = ref<any[]>([])
 
 const loading = reactive({ created: false, joined: false })
 
-// --- Create Team ---
 const createDialogVisible = ref(false)
 const submitting = ref(false)
 const createFormRef = ref<FormInstance>()
@@ -146,7 +151,6 @@ function openCreateDialog() {
 async function handleCreate() {
   const valid = await createFormRef.value?.validate().catch(() => false)
   if (!valid) return
-
   submitting.value = true
   try {
     const payload: any = { name: createForm.name }
@@ -157,43 +161,30 @@ async function handleCreate() {
     await fetchMyTeams()
   } catch (e: any) {
     ElMessage.error(e?.response?.data?.message || '创建失败')
-  } finally {
-    submitting.value = false
-  }
+  } finally { submitting.value = false }
 }
 
 async function fetchMyTeams() {
   loading.created = true
   try { const res = await getMyTeams(); createdTeams.value = res.data || [] }
-  catch (_) { createdTeams.value = [] }
+  catch { createdTeams.value = [] }
   finally { loading.created = false }
 }
 
 async function fetchJoinedTeams() {
   loading.joined = true
   try { const res = await getJoinedTeams(); joinedTeams.value = res.data || [] }
-  catch (_) { joinedTeams.value = [] }
+  catch { joinedTeams.value = [] }
   finally { loading.joined = false }
 }
 
 function teamStatusType(status: string): 'success' | 'info' | 'warning' | 'danger' {
-  switch (status) {
-    case 'ACTIVE': case 'NORMAL': return 'success'
-    case 'INACTIVE': return 'warning'
-    case 'DISBANDED': return 'info'
-    case 'CLOSED': return 'danger'
-    default: return 'info'
-  }
+  const map: Record<string, any> = { ACTIVE: 'success', NORMAL: 'success', INACTIVE: 'warning', DISBANDED: 'info', CLOSED: 'danger' }
+  return map[status] || 'info'
 }
-
 function teamStatusLabel(status: string): string {
-  switch (status) {
-    case 'ACTIVE': case 'NORMAL': return '活跃中'
-    case 'INACTIVE': return '已停用'
-    case 'DISBANDED': return '已解散'
-    case 'CLOSED': return '已关闭'
-    default: return status || '未知'
-  }
+  const map: Record<string, string> = { ACTIVE: '活跃中', NORMAL: '活跃中', INACTIVE: '已停用', DISBANDED: '已解散', CLOSED: '已关闭' }
+  return map[status] || status || '未知'
 }
 
 onMounted(() => { Promise.all([fetchMyTeams(), fetchJoinedTeams()]) })
@@ -203,45 +194,78 @@ onMounted(() => { Promise.all([fetchMyTeams(), fetchJoinedTeams()]) })
 .team-list-container { max-width: 1200px; margin: 0 auto; }
 
 .page-header-bar {
-  background: var(--gradient-primary);
-  border-radius: 16px;
-  padding: 24px 32px;
-  margin-bottom: 20px;
-  color: #fff;
+  background: var(--color-card);
+  border: 1px solid var(--color-border-light);
+  border-radius: var(--radius-xl);
+  padding: 28px 36px;
+  margin-bottom: 24px;
   display: flex;
   align-items: center;
   justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+  position: relative;
+  overflow: hidden;
 }
-.page-header-bar h2 { font-size: 22px; font-weight: 700; margin: 0 0 4px; }
-.page-desc { margin: 0; font-size: 14px; opacity: 0.8; }
+.page-header-bar::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  background: var(--gradient-primary);
+  border-radius: 4px 0 0 4px;
+}
+.page-header-bar h2 { font-size: 24px; font-weight: 700; margin: 0 0 4px; color: var(--color-text-primary); }
+.page-header-bar p { margin: 0; font-size: 14px; color: var(--color-text-muted); }
+.header-btn {
+  border-radius: var(--radius-sm) !important;
+  font-weight: 600 !important;
+}
+.header-btn:hover { background: rgba(255,255,255,0.3) !important; }
 
-.main-card { border-radius: 14px; }
-
+.main-card { border-radius: var(--radius-lg) !important; }
 .team-tabs { min-height: 300px; }
 
-.team-card { cursor: pointer; transition: all 0.25s; height: 100%; border-radius: 12px; }
-.team-card:hover { transform: translateY(-3px); box-shadow: 0 8px 24px rgba(0,0,0,0.1); }
-
-.card-top { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
-
+.team-card {
+  background: var(--color-card);
+  border: 1px solid var(--color-border-light);
+  border-radius: var(--radius-lg);
+  padding: 24px;
+  cursor: pointer;
+  height: 100%;
+}
+.card-top { display: flex; align-items: center; gap: 14px; margin-bottom: 20px; }
 .card-avatar {
-  width: 44px; height: 44px; border-radius: 10px;
+  width: 48px; height: 48px;
+  border-radius: var(--radius-md);
   display: flex; align-items: center; justify-content: center;
-  font-size: 18px; font-weight: 700; color: #fff;
-  flex-shrink: 0;
+  font-size: 20px; font-weight: 700; color: #fff; flex-shrink: 0;
+}
+.card-avatar-joined { background: linear-gradient(135deg, #22C55E, #10B981); }
+.card-titles { flex: 1; min-width: 0; }
+.card-name {
+  font-size: 16px; font-weight: 600;
+  color: var(--color-text-primary);
+  margin-bottom: 4px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.card-stats {
+  display: flex; gap: 28px; margin-bottom: 18px;
+  padding: 14px 0;
+  border-top: 1px solid var(--color-border-light);
+  border-bottom: 1px solid var(--color-border-light);
+}
+.card-stat { display: flex; flex-direction: column; align-items: center; }
+.stat-num { font-size: 20px; font-weight: 700; color: var(--color-text-primary); line-height: 1.2; }
+.stat-lbl { font-size: 12px; color: var(--color-text-muted); margin-top: 2px; }
+.card-footer {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 12px; color: var(--color-text-muted);
 }
 
-.card-titles { flex: 1; min-width: 0; }
-.card-name { font-size: 15px; font-weight: 600; color: #1a1a2e; margin-bottom: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-
-.card-stats { display: flex; gap: 24px; margin-bottom: 16px; }
-.card-stat { display: flex; flex-direction: column; align-items: center; }
-.stat-num { font-size: 18px; font-weight: 700; color: #1a1a2e; }
-.stat-lbl { font-size: 11px; color: #909399; margin-top: 2px; }
-
-.card-footer {
-  display: flex; align-items: center; gap: 4px;
-  font-size: 12px; color: #909399;
-  padding-top: 12px; border-top: 1px solid #f0f2f5;
+@media (max-width: 768px) {
+  .page-header-bar { padding: 24px; }
 }
 </style>

@@ -288,8 +288,29 @@ public class AdminServiceImpl implements AdminService {
         if (!List.of("USER", "ADMIN", "TEACHER", "REVIEWER").contains(role)) {
             throw BusinessException.badRequest("无效角色: " + role);
         }
+        String oldRole = user.getRole();
         user.setRole(role);
         userMapper.updateById(user);
+
+        // 设置为导师时，自动创建 Teacher 记录；取消导师时，删除 Teacher 记录
+        if ("TEACHER".equals(role) && !"TEACHER".equals(oldRole)) {
+            Teacher existingTeacher = teacherMapper.selectOne(
+                    new LambdaQueryWrapper<Teacher>().eq(Teacher::getUserId, userId));
+            if (existingTeacher == null) {
+                Teacher teacher = new Teacher();
+                teacher.setUserId(userId);
+                teacher.setDepartment("待完善");
+                teacher.setTitle("教师");
+                teacher.setMaxTeams(5);
+                teacher.setCurrentTeams(0);
+                teacher.setIsVerified(1);
+                teacher.setRating(java.math.BigDecimal.ZERO);
+                teacherMapper.insert(teacher);
+            }
+        } else if (!"TEACHER".equals(role) && "TEACHER".equals(oldRole)) {
+            // 取消导师角色时，删除对应的 Teacher 记录
+            teacherMapper.delete(new LambdaQueryWrapper<Teacher>().eq(Teacher::getUserId, userId));
+        }
     }
 
     // ---- Project Management ----

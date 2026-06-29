@@ -8,7 +8,7 @@ const router = createRouter({
       path: '/',
       name: 'Landing',
       component: () => import('@/views/LandingPage.vue'),
-      meta: { title: '组队星' },
+      meta: { title: '青创协同' },
     },
     {
       path: '/login',
@@ -130,10 +130,10 @@ const router = createRouter({
 
 router.beforeEach((to, _from, next) => {
   const title = to.meta.title as string
-  if (title === '组队星') {
-    document.title = '组队星 / TeamStar - 大学生计算机竞赛组队匹配平台'
+  if (title === '青创协同') {
+    document.title = '青创协同 - 大学生计算机竞赛组队匹配平台'
   } else if (title) {
-    document.title = title + ' - 组队星'
+    document.title = title + ' - 青创协同'
   }
   const token = localStorage.getItem('token')
   const isPublicRoute = to.path === '/' || to.path === '/login' || to.path === '/register'

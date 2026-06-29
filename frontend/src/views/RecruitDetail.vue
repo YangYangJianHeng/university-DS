@@ -1,10 +1,9 @@
 <template>
   <div class="recruit-detail-container" v-loading="loading">
     <template v-if="recruit">
-      <!-- Back -->
       <div class="back-nav">
         <el-button text @click="router.back()">
-          <el-icon><ArrowLeft /></el-icon> 返回招募列表
+          <el-icon><ArrowLeft /></el-icon>返回招募列表
         </el-button>
       </div>
 
@@ -13,11 +12,15 @@
         <el-col :xs="24" :lg="16">
           <el-card shadow="never" class="main-card">
             <div class="detail-header">
-              <div class="detail-header-left">
+              <div class="header-main">
                 <h1 class="detail-title">{{ recruit.title }}</h1>
                 <div class="header-tags">
-                  <el-tag :type="statusType(recruit.status)" effect="dark" size="small">{{ statusLabel(recruit.status) }}</el-tag>
-                  <el-tag :type="projectTypeType(recruit.projectType)" effect="plain" size="small">{{ recruit.projectType }}</el-tag>
+                  <el-tag :type="statusType(recruit.status)" effect="dark" size="small" round>
+                    {{ statusLabel(recruit.status) }}
+                  </el-tag>
+                  <el-tag :type="projectTypeTag(recruit.projectType)" effect="plain" size="small" round>
+                    {{ recruit.projectType }}
+                  </el-tag>
                 </div>
               </div>
             </div>
@@ -25,39 +28,39 @@
             <!-- Meta Grid -->
             <div class="meta-grid">
               <div class="meta-item">
-                <div class="meta-label">发布人</div>
-                <div class="meta-value">
-                  <el-avatar :size="24" :src="recruit.publisherAvatar" style="vertical-align:middle;margin-right:6px;background:var(--gradient-primary)">
+                <span class="meta-label">发布人</span>
+                <span class="meta-value">
+                  <el-avatar :size="20" :src="recruit.publisherAvatar" class="meta-avatar">
                     {{ recruit.publisherName?.charAt(0) || '?' }}
                   </el-avatar>
                   {{ recruit.publisherName || '未知' }}
-                </div>
+                </span>
               </div>
               <div class="meta-item">
-                <div class="meta-label">截止日期</div>
-                <div class="meta-value">{{ recruit.deadline ? dayjs(recruit.deadline).format('YYYY-MM-DD') : '无' }}</div>
+                <span class="meta-label">截止日期</span>
+                <span class="meta-value">{{ recruit.deadline ? dayjs(recruit.deadline).format('YYYY-MM-DD') : '无' }}</span>
               </div>
               <div class="meta-item">
-                <div class="meta-label">发布时间</div>
-                <div class="meta-value">{{ dayjs(recruit.createdAt).format('YYYY-MM-DD HH:mm') }}</div>
+                <span class="meta-label">发布时间</span>
+                <span class="meta-value">{{ dayjs(recruit.createdAt).format('YYYY-MM-DD HH:mm') }}</span>
               </div>
               <div class="meta-item">
-                <div class="meta-label">浏览次数</div>
-                <div class="meta-value">{{ recruit.viewCount || 0 }} 次</div>
+                <span class="meta-label">浏览次数</span>
+                <span class="meta-value">{{ recruit.viewCount || 0 }} 次</span>
               </div>
             </div>
 
             <!-- Member Progress -->
             <div class="detail-section">
               <h3 class="section-title">成员进度</h3>
-              <div class="member-progress-bar">
-                <div class="progress-header">
+              <div class="member-progress">
+                <div class="progress-info">
                   <span>{{ recruit.currentMembers || 0 }} / {{ recruit.maxMembers }} 人</span>
                   <span :class="memberStatusClass">{{ memberStatusText }}</span>
                 </div>
                 <el-progress
                   :percentage="memberPercent"
-                  :stroke-width="10"
+                  :stroke-width="12"
                   :status="memberPercent >= 100 ? 'exception' : ''"
                   :format="() => ''"
                 />
@@ -67,8 +70,8 @@
             <!-- Skills -->
             <div class="detail-section" v-if="recruit.requiredSkills?.length">
               <h3 class="section-title">所需技能</h3>
-              <div class="skills-wrapper">
-                <el-tag v-for="skill in recruit.requiredSkills" :key="skill" type="info" class="skill-tag">
+              <div class="skills-wrap">
+                <el-tag v-for="skill in recruit.requiredSkills" :key="skill" class="skill-badge">
                   {{ skill }}
                 </el-tag>
               </div>
@@ -93,40 +96,41 @@
                 <el-icon><Plus /></el-icon>
                 {{ recruit.currentMembers >= recruit.maxMembers ? '已满员' : '申请加入' }}
               </el-button>
-              <p class="apply-hint" v-if="recruit.currentMembers < recruit.maxMembers">提交申请后，等待发布人审核</p>
+              <p class="apply-hint" v-if="recruit.currentMembers < recruit.maxMembers">
+                提交申请后，等待发布人审核
+              </p>
             </div>
             <div class="detail-actions closed-actions" v-else>
-              <el-tag type="info" size="large" effect="plain">该招募已{{ statusLabel(recruit.status) }}</el-tag>
+              <el-tag type="info" size="large" effect="plain" round>
+                该招募已{{ statusLabel(recruit.status) }}
+              </el-tag>
             </div>
           </el-card>
         </el-col>
 
         <!-- Sidebar -->
         <el-col :xs="24" :lg="8">
-          <!-- 申请管理（仅发布者可见） -->
+          <!-- Application Management -->
           <el-card shadow="never" class="sidebar-card" v-if="isPublisher && applications.length > 0">
             <template #header>
               <div class="sidebar-header">
-                <div class="sidebar-header-left">
-                  <div class="sidebar-icon" style="background:linear-gradient(135deg,#fa8c16,#fa709a)">
-                    <el-icon :size="16" color="#fff"><List /></el-icon>
-                  </div>
-                  <span>申请管理 ({{ applications.length }})</span>
-                </div>
+                <span class="sidebar-title">申请管理 ({{ applications.length }})</span>
               </div>
             </template>
             <div class="application-list">
-              <div v-for="app in applications" :key="app.id" class="application-item">
+              <div v-for="app in applications" :key="app.id" class="app-item">
                 <div class="app-user">
-                  <el-avatar :size="32" class="app-avatar" :src="app.applicantAvatar">{{ app.applicantName?.charAt(0) || '?' }}</el-avatar>
+                  <el-avatar :size="36" :src="app.applicantAvatar" class="app-avatar">
+                    {{ app.applicantName?.charAt(0) || '?' }}
+                  </el-avatar>
                   <span class="app-name">{{ app.applicantName || '未知用户' }}</span>
                 </div>
                 <div class="app-actions" v-if="app.status === 'PENDING'">
                   <el-button size="small" type="success" @click="handleApproveApp(app)">通过</el-button>
                   <el-button size="small" type="danger" @click="handleRejectApp(app)">拒绝</el-button>
                 </div>
-                <div v-else class="app-status">
-                  <el-tag :type="app.status === 'ACCEPTED' ? 'success' : 'danger'" size="small">
+                <div v-else>
+                  <el-tag :type="app.status === 'ACCEPTED' ? 'success' : 'danger'" size="small" round>
                     {{ app.status === 'ACCEPTED' ? '已通过' : '已拒绝' }}
                   </el-tag>
                 </div>
@@ -134,44 +138,33 @@
             </div>
           </el-card>
 
-          <!-- 转为项目（发布者/管理员可见，只要未转项目都显示） -->
+          <!-- Convert to Project -->
           <el-card shadow="never" class="sidebar-card" style="margin-top:16px"
                    v-if="isPublisher && !recruit.projectId">
             <template #header>
               <div class="sidebar-header">
-                <div class="sidebar-header-left">
-                  <div class="sidebar-icon" style="background:linear-gradient(135deg,#52c41a,#237804)">
-                    <el-icon :size="16" color="#fff"><Switch /></el-icon>
-                  </div>
-                  <span>项目转换</span>
-                </div>
+                <span class="sidebar-title">项目转换</span>
               </div>
             </template>
             <div class="convert-section">
-              <p class="convert-desc">将当前招募转为正式项目，自动创建团队并将已通过的成员加入团队。</p>
+              <p class="convert-desc">将当前招募转为正式项目，自动创建团队并加入已通过成员。</p>
               <el-button type="primary" class="convert-btn" @click="showConvertDialog = true">
-                <el-icon><Switch /></el-icon> 转为项目
+                <el-icon><Switch /></el-icon>转为项目
               </el-button>
             </div>
           </el-card>
 
-          <!-- 已转为项目提示 -->
-          <el-card shadow="never" class="sidebar-card" style="margin-top:16px"
-                   v-if="recruit.projectId">
+          <!-- Converted Info -->
+          <el-card shadow="never" class="sidebar-card" style="margin-top:16px" v-if="recruit.projectId">
             <template #header>
               <div class="sidebar-header">
-                <div class="sidebar-header-left">
-                  <div class="sidebar-icon" style="background:linear-gradient(135deg,#52c41a,#237804)">
-                    <el-icon :size="16" color="#fff"><CircleCheckFilled /></el-icon>
-                  </div>
-                  <span>已转为项目</span>
-                </div>
+                <span class="sidebar-title">已转为项目</span>
               </div>
             </template>
             <div class="converted-info">
-              <p>该招募已成功转为项目，项目ID: {{ recruit.projectId }}</p>
+              <p>项目ID: {{ recruit.projectId }}</p>
               <p class="recruit-status-tip">
-                <el-tag :type="recruit.continueRecruit === 1 ? 'success' : 'info'" size="small">
+                <el-tag :type="recruit.continueRecruit === 1 ? 'success' : 'info'" size="small" round>
                   {{ recruit.continueRecruit === 1 ? '继续招募中' : '招募已停止' }}
                 </el-tag>
                 <el-button
@@ -189,41 +182,36 @@
             </div>
           </el-card>
 
+          <!-- Smart Matching -->
           <el-card shadow="never" class="sidebar-card" style="margin-top:16px">
             <template #header>
               <div class="sidebar-header">
-                <div class="sidebar-header-left">
-                  <div class="sidebar-icon" style="background:linear-gradient(135deg,#667eea,#764ba2)">
-                    <el-icon :size="16" color="#fff"><Lightning /></el-icon>
-                  </div>
-                  <span>智能匹配</span>
-                </div>
+                <span class="sidebar-title">智能匹配</span>
                 <el-button text type="primary" size="small" :loading="matchingLoading" @click="loadMatches">
                   刷新
                 </el-button>
               </div>
             </template>
-
-            <div v-if="matchingLoading" class="match-loading">
-              <el-icon class="is-loading" :size="28" color="#667eea"><Loading /></el-icon>
+            <div v-if="matchingLoading" class="match-state">
+              <el-icon class="is-loading" :size="28"><Loading /></el-icon>
               <p>正在智能匹配...</p>
             </div>
-
-            <div v-else-if="matchResults.length === 0" class="match-empty">
-              <el-icon :size="40" color="#d0d5dd"><UserFilled /></el-icon>
+            <div v-else-if="matchResults.length === 0" class="match-state">
+              <el-icon :size="40" color="var(--color-text-placeholder)"><UserFilled /></el-icon>
               <p>暂无匹配结果</p>
             </div>
-
             <div v-else class="match-list">
               <div v-for="item in matchResults" :key="item.userId || item.id" class="match-card">
                 <div class="match-user">
-                  <el-avatar :size="40" class="match-avatar" :src="item.avatar">{{ item.username?.charAt(0) || '?' }}</el-avatar>
-                  <div class="match-user-info">
-                    <span class="match-username">{{ item.username || '未知' }}</span>
-                    <span class="match-desc">{{ item.major || '' }}</span>
+                  <el-avatar :size="40" :src="item.avatar" class="match-avatar">
+                    {{ item.username?.charAt(0) || '?' }}
+                  </el-avatar>
+                  <div class="match-info">
+                    <span class="match-name">{{ item.username || '未知' }}</span>
+                    <span class="match-major">{{ item.major || '' }}</span>
                   </div>
                 </div>
-                <div class="match-score-circle">
+                <div class="match-score">
                   <svg viewBox="0 0 36 36" class="score-svg">
                     <path class="score-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>
                     <path class="score-fill" :stroke-dasharray="`${Math.round((item.similarity || 0) * 100)}, 100`" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>
@@ -237,17 +225,11 @@
       </el-row>
     </template>
 
-    <el-empty v-else-if="!loading" description="招募信息不存在" />
+    <el-empty v-else-if="!loading" description="招募信息不存在" :image-size="120" />
 
-    <!-- 转为项目弹窗 -->
-    <el-dialog
-      v-model="showConvertDialog"
-      title="招募转项目"
-      width="600px"
-      :close-on-click-modal="false"
-      destroy-on-close
-    >
-      <el-form :model="convertForm" label-width="110px" label-position="top">
+    <!-- Convert Dialog -->
+    <el-dialog v-model="showConvertDialog" title="招募转项目" width="600px" destroy-on-close>
+      <el-form :model="convertForm" label-width="auto" label-position="top">
         <el-form-item label="项目名称">
           <el-input v-model="convertForm.projectName" :placeholder="recruit?.title || '请输入项目名称'" />
         </el-form-item>
@@ -261,19 +243,12 @@
             <el-radio :value="0">停止招募</el-radio>
           </el-radio-group>
           <div class="form-tip">
-            <template v-if="convertForm.continueRecruit === 1">
-              继续招募：用户仍可申请，通过后自动加入项目团队
-            </template>
-            <template v-else>
-              停止招募：关闭招募通道，项目团队固定
-            </template>
+            {{ convertForm.continueRecruit === 1 ? '继续招募：用户仍可申请，通过后自动加入项目团队' : '停止招募：关闭招募通道，项目团队固定' }}
           </div>
         </el-form-item>
-
         <el-divider content-position="left">
           <span style="font-size:14px;font-weight:600">为团队成员创建任务（可选）</span>
         </el-divider>
-
         <div class="task-list">
           <div v-for="(task, idx) in convertForm.tasks" :key="idx" class="task-item">
             <div class="task-item-header">
@@ -309,15 +284,12 @@
           </div>
         </div>
         <el-button type="primary" plain dashed style="width:100%;margin-top:8px" @click="addTask">
-          <el-icon><Plus /></el-icon> 添加任务
+          <el-icon><Plus /></el-icon>添加任务
         </el-button>
       </el-form>
-
       <template #footer>
         <el-button @click="showConvertDialog = false">取消</el-button>
-        <el-button type="primary" :loading="converting" @click="handleConvertToProject">
-          确认转换
-        </el-button>
+        <el-button type="primary" :loading="converting" @click="handleConvertToProject">确认转换</el-button>
       </template>
     </el-dialog>
   </div>
@@ -333,7 +305,6 @@ import { getRecruit, applyRecruit, matchRecruit, getApplications, approveApplica
 const route = useRoute()
 const router = useRouter()
 
-/** 校验并获取路由ID，无效时返回 NaN（调用方需自行处理） */
 function getRouteId(): number {
   const id = Number(route.params.id)
   if (isNaN(id) || id <= 0) {
@@ -349,6 +320,7 @@ const applying = ref(false)
 const matchingLoading = ref(false)
 const matchResults = ref<any[]>([])
 const applications = ref<any[]>([])
+
 const isPublisher = computed(() => {
   const userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}')
   const currentUserId = Number(userInfo.id || '0')
@@ -367,76 +339,35 @@ const memberStatusText = computed(() => {
   return `剩余 ${recruit.value.maxMembers - recruit.value.currentMembers} 个名额`
 })
 
-const memberStatusClass = computed(() => {
-  if (!recruit.value) return ''
-  return recruit.value.currentMembers >= recruit.value.maxMembers ? 'status-full' : 'status-open'
-})
+const memberStatusClass = computed(() =>
+  recruit.value?.currentMembers >= recruit.value?.maxMembers ? 'status-full' : 'status-open'
+)
 
-// 是否允许切换继续招募状态（已转化项目 + 发布者或管理员）
 const canToggleContinueRecruit = computed(() => {
-  if (!recruit.value) return false
-  const hasProject = recruit.value.projectId != null
-  if (!hasProject) return false
+  if (!recruit.value?.projectId) return false
   const userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}')
   return recruit.value.publisherId === Number(userInfo.id || '0') || userInfo.role === 'ADMIN'
 })
 
 const togglingContinue = ref(false)
 
-async function handleToggleContinueRecruit() {
-  const newStatus = recruit.value.continueRecruit === 1 ? 0 : 1
-  const actionText = newStatus === 1 ? '开启招募' : '停止招募'
-  try {
-    await ElMessageBox.confirm(`确认${actionText}？`, '操作确认', {
-      confirmButtonText: '确认', cancelButtonText: '取消', type: 'warning',
-    })
-  } catch { return }
-
-  togglingContinue.value = true
-  try {
-    const id = getRouteId()
-    if (isNaN(id)) return
-    await toggleContinueRecruit(id, newStatus)
-    recruit.value.continueRecruit = newStatus
-    recruit.value.status = newStatus === 0 ? 'CLOSED' : 'OPEN'
-    ElMessage.success(`已${actionText}`)
-  } catch (_) {
-    // 错误已在拦截器中处理
-  } finally {
-    togglingContinue.value = false
-  }
-}
-
+// ... (all the same functions as original - kept for brevity)
 async function fetchDetail() {
   loading.value = true
   const id = getRouteId()
   if (isNaN(id)) { loading.value = false; return }
-  try {
-    const res = await getRecruit(id)
-    recruit.value = res.data
-  } catch (_) {
-    recruit.value = null
-  } finally {
-    loading.value = false
-  }
+  try { recruit.value = (await getRecruit(id)).data } catch { recruit.value = null } finally { loading.value = false }
 }
 
 async function handleApply() {
   try {
-    await ElMessageBox.confirm('确认申请加入该项目？', '申请确认', {
-      confirmButtonText: '确认', cancelButtonText: '取消', type: 'info',
-    })
+    await ElMessageBox.confirm('确认申请加入该项目？', '申请确认', { confirmButtonText: '确认', cancelButtonText: '取消', type: 'info' })
   } catch { return }
-
   applying.value = true
   try {
-    const id = getRouteId()
-    if (isNaN(id)) return
-    await applyRecruit(id)
+    await applyRecruit(getRouteId())
     ElMessage.success('申请已提交，请等待审核')
-  } catch (_) {} finally {
-    applying.value = false
-  }
+  } catch {} finally { applying.value = false }
 }
 
 async function loadApplications() {
@@ -444,24 +375,18 @@ async function loadApplications() {
   if (isNaN(id)) return
   try {
     const res = await getApplications(id)
-    const data = res.data || []
-    // 加载申请人名称
-    applications.value = data.map((app: any) => ({
-      ...app,
-      applicantName: app.applicantName || '用户' + app.applicantId
+    applications.value = (res.data || []).map((app: any) => ({
+      ...app, applicantName: app.applicantName || '用户' + app.applicantId
     }))
-  } catch (_) {
-    applications.value = []
-  }
+  } catch { applications.value = [] }
 }
 
 async function handleApproveApp(app: any) {
   try {
     await approveApplication(app.id, true)
     ElMessage.success('已通过申请')
-    await loadApplications()
-    await fetchDetail()
-  } catch (_) {}
+    await loadApplications(); await fetchDetail()
+  } catch {}
 }
 
 async function handleRejectApp(app: any) {
@@ -469,7 +394,7 @@ async function handleRejectApp(app: any) {
     await approveApplication(app.id, false)
     ElMessage.success('已拒绝申请')
     await loadApplications()
-  } catch (_) {}
+  } catch {}
 }
 
 async function loadMatches() {
@@ -479,381 +404,203 @@ async function loadMatches() {
   try {
     const res = await matchRecruit(id)
     matchResults.value = Array.isArray(res.data) ? res.data : []
-  } catch (_) {
-    matchResults.value = []
-  } finally {
-    matchingLoading.value = false
-  }
+  } catch { matchResults.value = [] } finally { matchingLoading.value = false }
 }
 
-function statusType(status: string): 'success' | 'info' | 'warning' | 'danger' {
-  switch (status) {
-    case 'OPEN': return 'success'
-    case 'CLOSED': return 'info'
-    case 'FULL': return 'warning'
-    default: return 'info'
-  }
+async function handleToggleContinueRecruit() {
+  const newStatus = recruit.value.continueRecruit === 1 ? 0 : 1
+  try {
+    await ElMessageBox.confirm(`确认${newStatus === 1 ? '开启招募' : '停止招募'}？`, '操作确认', {
+      confirmButtonText: '确认', cancelButtonText: '取消', type: 'warning',
+    })
+  } catch { return }
+  togglingContinue.value = true
+  try {
+    await toggleContinueRecruit(getRouteId(), newStatus)
+    recruit.value.continueRecruit = newStatus
+    recruit.value.status = newStatus === 0 ? 'CLOSED' : 'OPEN'
+    ElMessage.success(`已${newStatus === 1 ? '开启招募' : '停止招募'}`)
+  } catch {} finally { togglingContinue.value = false }
 }
 
-function statusLabel(status: string): string {
-  switch (status) {
-    case 'OPEN': return '招募中'
-    case 'CLOSED': return '已关闭'
-    case 'FULL': return '已满员'
-    default: return status || '未知'
-  }
+function statusType(status: string) {
+  const map: Record<string, any> = { OPEN: 'success', CLOSED: 'info', FULL: 'warning' }
+  return map[status] || 'info'
+}
+function statusLabel(status: string) {
+  const map: Record<string, string> = { OPEN: '招募中', CLOSED: '已关闭', FULL: '已满员' }
+  return map[status] || status || '未知'
+}
+function projectTypeTag(type: string) {
+  const map: Record<string, any> = { '竞赛': 'warning', '科研': 'primary', '创新创业': 'success' }
+  return map[type] || 'primary'
 }
 
-function projectTypeType(type: string): 'success' | 'warning' | 'primary' {
-  switch (type) {
-    case '竞赛': return 'warning'
-    case '科研': return 'primary'
-    case '创新创业': return 'success'
-    default: return 'primary'
-  }
-}
-
-// ---------- 招募转项目 ----------
+// Convert dialog
 const showConvertDialog = ref(false)
 const converting = ref(false)
 const convertForm = reactive({
-  projectName: '',
-  projectDescription: '',
-  continueRecruit: 1 as number,
-  tasks: [] as Array<{
-    title: string
-    description: string
-    priority: string
-    deadline: string
-  }>
+  projectName: '', projectDescription: '', continueRecruit: 1 as number,
+  tasks: [] as Array<{ title: string; description: string; priority: string; deadline: string }>
 })
 
 function addTask() {
-  convertForm.tasks.push({
-    title: '',
-    description: '',
-    priority: 'MEDIUM',
-    deadline: ''
-  })
+  convertForm.tasks.push({ title: '', description: '', priority: 'MEDIUM', deadline: '' })
 }
-
-function removeTask(index: number) {
-  convertForm.tasks.splice(index, 1)
-}
+function removeTask(index: number) { convertForm.tasks.splice(index, 1) }
 
 async function handleConvertToProject() {
-  // 验证：如果有任务，至少标题不为空
   const validTasks = convertForm.tasks.filter(t => t.title.trim())
   if (convertForm.tasks.length > 0 && validTasks.length !== convertForm.tasks.length) {
-    ElMessage.warning('请填写所有任务的标题，或移除空任务')
-    return
+    ElMessage.warning('请填写所有任务的标题，或移除空任务'); return
   }
-
   try {
-    await ElMessageBox.confirm(
-      '确认将当前招募转为正式项目？系统将自动创建团队并将已通过的成员加入团队。',
-      '确认转换',
-      { confirmButtonText: '确认转换', cancelButtonText: '取消', type: 'info' }
-    )
+    await ElMessageBox.confirm('确认将当前招募转为正式项目？', '确认转换', {
+      confirmButtonText: '确认转换', cancelButtonText: '取消', type: 'info'
+    })
   } catch { return }
-
   converting.value = true
   try {
-    const id = getRouteId()
-    if (isNaN(id)) return
-    const payload = {
+    await convertRecruitToProject(getRouteId(), {
       projectName: convertForm.projectName || undefined,
       projectDescription: convertForm.projectDescription || undefined,
       continueRecruit: convertForm.continueRecruit,
       tasks: validTasks.length > 0 ? validTasks : undefined
-    }
-    await convertRecruitToProject(id, payload)
+    })
     ElMessage.success('招募已成功转为项目！')
     showConvertDialog.value = false
-    await fetchDetail()
-    await loadApplications()
-  } catch (_) {
-    // error handled by interceptor
-  } finally {
-    converting.value = false
-  }
+    await fetchDetail(); await loadApplications()
+  } catch {} finally { converting.value = false }
 }
 
 onMounted(async () => {
   await fetchDetail()
-  // 并行加载申请列表和匹配列表
   await Promise.all([loadApplications(), loadMatches()])
 })
 </script>
 
 <style scoped>
 .recruit-detail-container { max-width: 1100px; margin: 0 auto; }
-
 .back-nav { margin-bottom: 16px; }
 
-/* ===== Main Card ===== */
 .main-card {
-  border-radius: 14px;
+  border-radius: var(--radius-lg) !important;
   margin-bottom: 20px;
 }
 
-.detail-header { margin-bottom: 20px; }
-
-.detail-header-left { display: flex; flex-direction: column; gap: 8px; }
-
-.detail-title {
-  font-size: 22px;
-  font-weight: 700;
-  color: #1a1a2e;
-  margin: 0;
-}
-
+.detail-header { margin-bottom: 24px; }
+.header-main { display: flex; flex-direction: column; gap: 10px; }
+.detail-title { font-size: 24px; font-weight: 700; color: var(--color-text-primary); margin: 0; }
 .header-tags { display: flex; gap: 8px; }
 
-/* ===== Meta Grid ===== */
 .meta-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   gap: 16px;
-  padding: 16px;
-  background: #f8f9fb;
-  border-radius: 10px;
-  margin-bottom: 24px;
+  padding: 20px;
+  background: var(--color-bg);
+  border-radius: var(--radius-lg);
+  margin-bottom: 28px;
 }
+.meta-item { display: flex; flex-direction: column; gap: 4px; }
+.meta-label { font-size: 12px; color: var(--color-text-muted); }
+.meta-value { font-size: 14px; color: var(--color-text-primary); font-weight: 500; display: flex; align-items: center; gap: 6px; }
+.meta-avatar { background: var(--gradient-primary) !important; font-size: 11px; font-weight: 600; color: #fff; }
 
-.meta-label {
-  font-size: 12px;
-  color: #909399;
-  margin-bottom: 4px;
-}
-
-.meta-value {
-  font-size: 14px;
-  color: #1a1a2e;
-  font-weight: 500;
-}
-
-/* ===== Sections ===== */
-.detail-section { margin-bottom: 24px; }
-
+.detail-section { margin-bottom: 28px; }
 .section-title {
   font-size: 16px;
   font-weight: 600;
-  color: #1a1a2e;
-  margin: 0 0 12px;
-  padding-left: 12px;
+  color: var(--color-text-primary);
+  margin: 0 0 14px;
+  padding-left: 14px;
   border-left: 3px solid var(--color-primary);
 }
 
-.member-progress-bar {
-  padding: 4px 0;
+.member-progress { padding: 4px 0; }
+.progress-info {
+  display: flex; justify-content: space-between;
+  font-size: 13px; color: var(--color-text-muted); margin-bottom: 10px;
 }
+.status-full { color: var(--color-danger); font-weight: 600; }
+.status-open { color: var(--color-success); }
 
-.progress-header {
-  display: flex;
-  justify-content: space-between;
-  font-size: 13px;
-  color: #909399;
-  margin-bottom: 8px;
+.skills-wrap { display: flex; flex-wrap: wrap; gap: 8px; }
+.skill-badge {
+  background: var(--color-primary-light) !important;
+  border-color: rgba(91,111,245,0.2) !important;
+  color: var(--color-primary) !important;
 }
-
-.status-full { color: #f56c6c; font-weight: 600; }
-.status-open { color: #67c23a; }
-
-.skills-wrapper {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.skill-tag { margin: 0 !important; }
 
 .detail-description {
   font-size: 14px;
-  color: #4a4a6a;
+  color: var(--color-text-secondary);
   line-height: 1.8;
   white-space: pre-wrap;
 }
 
-/* ===== Apply ===== */
-.detail-actions {
-  margin-top: 24px;
-  padding-top: 20px;
-  border-top: 1px solid #e8ecf1;
-}
-
-.apply-btn {
-  border-radius: 10px;
-  font-weight: 600;
-  height: 46px;
-  padding: 0 32px;
-  font-size: 16px;
-  background: var(--gradient-primary);
-  border: none;
-}
-.apply-btn:hover {
-  box-shadow: 0 4px 20px rgba(102,126,234,0.4);
-  transform: translateY(-1px);
-}
-
-.apply-hint {
-  margin: 8px 0 0;
-  font-size: 12px;
-  color: #909399;
-}
-
+.detail-actions { margin-top: 28px; padding-top: 24px; border-top: 1px solid var(--color-border-light); }
+.apply-btn { border-radius: var(--radius-sm) !important; font-weight: 600; height: 46px; padding: 0 32px; font-size: 16px; }
+.apply-hint { margin: 10px 0 0; font-size: 12px; color: var(--color-text-muted); }
 .closed-actions { text-align: center; }
 
-/* ===== Sidebar ===== */
-.sidebar-card {
-  border-radius: 14px;
-}
+.sidebar-card { border-radius: var(--radius-lg) !important; }
+.sidebar-header { display: flex; align-items: center; justify-content: space-between; }
+.sidebar-title { font-size: 15px; font-weight: 600; color: var(--color-text-primary); }
 
-.sidebar-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
+.match-state {
+  text-align: center; padding: 36px 0; color: var(--color-text-muted);
 }
+.match-state p { margin-top: 8px; font-size: 13px; }
 
-.sidebar-header-left {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 15px;
-  font-weight: 600;
-}
-
-.sidebar-icon {
-  width: 28px;
-  height: 28px;
-  border-radius: 7px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.match-loading, .match-empty {
-  text-align: center;
-  padding: 32px 0;
-  color: #909399;
-}
-.match-loading p, .match-empty p { margin-top: 8px; font-size: 13px; }
-
-.match-list {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
+.match-list { display: flex; flex-direction: column; gap: 8px; }
 .match-card {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 12px;
-  border: 1px solid #f0f2f5;
-  border-radius: 10px;
-  transition: all 0.2s;
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 12px; border: 1px solid var(--color-border-light);
+  border-radius: var(--radius-sm); transition: all var(--transition-fast);
 }
-.match-card:hover {
-  border-color: #e0e4ed;
-  background: #f8f9fb;
-}
-
-.match-user {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  flex: 1;
-  min-width: 0;
-}
-
-.match-avatar {
-  background: var(--gradient-primary) !important;
-  flex-shrink: 0;
-}
-
-.match-user-info {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-}
-
-.match-username { font-size: 14px; font-weight: 500; color: #1a1a2e; }
-.match-desc { font-size: 12px; color: #909399; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-
-.match-score-circle { margin-left: 12px; flex-shrink: 0; }
-
+.match-card:hover { border-color: var(--color-primary); background: var(--color-primary-light); }
+.match-user { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0; }
+.match-avatar { background: var(--gradient-primary) !important; flex-shrink: 0; }
+.match-info { display: flex; flex-direction: column; min-width: 0; }
+.match-name { font-size: 14px; font-weight: 500; color: var(--color-text-primary); }
+.match-major { font-size: 12px; color: var(--color-text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.match-score { margin-left: 12px; flex-shrink: 0; }
 .score-svg { width: 44px; height: 44px; transform: rotate(-90deg); }
-.score-bg { fill: none; stroke: #f0f2f5; stroke-width: 3; }
+.score-bg { fill: none; stroke: var(--color-border-light); stroke-width: 3; }
 .score-fill { fill: none; stroke: var(--color-primary); stroke-width: 3; stroke-linecap: round; }
-.score-text { transform: rotate(90deg); transform-origin: 18px 18px; fill: #667eea; font-size: 8px; font-weight: 700; text-anchor: middle; }
+.score-text { transform: rotate(90deg); transform-origin: 18px 18px; fill: var(--color-primary); font-size: 8px; font-weight: 700; text-anchor: middle; }
 
-/* ===== Convert Section ===== */
-.convert-section {
-  text-align: center;
-  padding: 4px 0;
-}
-.convert-desc {
-  font-size: 13px;
-  color: #909399;
-  margin: 0 0 12px;
-  line-height: 1.6;
-}
-.convert-btn {
-  width: 100%;
-  border-radius: 10px;
-  font-weight: 600;
-  height: 42px;
-}
+.convert-section { text-align: center; padding: 4px 0; }
+.convert-desc { font-size: 13px; color: var(--color-text-muted); margin: 0 0 14px; line-height: 1.6; }
+.convert-btn { width: 100%; border-radius: var(--radius-sm) !important; font-weight: 600; }
 
-.converted-info {
-  text-align: center;
-}
-.converted-info p {
-  font-size: 13px;
-  color: #606266;
-  margin: 0 0 8px;
-}
-.recruit-status-tip {
-  margin-bottom: 12px !important;
-}
+.converted-info { text-align: center; }
+.converted-info p { font-size: 13px; color: var(--color-text-secondary); margin: 0 0 8px; }
+.recruit-status-tip { margin-bottom: 12px !important; }
 
-/* ===== Convert Dialog ===== */
-.form-tip {
-  font-size: 12px;
-  color: #909399;
-  margin-top: 6px;
-}
+.form-tip { font-size: 12px; color: var(--color-text-muted); margin-top: 6px; }
 
-.task-list {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
+.task-list { display: flex; flex-direction: column; gap: 16px; }
 .task-item {
-  padding: 12px;
-  border: 1px solid #e8ecf1;
-  border-radius: 10px;
-  background: #fafbfc;
+  padding: 16px; border: 1px solid var(--color-border); border-radius: var(--radius-sm);
+  background: var(--color-bg);
 }
-.task-item-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 8px;
-}
-.task-index {
-  font-size: 13px;
-  font-weight: 600;
-  color: #667eea;
-}
+.task-item-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+.task-index { font-size: 13px; font-weight: 600; color: var(--color-primary); }
 
-/* ===== Application List ===== */
-.application-list { display: flex; flex-direction: column; gap: 8px; }
-.application-item { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid #f5f5f5; }
-.application-item:last-child { border-bottom: none; }
-.app-user { display: flex; align-items: center; gap: 8px; }
+.application-list { display: flex; flex-direction: column; }
+.app-item {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 10px 0; border-bottom: 1px solid var(--color-border-light);
+}
+.app-item:last-child { border-bottom: none; }
+.app-user { display: flex; align-items: center; gap: 10px; }
 .app-avatar { background: var(--gradient-primary) !important; }
-.app-name { font-size: 13px; color: #1a1a2e; }
+.app-name { font-size: 14px; font-weight: 500; color: var(--color-text-primary); }
 .app-actions { display: flex; gap: 6px; }
+
+@media (max-width: 768px) {
+  .meta-grid { grid-template-columns: 1fr; }
+}
 </style>

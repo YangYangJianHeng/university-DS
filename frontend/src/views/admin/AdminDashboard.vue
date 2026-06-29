@@ -149,6 +149,27 @@
                 </el-button>
               </template>
             </el-table-column>
+            <el-table-column label="导师" width="110">
+              <template #default="{ row }">
+                <el-button
+                  v-if="row.role !== 'TEACHER' && row.role !== 'ADMIN'"
+                  type="success" plain size="small"
+                  :loading="row._teacherToggling"
+                  @click="handleToggleTeacher(row, true)"
+                >
+                  设为导师
+                </el-button>
+                <el-button
+                  v-else-if="row.role === 'TEACHER'"
+                  type="info" plain size="small"
+                  :loading="row._teacherToggling"
+                  @click="handleToggleTeacher(row, false)"
+                >
+                  取消导师
+                </el-button>
+                <span v-else style="color:#999;font-size:12px;">--</span>
+              </template>
+            </el-table-column>
             <el-table-column label="状态" width="90">
               <template #default="{ row }">
                 <el-switch
@@ -1175,6 +1196,28 @@ async function handleToggleAdmin(row: any, makeAdmin: boolean) {
   } catch (_) {
   } finally {
     row._adminToggling = false
+  }
+}
+
+async function handleToggleTeacher(row: any, makeTeacher: boolean) {
+  const actionText = makeTeacher ? '设为导师' : '取消导师角色'
+  try {
+    await ElMessageBox.confirm(
+      `确认${actionText}用户「${row.username}」(${row.phone})？${makeTeacher ? '\n设置后该用户将拥有导师权限，可指导团队。' : ''}`,
+      '操作确认',
+      { confirmButtonText: '确认', cancelButtonText: '取消', type: 'warning' }
+    )
+  } catch { return }
+
+  row._teacherToggling = true
+  try {
+    const role = makeTeacher ? 'TEACHER' : 'USER'
+    await request.put(`/admin/users/${row.id}/role`, null, { params: { role } })
+    row.role = role
+    ElMessage.success(`${actionText}成功`)
+  } catch (_) {
+  } finally {
+    row._teacherToggling = false
   }
 }
 

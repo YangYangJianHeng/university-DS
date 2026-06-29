@@ -11,7 +11,7 @@ public class OllamaConfig {
     /** Ollama 服务基础地址 */
     private String baseUrl = "http://localhost:11434";
     /** 聊天模型名称 */
-    private String chatModel = "qwen2.5:7b";
+    private String chatModel = "mymodel";
     /** 嵌入模型名称 */
     private String embeddingModel = "nomic-embed-text";
     /** 请求超时秒数 */

@@ -34,7 +34,7 @@
         </div>
         <div class="filter-row">
           <el-select v-model="filters.projectId" placeholder="按项目筛选" clearable style="width:180px" @change="loadTasks">
-            <el-option v-for="p in myProjects" :key="p.id" :label="p.name" :value="p.id" />
+            <el-option v-for="p in filterableProjects" :key="p.id" :label="p.name" :value="p.id" />
           </el-select>
           <el-select v-model="filters.priority" placeholder="优先级" clearable style="width:110px" @change="loadTasks">
             <el-option label="高" value="HIGH" />
@@ -72,8 +72,15 @@
                     <el-icon><Clock /></el-icon> {{ dayjs(task.deadline).format('MM-DD') }}
                   </span>
                 </div>
-                <div class="card-assignees" v-if="task.assigneeCount">
-                  <el-icon><User /></el-icon> {{ task.assigneeCount }}人
+                <div class="card-footer">
+                  <div class="card-creator" :title="task.creatorName">
+                    <el-avatar v-if="task.creatorAvatar" :size="18" :src="task.creatorAvatar" />
+                    <el-avatar v-else :size="18">{{ task.creatorName?.charAt(0) || '?' }}</el-avatar>
+                    <span>{{ task.creatorName || '--' }}</span>
+                  </div>
+                  <div class="card-assignees" v-if="task.assigneeCount">
+                    <el-icon><User /></el-icon> {{ task.assigneeCount }}人
+                  </div>
                 </div>
               </div>
             </div>
@@ -105,8 +112,15 @@
                 <el-icon><Clock /></el-icon> {{ dayjs(task.deadline).format('MM-DD') }}
               </span>
             </div>
-            <div class="card-assignees" v-if="task.assigneeCount">
-              <el-icon><User /></el-icon> {{ task.assigneeCount }}人
+            <div class="card-footer">
+              <div class="card-creator" :title="task.creatorName">
+                <el-avatar v-if="task.creatorAvatar" :size="18" :src="task.creatorAvatar" />
+                <el-avatar v-else :size="18">{{ task.creatorName?.charAt(0) || '?' }}</el-avatar>
+                <span>{{ task.creatorName || '--' }}</span>
+              </div>
+              <div class="card-assignees" v-if="task.assigneeCount">
+                <el-icon><User /></el-icon> {{ task.assigneeCount }}人
+              </div>
             </div>
           </div>
         </div>
@@ -185,6 +199,15 @@
         <el-table-column label="所属项目" width="160">
           <template #default="{ row }">
             <span class="project-tag">{{ row.projectName || '--' }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column label="创建者" width="140">
+          <template #default="{ row }">
+            <div class="user-cell">
+              <el-avatar v-if="row.creatorAvatar" :size="24" :src="row.creatorAvatar" />
+              <el-avatar v-else :size="24">{{ row.creatorName?.charAt(0) || '?' }}</el-avatar>
+              <span class="user-name">{{ row.creatorName || '--' }}</span>
+            </div>
           </template>
         </el-table-column>
         <el-table-column label="执行人" min-width="160">
@@ -697,7 +720,7 @@
           <img :src="previewingFile.previewUrl" :alt="previewingFile.name" />
         </div>
         <!-- PDF -->
-        <div v-else-if="isPdfMime(previewingFile.mimeType) || isPdfExt(previewingFile.name)" class="preview-frame-wrap">
+        <div v-else-if="(isPdfMime(previewingFile.mimeType) || isPdfExt(previewingFile.name)) && previewingFile.previewUrl" class="preview-frame-wrap">
           <iframe :src="previewingFile.previewUrl" class="preview-iframe" />
         </div>
         <!-- 视频 -->
@@ -740,7 +763,7 @@ import {
 import { getMyProjects } from '@/api/project'
 import { getMembers } from '@/api/team'
 import { useUserStore } from '@/stores/user'
-import { prefetchFileUrls, getSignedFileUrl, fetchSingleSignedUrl } from '@/utils/url'
+import { prefetchFileUrls, fetchSingleSignedUrl } from '@/utils/url'
 
 const userStore = useUserStore()
 const loading = ref(false)
@@ -760,6 +783,12 @@ const tasks = ref<any[]>([])
 const groupedTasks = ref<any[]>([])
 const myProjects = ref<any[]>([])
 const managedProjects = ref<any[]>([])
+
+// 根据视图模式动态选择可筛选的项目列表
+// "我管理的" 只显示用户负责的项目；其他视图显示全部团队项目
+const filterableProjects = computed(() =>
+  viewMode.value === 'managed' ? managedProjects.value : myProjects.value
+)
 
 // 筛选
 const filters = ref({ projectId: null as number | null, priority: '' })
@@ -885,9 +914,10 @@ function getFileName(url: string) {
   return parts[parts.length - 1] || url
 }
 
-onMounted(() => {
-  // 并行加载项目和任务
-  Promise.all([loadProjects(), loadTasks()])
+onMounted(async () => {
+  // 先加载项目，再加载任务（确保 managedProjects/myProjects 已就绪）
+  await loadProjects()
+  await loadTasks()
 })
 
 watch(viewMode, () => loadTasks())
@@ -932,19 +962,39 @@ async function loadTasks() {
         res = await getManagedTasks()
       }
       let data = res.data || []
-      // 关联项目名称，同时过滤掉已关闭项目的任务
+      // 关联项目名称，同时过滤掉非当前视图范围的任务
+      const projectPool = viewMode.value === 'managed' ? managedProjects.value : myProjects.value
       data = data.filter((t: any) => {
-        const proj = myProjects.value.find((p: any) => p.id === t.projectId)
+        const proj = projectPool.find((p: any) => p.id === t.projectId)
         if (proj) {
           t.projectName = proj.name
           return true
         }
-        return false // 项目已关闭或不在列表中，不显示
+        return false // 项目已关闭或不在当前视图范围内，不显示
       })
       // 本地筛选
       if (filters.value.projectId) data = data.filter((t: any) => t.projectId === filters.value.projectId)
       if (filters.value.priority) data = data.filter((t: any) => t.priority === filters.value.priority)
       tasks.value = data
+
+      // 非 team 视图的分组模式：从扁平 task 按 projectId 分组
+      if (currentGroupByProject.value) {
+        const groupMap = new Map<number, { projectId: number; projectName: string; tasks: any[] }>()
+        for (const t of data) {
+          const pid = t.projectId
+          if (!groupMap.has(pid)) {
+            groupMap.set(pid, {
+              projectId: pid,
+              projectName: t.projectName || `项目 #${pid}`,
+              tasks: []
+            })
+          }
+          groupMap.get(pid)!.tasks.push(t)
+        }
+        groupedTasks.value = Array.from(groupMap.values())
+      } else {
+        groupedTasks.value = []
+      }
     }
   } catch (_) { tasks.value = []; groupedTasks.value = [] }
   finally { loading.value = false }
@@ -1445,28 +1495,23 @@ async function previewFile(fi: any) {
   // FileInfoVO 没有id字段，从URL中提取文件ID
   const fileId = fi.id || fi.fileId || extractFileIdFromUrl(fi.previewUrl || fi.downloadUrl)
   if (!fileId) return
-  // 通过安全签名URL访问文件，避免JWT token通过URL泄露
-  let previewUrl = getSignedFileUrl(fileId, 'preview')
-  let downloadUrl = getSignedFileUrl(fileId, 'download')
-  // 缓存未命中时，同步获取签名URL（浏览器标签不带Authorization header）
-  if (previewUrl.startsWith('/api/file/')) {
-    const signedUrl = await fetchSingleSignedUrl(fileId, 'preview')
-    if (signedUrl) previewUrl = signedUrl
+  // 始终获取新鲜签名URL（token 5分钟过期，不能依赖缓存）
+  const signedPreviewUrl = await fetchSingleSignedUrl(fileId, 'preview')
+  if (!signedPreviewUrl) {
+    ElMessage.error('获取预览链接失败，请刷新页面重试')
+    return
   }
-  if (downloadUrl.startsWith('/api/file/')) {
-    const signedUrl = await fetchSingleSignedUrl(fileId, 'download')
-    if (signedUrl) downloadUrl = signedUrl
-  }
+  const signedDownloadUrl = await fetchSingleSignedUrl(fileId, 'download')
   previewingFile.value = {
     ...fi,
-    previewUrl,
-    downloadUrl,
+    previewUrl: signedPreviewUrl,
+    downloadUrl: signedDownloadUrl || signedPreviewUrl,
   }
   textContent.value = ''
 
   // 文本/代码文件需要 fetch 内容
   if (isTextLikeMime(fi.mimeType) || isCodeExt(fi.name)) {
-    fetchTextContent(getSignedFileUrl(fileId, 'preview'))
+    fetchTextContent(signedPreviewUrl)
   }
 
   showFilePreview.value = true
@@ -1474,20 +1519,54 @@ async function previewFile(fi: any) {
 
 function downloadFile(fi: any) {
   const fileId = fi.id || fi.fileId || extractFileIdFromUrl(fi.previewUrl || fi.downloadUrl)
-  if (fileId) {
-    window.open(getSignedFileUrl(fileId, 'download'), '_blank')
-  }
+  if (!fileId) return
+  // 异步获取新鲜签名URL后触发下载
+  fetchSingleSignedUrl(fileId, 'download').then(signedUrl => {
+    if (signedUrl) {
+      const a = document.createElement('a')
+      a.href = signedUrl
+      a.download = fi.name || ''
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+    } else {
+      // 降级方案：用fetch请求下载（带Authorization header）
+      fetch(`/api/file/${fileId}/download`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+      }).then(resp => {
+        if (!resp.ok) throw new Error('下载失败')
+        return resp.blob()
+      }).then(blob => {
+        const url = URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = fi.name || ''
+        document.body.appendChild(a)
+        a.click()
+        document.body.removeChild(a)
+        URL.revokeObjectURL(url)
+      }).catch(() => {
+        ElMessage.error('文件下载失败，请刷新页面重试')
+      })
+    }
+  })
 }
 
 function copyFileLink(fi: any) {
   const fileId = fi.id || fi.fileId || extractFileIdFromUrl(fi.previewUrl || fi.downloadUrl)
   if (!fileId) return
-  const url = getSignedFileUrl(fileId, 'download')
-  const fullUrl = window.location.origin + url
-  navigator.clipboard.writeText(fullUrl).then(() => {
-    ElMessage.success('链接已复制')
-  }).catch(() => {
-    ElMessage.warning('复制失败，请手动复制')
+  // 获取新鲜签名URL后复制
+  fetchSingleSignedUrl(fileId, 'download').then(signedUrl => {
+    if (!signedUrl) {
+      ElMessage.warning('获取链接失败')
+      return
+    }
+    const fullUrl = window.location.origin + signedUrl
+    navigator.clipboard.writeText(fullUrl).then(() => {
+      ElMessage.success('链接已复制')
+    }).catch(() => {
+      ElMessage.warning('复制失败，请手动复制')
+    })
   })
 }
 
@@ -1514,14 +1593,26 @@ async function handleAddComment() {
 
 .page-header-bar {
   display: flex; align-items: center; justify-content: space-between;
-  background: var(--gradient-primary);
+  background: var(--color-card);
+  border: 1px solid var(--color-border-light);
   border-radius: 16px; padding: 24px 32px;
-  margin-bottom: 20px; color: #fff;
+  margin-bottom: 20px;
+  position: relative;
+  overflow: hidden;
 }
-.page-header-bar h2 { font-size: 22px; font-weight: 700; margin: 0 0 4px; }
-.page-desc { margin: 0; font-size: 14px; opacity: 0.8; }
-.create-btn { border-radius: 10px; font-weight: 600; border: none; background: rgba(255,255,255,0.2) !important; backdrop-filter: blur(4px); }
-.create-btn:hover { background: rgba(255,255,255,0.3) !important; }
+.page-header-bar::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  background: var(--gradient-primary);
+  border-radius: 4px 0 0 4px;
+}
+.page-header-bar h2 { font-size: 22px; font-weight: 700; margin: 0 0 4px; color: var(--color-text-primary); }
+.page-desc { margin: 0; font-size: 14px; color: var(--color-text-muted); }
+.create-btn { border-radius: 10px; font-weight: 600; }
 
 .view-switch-card { border-radius: var(--radius-lg); margin-bottom: 16px; border: 1px solid var(--color-border-light); }
 .view-switch-row { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
@@ -1612,26 +1703,38 @@ async function handleAddComment() {
 }
 .card-deadline { display: flex; align-items: center; gap: 3px; }
 .card-deadline.overdue { color: #f56c6c; font-weight: 600; }
+.card-footer {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-top: 8px; gap: 6px;
+}
+.card-creator {
+  font-size: 12px; color: var(--color-text-muted);
+  display: flex; align-items: center; gap: 4px;
+  min-width: 0; overflow: hidden;
+}
+.card-creator span {
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
 .card-assignees {
   font-size: 12px; color: var(--color-text-muted);
-  padding-left: 8px; margin-top: 8px;
   display: flex; align-items: center; gap: 4px;
+  flex-shrink: 0;
 }
 
 /* ========== 分组看板 ========== */
 .grouped-kanban { display: flex; flex-direction: column; gap: 20px; }
 .project-group {
-  background: #fff; border-radius: 12px; border: 1px solid #e4e7ed;
+  background: var(--color-card); border-radius: var(--radius-lg); border: 1px solid var(--color-border-light);
   overflow: hidden;
 }
 .project-group-header {
   display: flex; align-items: center; gap: 10px;
   padding: 14px 20px;
-  background: linear-gradient(135deg, #f5f7fa 0%, #e8ecf1 100%);
-  border-bottom: 1px solid #e4e7ed;
+  background: var(--color-bg);
+  border-bottom: 1px solid var(--color-border-light);
 }
 .project-group-name {
-  font-size: 16px; font-weight: 700; color: #1a1a2e;
+  font-size: 16px; font-weight: 700; color: var(--color-text-primary);
 }
 .project-kanban-row {
   display: flex; gap: 8px; padding: 12px; overflow-x: auto;
@@ -1645,13 +1748,13 @@ async function handleAddComment() {
 
 /* ========== 分组列表 ========== */
 .grouped-list { display: flex; flex-direction: column; gap: 16px; }
-.project-list-card { border-radius: 12px; border: 1px solid #e4e7ed; }
+.project-list-card { border-radius: var(--radius-lg); border: 1px solid var(--color-border-light); }
 .project-list-header {
   display: flex; align-items: center; gap: 10px;
 }
 .project-list-card :deep(.el-card__header) {
-  background: linear-gradient(135deg, #f5f7fa 0%, #e8ecf1 100%);
-  padding: 12px 20px; border-bottom: 1px solid #e4e7ed;
+  background: var(--color-bg);
+  padding: 12px 20px; border-bottom: 1px solid var(--color-border-light);
 }
 
 /* 列表视图 */
@@ -1665,44 +1768,44 @@ async function handleAddComment() {
 .deadline-overdue { color: #f56c6c; font-weight: 600; }
 
 /* 创建弹窗 */
-.form-hint { font-size: 12px; color: #909399; margin-top: 4px; display: block; }
-.recommend-section { background: #f8f9fb; border-radius: 8px; padding: 8px 12px; margin-bottom: 12px; }
+.form-hint { font-size: 12px; color: var(--color-text-muted); margin-top: 4px; display: block; }
+.recommend-section { background: var(--color-bg); border-radius: var(--radius-md); padding: 8px 12px; margin-bottom: 12px; }
 .recommend-item { display: flex; align-items: center; justify-content: space-between; padding: 6px 0; }
-.recommend-item + .recommend-item { border-top: 1px solid #ebeef5; }
+.recommend-item + .recommend-item { border-top: 1px solid var(--color-border-light); }
 .recommend-info { display: flex; align-items: center; gap: 8px; }
 .recommend-name { font-weight: 500; }
 .assignee-tags { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; }
 .member-pick-item { padding: 8px 0; }
-.member-pick-item + .member-pick-item { border-top: 1px solid #f0f0f0; }
+.member-pick-item + .member-pick-item { border-top: 1px solid var(--color-border-light); }
 
 /* 详情弹窗 */
 .detail-header { margin-bottom: 16px; }
 .detail-title-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
-.detail-title { font-size: 18px; font-weight: 600; color: #1a1a2e; }
-.detail-meta { display: flex; gap: 16px; font-size: 13px; color: #909399; }
-.detail-desc { margin-top: 8px; font-size: 14px; color: #606266; line-height: 1.6; }
+.detail-title { font-size: 18px; font-weight: 600; color: var(--color-text-primary); }
+.detail-meta { display: flex; gap: 16px; font-size: 13px; color: var(--color-text-muted); }
+.detail-desc { margin-top: 8px; font-size: 14px; color: var(--color-text-secondary); line-height: 1.6; }
 
 .detail-section { margin-top: 20px; }
 .section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
-.section-header h4 { margin: 0; font-size: 15px; display: flex; align-items: center; gap: 6px; color: #303133; }
+.section-header h4 { margin: 0; font-size: 15px; display: flex; align-items: center; gap: 6px; color: var(--color-text-primary); }
 
 .assignee-list { display: flex; flex-direction: column; gap: 8px; }
-.assignee-item { display: flex; align-items: center; gap: 8px; padding: 8px 12px; background: #f8f9fb; border-radius: 8px; }
+.assignee-item { display: flex; align-items: center; gap: 8px; padding: 8px 12px; background: var(--color-bg); border-radius: var(--radius-md); }
 .assignee-name { font-weight: 500; font-size: 14px; }
-.assignee-note { font-size: 12px; color: #909399; }
+.assignee-note { font-size: 12px; color: var(--color-text-muted); }
 .match-score { font-size: 12px; color: #67c23a; margin-left: auto; }
 
 .submission-list { display: flex; flex-direction: column; gap: 12px; }
-.submission-item { padding: 12px; background: #f8f9fb; border-radius: 8px; }
+.submission-item { padding: 12px; background: var(--color-bg); border-radius: var(--radius-md); }
 .submission-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
 .submission-title { font-weight: 500; }
-.submission-meta { display: flex; gap: 12px; font-size: 12px; color: #909399; margin-bottom: 4px; }
-.submission-desc { font-size: 13px; color: #606266; margin: 4px 0; }
+.submission-meta { display: flex; gap: 12px; font-size: 12px; color: var(--color-text-muted); margin-bottom: 4px; }
+.submission-desc { font-size: 13px; color: var(--color-text-secondary); margin: 4px 0; }
 .file-list { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
 .file-tag { cursor: pointer; }
-.review-comment { margin-top: 8px; padding: 8px; background: #fff; border-radius: 6px; font-size: 13px; color: #606266; }
+.review-comment { margin-top: 8px; padding: 8px; background: var(--color-card); border-radius: var(--radius-sm); font-size: 13px; color: var(--color-text-secondary); }
 .review-label { font-weight: 600; }
-.reviewer { font-size: 12px; color: #909399; }
+.reviewer { font-size: 12px; color: var(--color-text-muted); }
 .review-actions { margin-top: 8px; display: flex; gap: 8px; }
 
 .comment-list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 12px; max-height: 200px; overflow-y: auto; }
@@ -1710,20 +1813,20 @@ async function handleAddComment() {
 .comment-body { flex: 1; }
 .comment-header { display: flex; align-items: center; gap: 8px; margin-bottom: 2px; }
 .comment-user { font-weight: 500; font-size: 13px; }
-.comment-time { font-size: 11px; color: #c0c4cc; }
-.comment-content { font-size: 13px; color: #303133; }
+.comment-time { font-size: 11px; color: var(--color-text-placeholder); }
+.comment-content { font-size: 13px; color: var(--color-text-primary); }
 
-.empty-hint { font-size: 13px; color: #c0c4cc; }
+.empty-hint { font-size: 13px; color: var(--color-text-placeholder); }
 
 /* 提交文件列表 */
 .submission-files { margin-top: 8px; }
 .submission-file-item {
   display: flex; align-items: center; gap: 8px;
-  padding: 6px 10px; background: #fff; border-radius: 6px;
+  padding: 6px 10px; background: var(--color-card); border-radius: var(--radius-sm);
   margin-bottom: 4px; font-size: 13px;
 }
-.sf-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #303133; }
-.sf-size { font-size: 11px; color: #909399; white-space: nowrap; }
+.sf-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--color-text-primary); }
+.sf-size { font-size: 11px; color: var(--color-text-muted); white-space: nowrap; }
 .section-header-actions { display: flex; gap: 4px; align-items: center; }
 
 .submission-item.is-approved { border-left: 3px solid #67c23a; }
@@ -1731,37 +1834,41 @@ async function handleAddComment() {
 
 /* 审核弹窗 */
 .review-submission-info { margin-bottom: 16px; }
-.review-submission-info h4 { margin: 0 0 8px; font-size: 16px; color: #1a1a2e; }
-.review-desc { font-size: 13px; color: #606266; margin: 0 0 8px; }
-.review-meta { display: flex; gap: 16px; font-size: 12px; color: #909399; }
+.review-submission-info h4 { margin: 0 0 8px; font-size: 16px; color: var(--color-text-primary); }
+.review-desc { font-size: 13px; color: var(--color-text-secondary); margin: 0 0 8px; }
+.review-meta { display: flex; gap: 16px; font-size: 12px; color: var(--color-text-muted); }
 
 .review-files { margin-bottom: 12px; }
-.review-files h5 { margin: 0 0 8px; font-size: 14px; color: #303133; }
+.review-files h5 { margin: 0 0 8px; font-size: 14px; color: var(--color-text-primary); }
 .review-file-list { display: flex; flex-direction: column; gap: 4px; }
 .review-file-item {
   display: flex; align-items: center; gap: 8px;
-  padding: 8px 12px; background: #f8f9fb; border-radius: 6px; font-size: 13px;
+  padding: 8px 12px; background: var(--color-bg); border-radius: var(--radius-sm); font-size: 13px;
 }
-.rf-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #303133; }
-.rf-size { font-size: 11px; color: #909399; white-space: nowrap; }
-.review-no-files { display: flex; align-items: center; gap: 6px; padding: 12px 16px; background: #fdf6ec; border-radius: 8px; color: #e6a23c; font-size: 13px; margin-bottom: 12px; }
+.rf-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--color-text-primary); }
+.rf-size { font-size: 11px; color: var(--color-text-muted); white-space: nowrap; }
+.review-no-files {
+  display: flex; align-items: center; gap: 6px;
+  padding: 12px 16px; background: #fdf6ec; border-radius: var(--radius-md);
+  color: #e6a23c; font-size: 13px; margin-bottom: 12px;
+}
 
 /* 文件预览弹窗 */
 .file-preview-content { min-height: 300px; display: flex; justify-content: center; align-items: center; }
-.preview-image-wrap img { max-width: 100%; max-height: 75vh; border-radius: 8px; object-fit: contain; }
+.preview-image-wrap img { max-width: 100%; max-height: 75vh; border-radius: var(--radius-md); object-fit: contain; }
 .preview-frame-wrap { width: 100%; height: 75vh; }
-.preview-iframe { width: 100%; height: 100%; border: none; border-radius: 8px; }
+.preview-iframe { width: 100%; height: 100%; border: none; border-radius: var(--radius-md); }
 .preview-video-wrap { width: 100%; max-width: 900px; }
-.preview-video { width: 100%; max-height: 70vh; border-radius: 8px; }
+.preview-video { width: 100%; max-height: 70vh; border-radius: var(--radius-md); }
 .preview-audio-wrap { width: 100%; max-width: 600px; padding: 20px 0; }
 .preview-audio { width: 100%; }
-.preview-text-wrap { width: 100%; max-height: 70vh; overflow: auto; background: #1e1e2e; color: #cdd6f4; border-radius: 8px; padding: 16px; }
+.preview-text-wrap { width: 100%; max-height: 70vh; overflow: auto; background: #1e1e2e; color: #cdd6f4; border-radius: var(--radius-md); padding: 16px; }
 .preview-text-wrap pre { margin: 0; white-space: pre-wrap; word-break: break-all; font-size: 13px; line-height: 1.6; font-family: 'Consolas', 'Monaco', 'Courier New', monospace; }
-.preview-loading { text-align: center; color: #909399; padding: 40px 0; }
+.preview-loading { text-align: center; color: var(--color-text-muted); padding: 40px 0; }
 .preview-unsupported { padding: 40px 0; text-align: center; }
 .preview-office-wrap { width: 100%; height: 75vh; }
-.preview-office-wrap .preview-iframe { width: 100%; height: calc(100% - 30px); border: 1px solid #ebeef5; border-radius: 8px; }
-.preview-hint { font-size: 12px; color: #909399; margin: 0 0 8px; text-align: center; }
+.preview-office-wrap .preview-iframe { width: 100%; height: calc(100% - 30px); border: 1px solid var(--color-border-light); border-radius: var(--radius-md); }
+.preview-hint { font-size: 12px; color: var(--color-text-muted); margin: 0 0 8px; text-align: center; }
 
 .clickable { cursor: pointer; }
 

@@ -1,90 +1,98 @@
 // pages/notification/index/index.js
 const app = getApp()
 const { notificationApi } = require('../../../utils/api')
-const { timeAgo } = require('../../../utils/util')
 
 Page({
   data: {
     notifications: [],
-    unreadCount: 0,
-    loading: true
+    loading: true,
+    currentPage: 1,
+    pageSize: 20,
+    hasMore: false
   },
 
   onShow() {
+    this.setData({ currentPage: 1, notifications: [] })
     this.fetchNotifications()
-    this.fetchUnreadCount()
   },
 
   onPullDownRefresh() {
+    this.setData({ currentPage: 1, notifications: [] })
     this.fetchNotifications().finally(() => wx.stopPullDownRefresh())
   },
 
   async fetchNotifications() {
-    if (!app.globalData.isLoggedIn) {
-      this.setData({ notifications: [], loading: false })
-      return
-    }
-
     this.setData({ loading: true })
     try {
-      const res = await notificationApi.getList()
-      if (res.code === 200) {
-        this.setData({ notifications: res.data || [] })
-      }
+      const res = await notificationApi.getList({
+        page: this.data.currentPage,
+        size: this.data.pageSize
+      })
+
+      const records = res && res.records ? res.records : (Array.isArray(res) ? res : [])
+      this.setData({
+        notifications: this.data.currentPage === 1 ? records : [...this.data.notifications, ...records],
+        hasMore: records.length >= this.data.pageSize
+      })
     } catch (e) {
-      this.setData({ notifications: [] })
+      console.error('获取通知失败:', e)
     } finally {
       this.setData({ loading: false })
     }
   },
 
-  async fetchUnreadCount() {
-    try {
-      const res = await notificationApi.getUnreadCount()
-      if (res.code === 200) {
-        const count = res.data || 0
-        this.setData({ unreadCount: count })
-        if (count > 0) {
-          wx.setTabBarBadge({ index: 3, text: count > 99 ? '99+' : String(count) })
-        } else {
-          wx.removeTabBarBadge({ index: 3 })
-        }
-      }
-    } catch (e) {
-      // ignore
-    }
+  async loadMore() {
+    this.setData({ currentPage: this.data.currentPage + 1 })
+    await this.fetchNotifications()
   },
 
   async handleRead(e) {
-    const id = e.currentTarget.dataset.id
+    const { id, index } = e.currentTarget.dataset
     try {
-      await notificationApi.markAsRead(id)
-      const notifications = this.data.notifications.map(n => {
-        if (n.id === id) n.isRead = 1
-        return n
-      })
-      this.setData({ notifications, unreadCount: Math.max(0, this.data.unreadCount - 1) })
-      this.fetchUnreadCount()
+      await notificationApi.markRead(id)
+      const notifications = [...this.data.notifications]
+      if (notifications[index]) {
+        notifications[index].read = true
+        this.setData({ notifications })
+      }
+      // 更新未读数
+      app.fetchUnreadCount()
     } catch (e) {
-      // ignore
+      // 忽略
     }
   },
 
   async markAllRead() {
     try {
       await notificationApi.markAllRead()
-      const notifications = this.data.notifications.map(n => {
-        n.isRead = 1
-        return n
-      })
-      this.setData({ notifications, unreadCount: 0 })
-      wx.removeTabBarBadge({ index: 3 })
+      const notifications = this.data.notifications.map(n => ({ ...n, read: true }))
+      this.setData({ notifications })
+      app.fetchUnreadCount()
+      wx.showToast({ title: '已全部标记为已读', icon: 'success' })
     } catch (e) {
-      // ignore
+      // 忽略
     }
   },
 
-  formatTime(dateStr) {
-    return timeAgo(dateStr)
+  iconClass(type) {
+    const map = { SYSTEM: 'icon-system', TEAM: 'icon-team', RECRUIT: 'icon-recruit', TASK: 'icon-task', PROJECT: 'icon-project', MESSAGE: 'icon-message' }
+    return map[type] || 'icon-system'
+  },
+
+  iconEmoji(type) {
+    const map = { SYSTEM: '📢', TEAM: '👥', RECRUIT: '📋', TASK: '✅', PROJECT: '📁', MESSAGE: '💬' }
+    return map[type] || '🔔'
+  },
+
+  formatTime(time) {
+    if (!time) return ''
+    const d = new Date(time)
+    const now = new Date()
+    const diff = now - d
+    if (diff < 60000) return '刚刚'
+    if (diff < 3600000) return `${Math.floor(diff / 60000)}分钟前`
+    if (diff < 86400000) return `${Math.floor(diff / 3600000)}小时前`
+    const pad = n => String(n).padStart(2, '0')
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`
   }
 })

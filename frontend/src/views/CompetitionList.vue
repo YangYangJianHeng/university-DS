@@ -108,14 +108,27 @@ function resetFilters() { filters.value = { level: '', category: '', status: '' 
 .competition-list-page { max-width: 1200px; margin: 0 auto; }
 
 .page-header-bar {
-  background: var(--gradient-primary);
+  background: var(--color-card);
+  border: 1px solid var(--color-border-light);
   border-radius: 16px; padding: 24px 32px;
-  margin-bottom: 20px; color: #fff;
+  margin-bottom: 20px;
+  position: relative;
+  overflow: hidden;
 }
-.page-header-bar h2 { font-size: 22px; font-weight: 700; margin: 0 0 4px; }
-.page-desc { margin: 0; font-size: 14px; opacity: 0.8; }
+.page-header-bar::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  background: var(--gradient-primary);
+  border-radius: 4px 0 0 4px;
+}
+.page-header-bar h2 { font-size: 22px; font-weight: 700; margin: 0 0 4px; color: var(--color-text-primary); }
+.page-desc { margin: 0; font-size: 14px; color: var(--color-text-muted); }
 
-.filter-card { border-radius: 14px; margin-bottom: 16px; }
+.filter-card { border-radius: var(--radius-lg); margin-bottom: 16px; border: 1px solid var(--color-border-light); }
 
 .competition-grid {
   display: grid;
@@ -125,26 +138,34 @@ function resetFilters() { filters.value = { level: '', category: '', status: '' 
 
 .competition-card {
   cursor: pointer;
-  transition: all 0.25s;
-  border-radius: 12px;
+  transition: all var(--transition-base);
+  border-radius: var(--radius-lg);
   overflow: hidden;
   padding: 0;
+  border: 1px solid var(--color-border-light);
 }
-.competition-card:hover { transform: translateY(-3px); box-shadow: 0 8px 24px rgba(0,0,0,0.1); }
+.competition-card:hover { transform: translateY(-3px); box-shadow: var(--shadow-lg); border-color: var(--color-border); }
 
 .card-level-strip { height: 4px; }
 .card-level-strip.level-national { background: linear-gradient(90deg, #f56c6c, #fa709a); }
 .card-level-strip.level-provincial { background: linear-gradient(90deg, #e6a23c, #fee140); }
-.card-level-strip.level-school { background: linear-gradient(90deg, #409eff, #79bbff); }
+.card-level-strip.level-school { background: linear-gradient(90deg, var(--color-primary), #a5b4fc); }
 
 .card-body { padding: 16px; }
 
 .card-top { display: flex; gap: 6px; margin-bottom: 10px; }
 
-.card-name { font-size: 15px; font-weight: 600; color: #1a1a2e; margin-bottom: 10px; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+.card-name {
+  font-size: 15px; font-weight: 600; color: var(--color-text-primary);
+  margin-bottom: 10px; overflow: hidden; text-overflow: ellipsis;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+}
 
-.card-dates, .card-organizer { font-size: 13px; color: #606266; margin-bottom: 6px; display: flex; align-items: center; gap: 4px; }
+.card-dates, .card-organizer {
+  font-size: 13px; color: var(--color-text-secondary);
+  margin-bottom: 6px; display: flex; align-items: center; gap: 4px;
+}
 
-.card-stats { display: flex; gap: 16px; font-size: 12px; color: #909399; margin-top: 10px; }
+.card-stats { display: flex; gap: 16px; font-size: 12px; color: var(--color-text-muted); margin-top: 10px; }
 .card-stats span { display: flex; align-items: center; gap: 4px; }
 </style>

@@ -136,7 +136,7 @@ async function handleCollect() {
 
 .back-nav { margin-bottom: 16px; }
 
-.detail-card { border-radius: 14px; padding: 4px; }
+.detail-card { border-radius: var(--radius-lg); padding: 4px; border: 1px solid var(--color-border-light); }
 
 .detail-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 20px; margin-bottom: 24px; }
 
@@ -150,21 +150,25 @@ async function handleCollect() {
 }
 .comp-level-badge.level-national { background: linear-gradient(135deg, #f56c6c, #fa709a); }
 .comp-level-badge.level-provincial { background: linear-gradient(135deg, #e6a23c, #fee140); }
-.comp-level-badge.level-school { background: linear-gradient(135deg, #409eff, #79bbff); }
+.comp-level-badge.level-school { background: linear-gradient(135deg, var(--color-primary), #a5b4fc); }
 
 .header-text { flex: 1; }
-.header-text h2 { font-size: 20px; font-weight: 700; color: #1a1a2e; margin: 0 0 6px; }
+.header-text h2 { font-size: 20px; font-weight: 700; color: var(--color-text-primary); margin: 0 0 6px; }
 .header-tags { display: flex; gap: 6px; }
 
-.collect-btn { border-radius: 8px; flex-shrink: 0; }
+.collect-btn { border-radius: var(--radius-md); flex-shrink: 0; }
 
 .info-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 16px; margin-bottom: 8px; }
 
 .info-item { display: flex; flex-direction: column; gap: 4px; }
-.info-label { font-size: 12px; color: #909399; }
-.info-value { font-size: 14px; color: #1a1a2e; }
+.info-label { font-size: 12px; color: var(--color-text-muted); }
+.info-value { font-size: 14px; color: var(--color-text-primary); }
 
 .section { margin-bottom: 20px; }
-.section-title { font-size: 16px; font-weight: 600; color: #1a1a2e; margin-bottom: 8px; padding-left: 12px; border-left: 3px solid var(--color-primary); }
-.section-content { font-size: 14px; color: #606266; line-height: 1.7; white-space: pre-wrap; }
+.section-title {
+  font-size: 16px; font-weight: 600; color: var(--color-text-primary);
+  margin-bottom: 8px; padding-left: 12px;
+  border-left: 3px solid var(--color-primary);
+}
+.section-content { font-size: 14px; color: var(--color-text-secondary); line-height: 1.7; white-space: pre-wrap; }
 </style>

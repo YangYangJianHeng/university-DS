@@ -1,93 +1,141 @@
-/* ===== Design System: Light Grey Theme ===== */
+/* ===== Design System: Modern Light Premium Theme ===== */
 :root {
-  /* Primary - soft blue-grey accent */
-  --color-primary: #4a6b7e;
-  --color-primary-dark: #3d5a6e;
-  --color-primary-light: #e8f0f5;
-  --color-secondary: #7a8fa6;
-  --color-accent: #b0bec5;
+  /* ── Primary: Vibrant Indigo-Blue ── */
+  --color-primary: #5B6FF5;
+  --color-primary-dark: #4F5FE0;
+  --color-primary-darker: #3E4ECB;
+  --color-primary-light: #EEF0FF;
+  --color-primary-lighter: #F5F6FF;
 
-  /* Gradient - for page headers, banners */
-  --gradient-primary: linear-gradient(135deg, #5a7a8e 0%, #3d5a6e 100%);
+  /* Gradient accents */
+  --gradient-primary: linear-gradient(135deg, #5B6FF5 0%, #8B5CF6 100%);
+  --gradient-hero: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  --gradient-card: linear-gradient(145deg, rgba(91,111,245,0.04) 0%, rgba(139,92,246,0.02) 100%);
 
-  /* Status colors */
-  --color-success: #6b9e85;
-  --color-warning: #b8a06e;
-  --color-danger: #c97b7b;
-  --color-info: #8899a6;
+  /* ── Status Colors ── */
+  --color-success: #22C55E;
+  --color-success-light: #ECFDF5;
+  --color-warning: #F59E0B;
+  --color-warning-light: #FFFBEB;
+  --color-danger: #EF4444;
+  --color-danger-light: #FEF2F2;
+  --color-info: #3B82F6;
+  --color-info-light: #EFF6FF;
 
-  /* Backgrounds - light grey palette */
-  --color-bg: #f2f3f5;
-  --color-bg-page: #f5f6f8;
-  --color-bg-hover: #e8eaee;
-  --color-card: #ffffff;
-  --color-card-hover: #fafbfc;
+  /* ── Backgrounds ── */
+  --color-bg: #F8F9FB;
+  --color-bg-page: #F3F4F7;
+  --color-bg-hover: #EEEFF4;
+  --color-card: #FFFFFF;
+  --color-card-hover: #FAFBFF;
 
-  /* Text */
-  --color-text-primary: #2c3e4e;
-  --color-text-secondary: #5a6c7d;
-  --color-text-muted: #8899a6;
-  --color-text-placeholder: #b0bec5;
+  /* ── Text hierarchy ── */
+  --color-text-primary: #1E293B;
+  --color-text-secondary: #64748B;
+  --color-text-muted: #94A3B8;
+  --color-text-placeholder: #B8C1D0;
+  --color-text-inverse: #FFFFFF;
 
-  /* Borders */
-  --color-border: #e1e4e8;
-  --color-border-light: #eceef2;
-  --color-border-input: #d5d9de;
+  /* ── Borders ── */
+  --color-border: #E8ECF1;
+  --color-border-light: #F0F2F6;
+  --color-border-input: #DEE3EA;
 
-  /* Sidebar & Header */
-  --color-sidebar-bg: #ffffff;
-  --color-sidebar-hover: #f5f6f8;
-  --color-sidebar-active: #edf2f6;
-  --color-header-bg: #ffffff;
-  --color-header-border: #e8eaee;
+  /* ── Sidebar & Header ── */
+  --color-sidebar-bg: #FFFFFF;
+  --color-sidebar-hover: #F5F6FF;
+  --color-sidebar-active: #EEF0FF;
+  --color-header-bg: rgba(255,255,255,0.85);
+  --color-header-border: rgba(232,236,241,0.6);
 
-  /* Border Radius */
-  --radius-sm: 6px;
-  --radius-md: 10px;
-  --radius-lg: 14px;
-  --radius-xl: 18px;
+  /* ── Border Radius ── */
+  --radius-xs: 4px;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 20px;
+  --radius-2xl: 24px;
   --radius-full: 50%;
 
-  /* Shadows */
-  --shadow-sm: 0 1px 4px rgba(0, 0, 0, 0.04);
-  --shadow-md: 0 2px 12px rgba(0, 0, 0, 0.06);
-  --shadow-lg: 0 6px 24px rgba(0, 0, 0, 0.08);
-  --shadow-card: 0 2px 8px rgba(0, 0, 0, 0.05);
+  /* ── Shadows ── */
+  --shadow-xs: 0 1px 2px rgba(0,0,0,0.03);
+  --shadow-sm: 0 2px 6px rgba(0,0,0,0.04);
+  --shadow-md: 0 4px 16px rgba(0,0,0,0.06);
+  --shadow-lg: 0 8px 32px rgba(0,0,0,0.08);
+  --shadow-xl: 0 16px 48px rgba(0,0,0,0.10);
+  --shadow-card: 0 2px 10px rgba(0,0,0,0.04);
+  --shadow-card-hover: 0 6px 24px rgba(91,111,245,0.10);
+  --shadow-glow: 0 0 20px rgba(91,111,245,0.15);
 
-  /* Transitions */
-  --transition-fast: 0.2s ease;
-  --transition-normal: 0.3s ease;
+  /* ── Glass morphism ── */
+  --glass-bg: rgba(255,255,255,0.72);
+  --glass-border: rgba(255,255,255,0.6);
+  --glass-shadow: 0 8px 32px rgba(0,0,0,0.06);
+  --glass-blur: 16px;
 
-  /* Font */
-  --font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  /* ── Transitions ── */
+  --transition-fast: 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-base: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-normal: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-slow: 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-spring: 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  /* ── Typography ── */
+  --font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  --font-mono: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+
+  /* ── Spacing scale ── */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+  --space-16: 64px;
 }
 
 /* ===== Element Plus Theme Override ===== */
 :root {
   --el-color-primary: var(--color-primary);
-  --el-color-primary-light-3: #6d8d9c;
-  --el-color-primary-light-5: #8fa8b5;
-  --el-color-primary-light-7: #b3c5ce;
-  --el-color-primary-light-8: #c7d4db;
-  --el-color-primary-light-9: #dbe4e9;
-  --el-color-primary-dark-2: #3d5a6e;
+  --el-color-primary-light-3: #7C8AF7;
+  --el-color-primary-light-5: #9DA8F9;
+  --el-color-primary-light-7: #BFC6FB;
+  --el-color-primary-light-8: #D0D5FC;
+  --el-color-primary-light-9: #E1E4FD;
+  --el-color-primary-dark-2: #4F5FE0;
+
   --el-color-success: var(--color-success);
   --el-color-warning: var(--color-warning);
   --el-color-danger: var(--color-danger);
   --el-color-info: var(--color-info);
+
   --el-bg-color: var(--color-card);
   --el-bg-color-page: var(--color-bg-page);
   --el-bg-color-overlay: #ffffff;
+
   --el-text-color-primary: var(--color-text-primary);
   --el-text-color-regular: var(--color-text-secondary);
   --el-text-color-secondary: var(--color-text-muted);
   --el-text-color-placeholder: var(--color-text-placeholder);
+
   --el-border-color: var(--color-border);
   --el-border-color-light: var(--color-border-light);
+  --el-border-color-lighter: var(--color-border-light);
+  --el-border-color-extra-light: var(--color-border-light);
+
   --el-border-radius-base: var(--radius-sm);
-  --el-border-radius-small: 4px;
+  --el-border-radius-small: var(--radius-xs);
   --el-border-radius-round: 20px;
+
   --el-box-shadow-light: var(--shadow-sm);
   --el-box-shadow: var(--shadow-md);
   --el-box-shadow-dark: var(--shadow-lg);
+
+  --el-font-size-base: 14px;
 }
+
+/* ===== Import Google Fonts ===== */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+SC:wght@400;500;600;700&display=swap');

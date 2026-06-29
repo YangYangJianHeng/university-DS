@@ -52,7 +52,7 @@ public class SecurityConfig {
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
             // 安全响应头
             .headers(headers -> headers
-                .frameOptions(frame -> frame.deny())
+                .frameOptions(frame -> frame.sameOrigin())
                 .xssProtection(xss -> xss.headerValue(org.springframework.security.web.header.writers.XXssProtectionHeaderWriter.HeaderValue.ENABLED_MODE_BLOCK))
                 .contentTypeOptions(contentType -> {})
                 // 禁止IE从响应内容推断MIME类型

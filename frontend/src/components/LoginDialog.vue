@@ -13,12 +13,10 @@
           <!-- Header -->
           <div class="dialog-header">
             <div class="dialog-logo">
-              <svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="#7c3aed" stroke-width="1.5">
-                <path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/>
-              </svg>
+              <img src="/icon.png" width="32" height="32" alt="青创协同" />
             </div>
             <h2 class="dialog-title">欢迎回来</h2>
-            <p class="dialog-sub">登录 TeamStar，开启你的竞赛之旅</p>
+            <p class="dialog-sub">登录 青创协同，开启你的竞赛之旅</p>
           </div>
 
           <!-- Form -->

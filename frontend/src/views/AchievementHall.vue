@@ -64,7 +64,7 @@
     <div v-loading="loading" class="main-content">
       <el-empty v-if="!loading && achievements.length === 0" description="暂无成果展示" :image-size="120">
         <template #image>
-          <el-icon :size="80" color="#c0c4cc"><FolderOpened /></el-icon>
+          <el-icon :size="80" color="var(--color-text-placeholder)"><FolderOpened /></el-icon>
         </template>
       </el-empty>
       <div v-else class="achievement-masonry">
@@ -299,11 +299,22 @@ function getFileName(url: string): string {
 /* ============= Hero Banner ============= */
 .hero-banner {
   position: relative;
-  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 40%, #0f3460 100%);
+  background: var(--color-card);
+  border: 1px solid var(--color-border-light);
   border-radius: 20px;
   padding: 40px 48px;
   margin-bottom: 28px;
   overflow: hidden;
+}
+.hero-banner::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  background: var(--gradient-primary);
+  border-radius: 4px 0 0 4px;
 }
 .hero-content {
   position: relative;
@@ -313,26 +324,25 @@ function getFileName(url: string): string {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  background: rgba(255, 255, 255, 0.12);
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: var(--color-primary-light);
+  border: 1px solid rgba(91,111,245,0.2);
   border-radius: 20px;
   padding: 6px 16px;
   font-size: 13px;
-  color: #ffd700;
+  color: var(--color-primary);
   font-weight: 500;
   margin-bottom: 16px;
-  backdrop-filter: blur(8px);
 }
 .hero-title {
   font-size: 34px;
   font-weight: 800;
-  color: #fff;
+  color: var(--color-text-primary);
   margin: 0 0 8px;
   letter-spacing: 1px;
 }
 .hero-subtitle {
   font-size: 15px;
-  color: rgba(255, 255, 255, 0.65);
+  color: var(--color-text-muted);
   margin: 0 0 24px;
   max-width: 480px;
   line-height: 1.5;
@@ -349,18 +359,18 @@ function getFileName(url: string): string {
 .hero-stat-num {
   font-size: 28px;
   font-weight: 700;
-  color: #fff;
+  color: var(--color-text-primary);
   line-height: 1;
 }
 .hero-stat-label {
   font-size: 12px;
-  color: rgba(255, 255, 255, 0.55);
+  color: var(--color-text-muted);
   margin-top: 4px;
 }
 .hero-divider {
   width: 1px;
   height: 36px;
-  background: rgba(255, 255, 255, 0.15);
+  background: var(--color-border);
 }
 
 /* Decoration */
@@ -403,13 +413,14 @@ function getFileName(url: string): string {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  background: #fff;
-  border-radius: 14px;
+  background: var(--color-card);
+  border-radius: var(--radius-lg);
   padding: 16px 20px;
   margin-bottom: 20px;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+  box-shadow: var(--shadow-sm);
   flex-wrap: wrap;
   gap: 12px;
+  border: 1px solid var(--color-border-light);
 }
 .filter-left :deep(.el-radio-button__inner) {
   border-radius: 8px !important;
@@ -436,7 +447,7 @@ function getFileName(url: string): string {
 }
 .level-dot.national { background: #f56c6c; }
 .level-dot.provincial { background: #e6a23c; }
-.level-dot.school { background: #409eff; }
+.level-dot.school { background: var(--color-primary); }
 
 /* ============= Masonry Grid ============= */
 .achievement-masonry {
@@ -447,14 +458,15 @@ function getFileName(url: string): string {
 
 /* ============= Card ============= */
 .achievement-card {
-  background: #fff;
+  background: var(--color-card);
   border-radius: 16px;
   overflow: hidden;
   cursor: pointer;
   transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+  box-shadow: var(--shadow-sm);
   position: relative;
   animation: cardFadeUp 0.5s ease both;
+  border: 1px solid var(--color-border-light);
 }
 @keyframes cardFadeUp {
   from { opacity: 0; transform: translateY(20px); }
@@ -462,7 +474,8 @@ function getFileName(url: string): string {
 }
 .achievement-card:hover {
   transform: translateY(-6px);
-  box-shadow: 0 12px 32px rgba(0,0,0,0.12), 0 4px 8px rgba(0,0,0,0.06);
+  box-shadow: var(--shadow-lg);
+  border-color: var(--color-border);
 }
 .achievement-card.featured {
   border: 1.5px solid #ffd700;
@@ -523,7 +536,7 @@ function getFileName(url: string): string {
 .card-title {
   font-size: 17px;
   font-weight: 700;
-  color: #1a1a2e;
+  color: var(--color-text-primary);
   margin: 0 0 8px;
   line-height: 1.5;
   display: -webkit-box;
@@ -533,7 +546,7 @@ function getFileName(url: string): string {
 }
 .card-desc {
   font-size: 13px;
-  color: #909399;
+  color: var(--color-text-muted);
   line-height: 1.6;
   margin: 0 0 14px;
   display: -webkit-box;
@@ -549,7 +562,7 @@ function getFileName(url: string): string {
   gap: 16px;
   margin-bottom: 12px;
   font-size: 12px;
-  color: #909399;
+  color: var(--color-text-muted);
 }
 .card-team, .card-date {
   display: flex;
@@ -569,14 +582,14 @@ function getFileName(url: string): string {
   justify-content: space-between;
   align-items: center;
   padding-top: 12px;
-  border-top: 1px solid #f0f2f5;
+  border-top: 1px solid var(--color-border-light);
 }
 .card-engagement {
   display: flex;
   align-items: center;
   gap: 8px;
   font-size: 13px;
-  color: #909399;
+  color: var(--color-text-muted);
 }
 .eng-item {
   display: flex;
@@ -584,15 +597,15 @@ function getFileName(url: string): string {
   gap: 4px;
   transition: color 0.2s;
 }
-.eng-item:hover { color: var(--color-primary, #409eff); }
-.eng-item .liked { color: var(--color-primary, #409eff); }
+.eng-item:hover { color: var(--color-primary); }
+.eng-item .liked { color: var(--color-primary); }
 .eng-divider { font-size: 14px; }
 .card-arrow {
-  color: #c0c4cc;
+  color: var(--color-text-placeholder);
   transition: all 0.3s;
 }
 .achievement-card:hover .card-arrow {
-  color: var(--color-primary, #409eff);
+  color: var(--color-primary);
   transform: translateX(4px);
 }
 
@@ -625,7 +638,7 @@ function getFileName(url: string): string {
 .dialog-title {
   font-size: 22px;
   font-weight: 700;
-  color: #1a1a2e;
+  color: var(--color-text-primary);
   margin: 8px 0 20px;
   line-height: 1.4;
 }
@@ -673,10 +686,10 @@ function getFileName(url: string): string {
 .di-section-title {
   font-size: 14px;
   font-weight: 600;
-  color: #303133;
+  color: var(--color-text-secondary);
   margin: 0 0 10px;
   padding-left: 12px;
-  border-left: 3px solid var(--color-primary, #409eff);
+  border-left: 3px solid var(--color-primary);
 }
 .di-member-list {
   display: flex;
@@ -688,10 +701,10 @@ function getFileName(url: string): string {
 }
 .di-description {
   font-size: 14px;
-  color: #606266;
+  color: var(--color-text-secondary);
   line-height: 1.8;
   margin: 0;
-  background: #f8f9fc;
+  background: var(--color-bg);
   border-radius: 10px;
   padding: 14px 16px;
 }

@@ -1,13 +1,6 @@
 {
-  "navigationBarTitleText": "消息通知",
-  "navigationBarBackgroundColor": "#f5f6f7",
-  "navigationBarTextStyle": "black",
+  "navigationBarTitleText": "消息中心",
+  "navigationStyle": "custom",
   "enablePullDownRefresh": true,
-  "usingComponents": {
-    "t-icon": "tdesign-miniprogram/icon/icon",
-    "t-tag": "tdesign-miniprogram/tag/tag",
-    "t-button": "tdesign-miniprogram/button/button",
-    "t-loading": "tdesign-miniprogram/loading/loading",
-    "t-swipe-cell": "tdesign-miniprogram/swipe-cell/swipe-cell"
-  }
+  "usingComponents": {}
 }

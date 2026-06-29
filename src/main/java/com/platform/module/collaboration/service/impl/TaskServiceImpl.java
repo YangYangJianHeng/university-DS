@@ -474,11 +474,12 @@ public class TaskServiceImpl extends ServiceImpl<TaskMapper, Task> implements Ta
 
     @Override
     public List<Task> getManagedTasks(Long leaderId) {
-        // 1. 获取用户作为负责人的项目（排除已关闭的）
+        // 1. 获取用户作为负责人的项目（排除已关闭和已归档的）
         List<Project> managedProjects = projectMapper.selectList(
                 new LambdaQueryWrapper<Project>()
                         .eq(Project::getLeaderId, leaderId)
-                        .ne(Project::getStatus, "CLOSED"));
+                        .ne(Project::getStatus, "CLOSED")
+                        .ne(Project::getStatus, "ARCHIVED"));
         if (managedProjects.isEmpty()) return Collections.emptyList();
 
         List<Long> projectIds = managedProjects.stream()
@@ -566,8 +567,9 @@ public class TaskServiceImpl extends ServiceImpl<TaskMapper, Task> implements Ta
         // 4. 自动检测逾期
         checkAndMarkOverdue(tasks);
 
-        // 5. 批量获取创建者名称
+        // 5. 批量获取创建者名称和头像
         Map<Long, String> creatorNameMap = new HashMap<>();
+        Map<Long, String> creatorAvatarMap = new HashMap<>();
         if (!tasks.isEmpty()) {
             List<Long> creatorIds = tasks.stream()
                     .map(Task::getCreatorId)
@@ -575,6 +577,7 @@ public class TaskServiceImpl extends ServiceImpl<TaskMapper, Task> implements Ta
                     .collect(Collectors.toList());
             for (User u : userMapper.selectBatchIds(creatorIds)) {
                 creatorNameMap.put(u.getId(), u.getUsername());
+                creatorAvatarMap.put(u.getId(), u.getAvatar());
             }
         }
 
@@ -598,6 +601,7 @@ public class TaskServiceImpl extends ServiceImpl<TaskMapper, Task> implements Ta
                             vo.setProjectId(task.getProjectId());
                             vo.setCreatorId(task.getCreatorId());
                             vo.setCreatorName(creatorNameMap.getOrDefault(task.getCreatorId(), null));
+                            vo.setCreatorAvatar(creatorAvatarMap.getOrDefault(task.getCreatorId(), null));
                             vo.setTitle(task.getTitle());
                             vo.setDescription(task.getDescription());
                             vo.setRequiredSkills(task.getRequiredSkills());

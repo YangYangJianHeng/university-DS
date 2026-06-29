@@ -22,6 +22,9 @@ export default defineConfig({
   },
   server: {
     port: 5173,
+    headers: {
+      'X-Frame-Options': 'SAMEORIGIN',
+    },
     proxy: {
       '/api': {
         target: 'http://localhost:8080',

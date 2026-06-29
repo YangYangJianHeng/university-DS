@@ -1,53 +1,74 @@
 <!--pages/notification/index/index.wxml-->
-<view class="notification-page">
-  <view class="page-container">
-    <!-- 全部已读 -->
-    <view class="flex-between px-3 py-2 mb-3" wx:if="{{unreadCount > 0}}">
-      <view class="flex-row">
-        <t-icon name="check-circle" size="32rpx" color="#52c41a" />
-        <text class="ml-2 text-sm text-muted">{{unreadCount}}条未读</text>
+<view class="notify-page">
+  <!-- 顶部 -->
+  <view class="page-header">
+    <view class="flex-between">
+      <view>
+        <view class="page-header-title">消息中心</view>
+        <view class="page-header-sub">查看你的所有通知消息</view>
       </view>
-      <t-button size="small" variant="text" theme="primary" bindtap="markAllRead">
+      <view class="header-action" bindtap="markAllRead" wx:if="{{notifications.length > 0}}">
         全部已读
-      </t-button>
+      </view>
     </view>
+  </view>
 
-    <!-- 通知列表 -->
+  <!-- 消息列表 -->
+  <view class="page-inner">
     <block wx:if="{{!loading}}">
       <block wx:if="{{notifications.length > 0}}">
         <view
-          class="notif-item card card-hover {{item.isRead ? 'read' : ''}}"
+          class="card notify-item {{item.read ? 'notify-read' : 'notify-unread'}}"
           wx:for="{{notifications}}"
           wx:key="id"
           bindtap="handleRead"
           data-id="{{item.id}}"
+          data-index="{{index}}"
         >
-          <view class="flex-row">
-            <view class="notif-dot {{item.isRead ? 'read' : ''}}"></view>
-            <view class="notif-content">
-              <view class="notif-title">{{item.title || '通知'}}</view>
-              <view class="notif-body">{{item.content || item.message || '暂无内容'}}</view>
-              <view class="notif-time text-muted">{{formatTime(item.createdAt || item.time)}}</view>
+          <view class="flex" style="gap: 16rpx;">
+            <!-- 类型图标 -->
+            <view class="notify-icon {{iconClass(item.type)}}">
+              <text>{{iconEmoji(item.type)}}</text>
+            </view>
+            <!-- 内容 -->
+            <view class="flex-1" style="min-width: 0;">
+              <view class="flex-between">
+                <view class="text-base text-bold {{item.read ? '' : 'text-primary'}} text-ellipsis">
+                  {{item.title || '通知消息'}}
+                </view>
+                <!-- 未读红点 -->
+                <view class="unread-dot" wx:if="{{!item.read}}"></view>
+              </view>
+              <view class="text-sm text-secondary text-clamp-2 mt-1">
+                {{item.content || item.message || '暂无内容'}}
+              </view>
+              <view class="text-xs text-muted mt-2">
+                {{formatTime(item.createTime || item.createdAt)}}
+              </view>
             </view>
           </view>
-          <view class="read-action" wx:if="{{!item.isRead}}">
-            <t-icon name="check" size="24rpx" color="#4e6ef2" />
-          </view>
+        </view>
+
+        <!-- 加载更多 -->
+        <view class="load-more" wx:if="{{hasMore}}" bindtap="loadMore">
+          <text class="text-sm text-muted">加载更多</text>
         </view>
       </block>
 
       <!-- 空状态 -->
       <view wx:else class="empty-state">
-        <view class="empty-icon">📬</view>
+        <view class="empty-icon">📭</view>
         <view class="empty-text">暂无消息</view>
+        <view class="empty-sub">当有新的通知时，会在这里显示</view>
       </view>
     </block>
 
     <!-- 加载中 -->
     <view wx:else class="loading-container">
-      <t-loading theme="circular" size="60rpx" />
+      <text class="loading-spinner"></text>
+      <text class="loading-text">加载中...</text>
     </view>
-
-    <view class="safe-bottom"></view>
   </view>
+
+  <view class="safe-bottom"></view>
 </view>
