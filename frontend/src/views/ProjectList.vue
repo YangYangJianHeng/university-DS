@@ -10,51 +10,70 @@
       </el-button>
     </div>
 
-    <div v-loading="loading">
-      <el-empty v-if="!loading && projects.length === 0" description="暂无项目" />
-      <div v-else class="project-grid">
-        <el-card
-          v-for="item in projects"
-          :key="item.id"
-          class="project-card"
-          shadow="hover"
-          @click="router.push(`/project/${item.id}`)"
-        >
-          <div class="card-top">
-            <div class="project-avatar" :style="projectAvatarStyle(item)">
-              {{ item.name?.charAt(0) || 'P' }}
-            </div>
-            <div class="project-info">
-              <div class="project-name">{{ item.name }}</div>
-              <el-tag :type="projectStatusType(item.status)" size="small" effect="plain">
-                {{ projectStatusLabel(item.status) }}
-              </el-tag>
-            </div>
+    <!-- 骨架屏加载 -->
+    <div v-if="loading" class="project-grid">
+      <div v-for="n in 3" :key="'sk-' + n" class="skeleton-card">
+        <div class="card-top">
+          <div class="skeleton-avatar skeleton-pulse"></div>
+          <div class="skeleton-info">
+            <div class="skeleton-line skeleton-pulse" style="width: 70%"></div>
+            <div class="skeleton-line skeleton-pulse" style="width: 40%; margin-top: 6px"></div>
           </div>
-          <div class="card-body">
-            <div class="card-stat-row">
-              <span>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
-                {{ item.team?.name || item.teamName || '--' }}
-              </span>
-              <span>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-                {{ dayjs(item.createdAt).format('YYYY-MM-DD') }}
-              </span>
-            </div>
-          </div>
-          <div class="card-footer" v-if="item.taskCount !== undefined || item.memberCount !== undefined">
-            <div class="footer-stat">
-              <span class="footer-num">{{ item.taskCount || 0 }}</span>
-              <span class="footer-lbl">任务</span>
-            </div>
-            <div class="footer-stat">
-              <span class="footer-num">{{ item.memberCount || 0 }}</span>
-              <span class="footer-lbl">成员</span>
-            </div>
-          </div>
-        </el-card>
+        </div>
+        <div class="skeleton-body">
+          <div class="skeleton-line skeleton-pulse" style="width: 55%"></div>
+          <div class="skeleton-line skeleton-pulse" style="width: 45%; margin-top: 8px"></div>
+        </div>
+        <div class="skeleton-footer">
+          <div class="skeleton-line skeleton-pulse" style="width: 30%"></div>
+          <div class="skeleton-line skeleton-pulse" style="width: 30%"></div>
+        </div>
       </div>
+    </div>
+
+    <el-empty v-else-if="projects.length === 0" description="暂无项目" />
+    <div v-else class="project-grid">
+      <el-card
+        v-for="item in projects"
+        :key="item.id"
+        class="project-card"
+        shadow="hover"
+        @click="router.push(`/project/${item.id}`)"
+      >
+        <div class="card-top">
+          <div class="project-avatar" :style="projectAvatarStyle(item)">
+            {{ item.name?.charAt(0) || 'P' }}
+          </div>
+          <div class="project-info">
+            <div class="project-name">{{ item.name }}</div>
+            <el-tag :type="projectStatusType(item.status)" size="small" effect="plain">
+              {{ projectStatusLabel(item.status) }}
+            </el-tag>
+          </div>
+        </div>
+        <div class="card-body">
+          <div class="card-stat-row">
+            <span :title="item.leaderName ? '队长: ' + item.leaderName : ''">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-3-3.87"/><path d="M4 21v-2a4 4 0 0 1 3-3.87"/><circle cx="12" cy="7" r="4"/></svg>
+              {{ item.leaderName || '未指定' }}
+            </span>
+            <span>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+              {{ dayjs(item.createdAt).format('YYYY-MM-DD') }}
+            </span>
+          </div>
+        </div>
+        <div class="card-footer">
+          <div class="footer-stat">
+            <span class="footer-num">{{ item.taskCount ?? 0 }}</span>
+            <span class="footer-lbl">任务</span>
+          </div>
+          <div class="footer-stat">
+            <span class="footer-num">{{ item.memberCount ?? 0 }}</span>
+            <span class="footer-lbl">成员</span>
+          </div>
+        </div>
+      </el-card>
     </div>
 
     <!-- Create Project Dialog -->
@@ -221,4 +240,30 @@ async function handleCreate() {
 .create-dialog :deep(.el-dialog__body) { padding: 24px 32px; }
 .dialog-btn { border-radius: 8px; }
 .form-hint { font-size: 12px; color: var(--color-text-muted); margin-top: 4px; display: block; }
+
+/* ========== 骨架屏 ========== */
+.skeleton-card {
+  background: #fff; border-radius: 12px; padding: 20px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+  display: flex; flex-direction: column; gap: 14px;
+}
+.skeleton-avatar {
+  width: 44px; height: 44px; border-radius: 10px; flex-shrink: 0;
+}
+.skeleton-info { flex: 1; display: flex; flex-direction: column; justify-content: center; }
+.skeleton-body { display: flex; flex-direction: column; }
+.skeleton-footer {
+  display: flex; gap: 24px;
+  padding-top: 12px; border-top: 1px solid #f0f2f5;
+}
+.skeleton-line { height: 14px; border-radius: 4px; }
+.skeleton-pulse {
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  animation: skeletonShimmer 1.5s infinite ease-in-out;
+}
+@keyframes skeletonShimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
 </style>

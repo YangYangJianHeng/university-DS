@@ -446,9 +446,56 @@ public class ProjectServiceImpl extends ServiceImpl<ProjectMapper, Project> impl
             return Collections.emptyList();
         }
         // 查询这些团队的所有项目
-        return list(new LambdaQueryWrapper<Project>()
+        List<Project> projects = list(new LambdaQueryWrapper<Project>()
                 .in(Project::getTeamId, teamIds)
                 .orderByDesc(Project::getCreatedAt));
+
+        if (projects.isEmpty()) {
+            return projects;
+        }
+
+        // ---------- 批量关联查询，一次性填充所有附加信息 ----------
+
+        // 1. 批量查询团队名称
+        Map<Long, String> teamNameMap = teamMapper.selectBatchIds(teamIds).stream()
+                .collect(Collectors.toMap(Team::getId, Team::getName, (a, b) -> a));
+
+        // 2. 批量查询队长用户信息
+        List<Long> leaderIds = projects.stream()
+                .map(Project::getLeaderId)
+                .filter(Objects::nonNull)
+                .distinct()
+                .collect(Collectors.toList());
+        Map<Long, String> leaderNameMap = Collections.emptyMap();
+        if (!leaderIds.isEmpty()) {
+            leaderNameMap = userMapper.selectBatchIds(leaderIds).stream()
+                    .collect(Collectors.toMap(User::getId, User::getUsername, (a, b) -> a));
+        }
+
+        // 3. 批量统计每个项目的任务数
+        List<Long> projectIds = projects.stream().map(Project::getId).collect(Collectors.toList());
+        Map<Long, Long> taskCountMap = new HashMap<>();
+        for (Task t : taskMapper.selectList(
+                new LambdaQueryWrapper<Task>().in(Task::getProjectId, projectIds))) {
+            taskCountMap.merge(t.getProjectId(), 1L, Long::sum);
+        }
+
+        // 4. 批量统计每个项目的团队成员数
+        Map<Long, Long> memberCountMap = new HashMap<>();
+        for (TeamMember m : teamMemberMapper.selectList(
+                new LambdaQueryWrapper<TeamMember>().in(TeamMember::getTeamId, teamIds))) {
+            memberCountMap.merge(m.getTeamId(), 1L, Long::sum);
+        }
+
+        // 5. 填充瞬态字段
+        for (Project project : projects) {
+            project.setTeamName(teamNameMap.getOrDefault(project.getTeamId(), null));
+            project.setLeaderName(leaderNameMap.getOrDefault(project.getLeaderId(), null));
+            project.setTaskCount(taskCountMap.getOrDefault(project.getId(), 0L));
+            project.setMemberCount(memberCountMap.getOrDefault(project.getTeamId(), 0L));
+        }
+
+        return projects;
     }
 
     /**
@@ -490,6 +537,21 @@ public class ProjectServiceImpl extends ServiceImpl<ProjectMapper, Project> impl
             case "ARCHIVED", "CLOSED" -> 100;
             default -> 0;
         };
+    }
+
+    @Override
+    public void enrichProject(Project project) {
+        if (project == null) return;
+        // 团队名称
+        if (project.getTeamId() != null) {
+            Team team = teamMapper.selectById(project.getTeamId());
+            if (team != null) project.setTeamName(team.getName());
+        }
+        // 队长名称
+        if (project.getLeaderId() != null) {
+            User leader = userMapper.selectById(project.getLeaderId());
+            if (leader != null) project.setLeaderName(leader.getUsername());
+        }
     }
 
     @Override

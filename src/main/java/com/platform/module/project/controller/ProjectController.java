@@ -39,6 +39,8 @@ public class ProjectController {
         if (project == null) {
             return Result.notFound("Project not found");
         }
+        // 补充团队名称和队长名称
+        projectService.enrichProject(project);
         return Result.success(project);
     }
 

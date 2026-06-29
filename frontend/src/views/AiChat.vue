@@ -68,16 +68,16 @@
             v-for="(msg, i) in messages"
             :key="i"
             class="message-row"
-            :class="msg.role"
+            :class="[msg.role, { 'animate-in': animateMessages }]"
+            :style="{ animationDelay: animateMessages ? `${i * 0.08}s` : '0s' }"
           >
-            <div class="message-avatar">
-              <span v-if="msg.role === 'assistant'">🤖</span>
-              <span v-else>👤</span>
-            </div>
+            <!-- AI 头像 -->
+            <div v-if="msg.role === 'assistant'" class="message-avatar">🤖</div>
             <div class="message-bubble" :class="msg.role">
               <div class="message-text" v-html="renderMarkdown(msg.content)"></div>
               <div class="message-time">{{ formatTime(msg.createdAt) }}</div>
             </div>
+            <!-- 用户消息靠右，不需要头像 -->
           </div>
 
           <!-- 流式输出中的临时消息 -->
@@ -85,9 +85,7 @@
             <div class="message-avatar">🤖</div>
             <div class="message-bubble assistant">
               <div class="message-text" v-html="renderMarkdown(streamContent)"></div>
-              <div class="typing-indicator">
-                <span class="dot"></span><span class="dot"></span><span class="dot"></span>
-              </div>
+              <span class="streaming-cursor"></span>
             </div>
           </div>
 
@@ -169,6 +167,7 @@ const sending = ref(false)
 const streaming = ref(false)
 const streamContent = ref('')
 const loading = ref(false)
+const animateMessages = ref(false)
 const messagesRef = ref<HTMLElement | null>(null)
 
 const quickQuestions = [
@@ -194,6 +193,7 @@ async function handleNewSession() {
     sessions.value.unshift(session)
     currentSessionId.value = session.id
     messages.value = []
+    animateMessages.value = false
   } catch {
     ElMessage.error('创建会话失败')
   }
@@ -207,10 +207,13 @@ function switchSession(session: any) {
 async function loadMessages() {
   if (!currentSessionId.value) return
   loading.value = true
+  animateMessages.value = false
   try {
     const res = await getMessages(currentSessionId.value)
     messages.value = res.data || []
+    // 触发渐入动画
     await nextTick()
+    animateMessages.value = true
     scrollToBottom()
   } catch {
     ElMessage.error('加载消息失败')
@@ -238,7 +241,8 @@ async function handleSend() {
   const text = inputText.value.trim()
   if (!text || sending.value) return
 
-  // 追加用户消息到界面
+  // 追加用户消息到界面（禁用动画，直接显示）
+  animateMessages.value = false
   messages.value.push({
     role: 'user',
     content: text,
@@ -472,7 +476,6 @@ loadSessions()
 }
 .message-row.user {
   align-self: flex-end;
-  flex-direction: row-reverse;
 }
 .message-row.assistant {
   align-self: flex-start;
@@ -545,25 +548,36 @@ loadSessions()
   margin-top: 4px;
 }
 
-/* Typing indicator */
-.typing-indicator {
-  display: flex;
-  gap: 4px;
-  padding: 4px 0;
+/* Typing / streaming cursor */
+.streaming-cursor {
+  display: inline-block;
+  width: 2px;
+  height: 16px;
+  background: #409eff;
+  margin-left: 2px;
+  vertical-align: text-bottom;
+  animation: cursorBlink 0.6s infinite;
 }
-.dot {
-  width: 6px;
-  height: 6px;
-  background: #c0c4cc;
-  border-radius: 50%;
-  animation: blink 1.4s infinite both;
-}
-.dot:nth-child(2) { animation-delay: 0.2s; }
-.dot:nth-child(3) { animation-delay: 0.4s; }
 
-@keyframes blink {
-  0%, 80%, 100% { opacity: 0.2; }
-  40% { opacity: 1; }
+@keyframes cursorBlink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+/* Message fade-in animation */
+.message-row.animate-in {
+  animation: fadeInUp 0.35s ease-out both;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 /* ---- Input ---- */

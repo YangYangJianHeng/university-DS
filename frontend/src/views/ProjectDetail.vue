@@ -487,9 +487,9 @@ const previewFileSize = ref(0)
 const previewTextContent = ref('')
 const previewFileRow = ref<any>(null)
 
-// 里程碑数据存储在 description 字段中（JSON数组），需要从description中解析
+// 里程碑数据解析自 milestones JSON 字段
 const milestones = computed(() => {
-  const raw = project.value.description
+  const raw = project.value.milestones
   if (!raw) return []
   try {
     const parsed = JSON.parse(raw)

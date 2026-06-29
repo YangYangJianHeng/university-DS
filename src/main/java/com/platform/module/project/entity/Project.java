@@ -24,4 +24,17 @@ public class Project {
 
     @TableField(fill = FieldFill.INSERT)
     private LocalDateTime createdAt;
+
+    // ========== 瞬态字段（非数据库，仅返回前端用） ==========
+    @TableField(exist = false)
+    private String teamName;
+
+    @TableField(exist = false)
+    private String leaderName;
+
+    @TableField(exist = false)
+    private Long taskCount;
+
+    @TableField(exist = false)
+    private Long memberCount;
 }

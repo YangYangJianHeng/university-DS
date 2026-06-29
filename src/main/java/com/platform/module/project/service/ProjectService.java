@@ -36,4 +36,7 @@ public interface ProjectService extends IService<Project> {
     void addProjectMember(Long projectId, Long userId);
 
     List<Map<String, Object>> getProjectMembers(Long projectId);
+
+    /** 单个项目信息补全（团队名称、队长名称） */
+    void enrichProject(Project project);
 }
