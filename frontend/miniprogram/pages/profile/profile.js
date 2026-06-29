@@ -1,19 +1,26 @@
 // pages/profile/profile.js
 const app = getApp()
-const { userApi, teamApi, taskApi, achievementApi } = require('../../utils/api')
+const { userApi, teamApi, taskApi, achievementApi, teacherApi } = require('../../utils/api')
 
 Page({
   data: {
     isLoggedIn: false,
     userInfo: {},
     isAdmin: false,
+    isTeacher: false,
     stats: { teamCount: 0, projectCount: 0, achievementCount: 0 },
     roleLabel: '普通用户',
     showEditDialog: false,
     showPwdDialog: false,
     editForm: { username: '', major: '', grade: '', bio: '' },
     pwdForm: { oldPassword: '', newPassword: '', confirmPassword: '' },
-    gradeOptions: ['大一', '大二', '大三', '大四', '研一', '研二', '研三']
+    gradeOptions: ['大一', '大二', '大三', '大四', '研一', '研二', '研三'],
+    // 导师资料编辑
+    showTeacherDialog: false,
+    savingTeacher: false,
+    teacherForm: { department: '', title: '', researchFields: '' },
+    teacherTitleIndex: -1,
+    titleOptions: ['教授', '副教授', '讲师', '助教', '高级工程师', '研究员']
   },
 
   onShow() {
@@ -32,6 +39,7 @@ Page({
       isLoggedIn: !!wx.getStorageSync('token'),
       userInfo,
       isAdmin: role === 'ADMIN',
+      isTeacher: role === 'TEACHER',
       roleLabel: roleMap[role] || '普通用户'
     })
   },
@@ -79,7 +87,54 @@ Page({
   goCalendar() { wx.navigateTo({ url: '/pages/competition/list/list' }) },
   goAiChat() { wx.navigateTo({ url: '/pages/ai-chat/index/index' }) },
 
-  // 编辑个人信息
+  // ===== 导师资料编辑（仅 TEACHER 角色可见） =====
+  openTeacherDialog() {
+    const { userInfo } = this.data
+    const titleOptions = this.data.titleOptions
+    const titleIndex = titleOptions.indexOf(userInfo.title || '')
+    this.setData({
+      showTeacherDialog: true,
+      teacherForm: {
+        department: userInfo.department || '',
+        title: userInfo.title || '',
+        researchFields: userInfo.researchFields || ''
+      },
+      teacherTitleIndex: titleIndex >= 0 ? titleIndex : -1
+    })
+  },
+  closeTeacherDialog() { this.setData({ showTeacherDialog: false }) },
+  onTeacherDialogClose(e) {
+    if (!e.detail.visible) this.setData({ showTeacherDialog: false })
+  },
+  onTeacherFieldChange(e) {
+    const { field } = e.currentTarget.dataset
+    this.setData({ [`teacherForm.${field}`]: e.detail.value })
+  },
+  onTeacherTitleChange(e) {
+    const idx = parseInt(e.detail.value)
+    this.setData({
+      'teacherForm.title': this.data.titleOptions[idx],
+      teacherTitleIndex: idx
+    })
+  },
+  async handleSaveTeacher() {
+    const { department, title, researchFields } = this.data.teacherForm
+    if (!department) { wx.showToast({ title: '请填写院系', icon: 'none' }); return }
+    if (!title) { wx.showToast({ title: '请选择职称', icon: 'none' }); return }
+    this.setData({ savingTeacher: true })
+    try {
+      await teacherApi.updateMyInfo({ department, title, researchFields })
+      wx.showToast({ title: '导师资料已更新', icon: 'success' })
+      this.setData({ showTeacherDialog: false })
+      this.fetchProfile()
+    } catch (e) {
+      /* 错误由 request 层统一提示 */
+    } finally {
+      this.setData({ savingTeacher: false })
+    }
+  },
+
+  // 退出登录
   onEditFieldChange(e) { const { field } = e.currentTarget.dataset; this.setData({ [`editForm.${field}`]: e.detail.value }) },
   async handleSaveProfile() {
     try {

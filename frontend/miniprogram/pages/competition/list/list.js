@@ -35,19 +35,17 @@ Page({
       if (keyword) params.keyword = keyword
       if (filterLevel) params.level = filterLevel
 
+      // request.js 已自动解包 Result.data，res 直接是 IPage 对象
       const res = await competitionApi.getList(params)
-      if (res.code === 200) {
-        const data = res.data
-        const list = data.records || data.list || data || []
-        const total = data.total || list.length
-        const newList = currentPage === 1 ? list : [...competitions, ...list]
+      const list = res.records || res.list || (Array.isArray(res) ? res : [])
+      const total = res.total || list.length
+      const newList = currentPage === 1 ? list : [...competitions, ...list]
 
-        this.setData({
-          competitions: newList,
-          hasMore: newList.length < total,
-          currentPage: currentPage + 1
-        })
-      }
+      this.setData({
+        competitions: newList,
+        hasMore: newList.length < total,
+        currentPage: currentPage + 1
+      })
     } catch (e) {
       // ignore
     } finally {

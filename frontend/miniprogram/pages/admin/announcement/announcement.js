@@ -25,12 +25,10 @@ Page({
     this.setData({ loading: true })
     try {
       const res = await adminApi.getAnnouncements()
-      if (res.code === 200) {
-        this.setData({
-          announcements: (res.data || []).reverse(),
-          loading: false
-        })
-      }
+      this.setData({
+        announcements: (Array.isArray(res) ? res : []).reverse(),
+        loading: false
+      })
     } catch (e) {
       this.setData({ loading: false })
     }

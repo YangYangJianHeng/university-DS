@@ -1,12 +1,14 @@
 package com.platform.module.team.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.platform.common.exception.BusinessException;
 import com.platform.common.util.UserContext;
 import com.platform.module.collaboration.entity.Task;
 import com.platform.module.collaboration.mapper.TaskMapper;
 import com.platform.module.project.entity.Project;
 import com.platform.module.project.mapper.ProjectMapper;
+import com.platform.module.project.service.ProjectService;
 import com.platform.module.team.dto.CreateTeamDTO;
 import com.platform.module.team.dto.UpdateTeamDTO;
 import com.platform.module.team.entity.Team;
@@ -21,6 +23,16 @@ import com.platform.module.team.vo.TeamVO;
 import com.platform.module.team.vo.TimelineEvent;
 import com.platform.module.user.entity.User;
 import com.platform.module.user.mapper.UserMapper;
+import com.platform.module.collaboration.entity.Message;
+import com.platform.module.collaboration.mapper.MessageMapper;
+import com.platform.module.file.entity.FileEntity;
+import com.platform.module.file.mapper.FileMapper;
+import com.platform.module.recruit.entity.Application;
+import com.platform.module.recruit.entity.Recruit;
+import com.platform.module.recruit.mapper.ApplicationMapper;
+import com.platform.module.recruit.mapper.RecruitMapper;
+import com.platform.module.achievement.entity.Achievement;
+import com.platform.module.achievement.mapper.AchievementMapper;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -40,20 +52,38 @@ public class TeamServiceImpl implements TeamService {
     private final TeamTeacherMapper teamTeacherMapper;
     private final UserMapper userMapper;
     private final ProjectMapper projectMapper;
+    private final ProjectService projectService;
     private final TaskMapper taskMapper;
+    private final FileMapper fileMapper;
+    private final RecruitMapper recruitMapper;
+    private final ApplicationMapper applicationMapper;
+    private final AchievementMapper achievementMapper;
+    private final MessageMapper messageMapper;
 
     public TeamServiceImpl(TeamMapper teamMapper,
                            TeamMemberMapper teamMemberMapper,
                            TeamTeacherMapper teamTeacherMapper,
                            UserMapper userMapper,
                            ProjectMapper projectMapper,
-                           TaskMapper taskMapper) {
+                           ProjectService projectService,
+                           TaskMapper taskMapper,
+                           FileMapper fileMapper,
+                           RecruitMapper recruitMapper,
+                           ApplicationMapper applicationMapper,
+                           AchievementMapper achievementMapper,
+                           MessageMapper messageMapper) {
         this.teamMapper = teamMapper;
         this.teamMemberMapper = teamMemberMapper;
         this.teamTeacherMapper = teamTeacherMapper;
         this.userMapper = userMapper;
         this.projectMapper = projectMapper;
+        this.projectService = projectService;
         this.taskMapper = taskMapper;
+        this.fileMapper = fileMapper;
+        this.recruitMapper = recruitMapper;
+        this.applicationMapper = applicationMapper;
+        this.achievementMapper = achievementMapper;
+        this.messageMapper = messageMapper;
     }
 
     @Override
@@ -236,8 +266,65 @@ public class TeamServiceImpl implements TeamService {
         if (team == null) {
             throw BusinessException.notFound("Team not found");
         }
+
         if (team.getLeaderId().equals(userId)) {
-            throw BusinessException.badRequest("Team leader cannot quit the team, please disband instead");
+            // Team leader quitting — auto-transfer leadership to earliest-joined member
+            List<TeamMember> remainingMembers = teamMemberMapper.selectList(
+                    new LambdaQueryWrapper<TeamMember>()
+                            .eq(TeamMember::getTeamId, teamId)
+                            .ne(TeamMember::getUserId, userId));
+            if (!remainingMembers.isEmpty()) {
+                // Pick the member with the oldest joinedAt as new leader
+                TeamMember newLeader = remainingMembers.stream()
+                        .filter(m -> m.getJoinedAt() != null)
+                        .min(Comparator.comparing(TeamMember::getJoinedAt))
+                        .orElse(remainingMembers.get(0));
+                team.setLeaderId(newLeader.getUserId());
+                teamMapper.updateById(team);
+            } else {
+                // No other members → cascade delete the entire team and all related data
+                // 0. Delete projects referencing this team (FK: project_ibfk_1)
+                List<Project> teamProjects = projectMapper.selectList(
+                        new LambdaQueryWrapper<Project>().eq(Project::getTeamId, teamId));
+                for (Project p : teamProjects) {
+                    projectService.deleteProject(p.getId());
+                }
+                // 1. Delete achievements referencing this team
+                achievementMapper.delete(
+                        new LambdaQueryWrapper<Achievement>().eq(Achievement::getTeamId, teamId));
+                // 2. Delete messages referencing this team
+                messageMapper.delete(
+                        new LambdaQueryWrapper<Message>().eq(Message::getTeamId, teamId));
+                // 3. Delete applications referencing recruits of this team
+                List<Recruit> teamRecruits = recruitMapper.selectList(
+                        new LambdaQueryWrapper<Recruit>().eq(Recruit::getTeamId, teamId));
+                if (!teamRecruits.isEmpty()) {
+                    List<Long> recruitIds = teamRecruits.stream().map(Recruit::getId).collect(Collectors.toList());
+                    applicationMapper.delete(
+                            new LambdaQueryWrapper<Application>().in(Application::getRecruitId, recruitIds));
+                }
+                // —— Before deleting recruit: break team.recruit_id → recruit FK (MUST use explicit UpdateWrapper: MyBatis-Plus ignores null in updateById)
+                if (team.getRecruitId() != null) {
+                    teamMapper.update(null, new LambdaUpdateWrapper<Team>()
+                            .set(Team::getRecruitId, null)
+                            .eq(Team::getId, teamId));
+                }
+                // 4. Delete recruits referencing this team
+                recruitMapper.delete(
+                        new LambdaQueryWrapper<Recruit>().eq(Recruit::getTeamId, teamId));
+                // 5. Delete files referencing this team
+                fileMapper.delete(
+                        new LambdaQueryWrapper<FileEntity>().eq(FileEntity::getTeamId, teamId));
+                // 6. Delete all team members (including leader)
+                teamMemberMapper.delete(
+                        new LambdaQueryWrapper<TeamMember>().eq(TeamMember::getTeamId, teamId));
+                // 7. Delete team teachers
+                teamTeacherMapper.delete(
+                        new LambdaQueryWrapper<TeamTeacher>().eq(TeamTeacher::getTeamId, teamId));
+                // 8. Finally delete the team itself
+                teamMapper.deleteById(teamId);
+                return;
+            }
         }
 
         teamMemberMapper.delete(

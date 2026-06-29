@@ -59,6 +59,14 @@ public class AdminController {
         return Result.success();
     }
 
+    @DeleteMapping("/users/{id}")
+    @Operation(summary = "Delete user (admin)")
+    public Result<Void> deleteUser(@PathVariable Long id) {
+        Long operatorId = UserContext.getCurrentUserId();
+        adminService.deleteUser(id, operatorId);
+        return Result.<Void>success("用户已删除", null);
+    }
+
     @GetMapping("/audit/list")
     @Operation(summary = "List audit logs")
     public Result<IPage<AuditLog>> listAudit(@RequestParam(required = false) String status,

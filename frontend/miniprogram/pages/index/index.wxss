@@ -79,6 +79,38 @@
 }
 
 /* ===== 已登录 - 工作台 ===== */
+/* 网络错误提示 */
+.network-error-card {
+  margin: 24rpx 24rpx 0;
+  padding: 48rpx 32rpx;
+  background: var(--color-card);
+  border-radius: var(--radius-md);
+  text-align: center;
+  box-shadow: var(--shadow-sm);
+}
+
+.error-icon {
+  font-size: 72rpx;
+  margin-bottom: 16rpx;
+}
+
+.error-msg {
+  font-size: 30rpx;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  margin-bottom: 12rpx;
+}
+
+.error-desc {
+  font-size: 24rpx;
+  color: var(--color-text-muted);
+  line-height: 1.6;
+}
+
+.retry-btn {
+  margin-top: 32rpx !important;
+}
+
 .greeting-section {
   background: var(--color-header-bg);
   padding: 32rpx 32rpx 24rpx;

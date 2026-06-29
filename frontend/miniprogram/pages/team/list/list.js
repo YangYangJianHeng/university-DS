@@ -34,9 +34,8 @@ Page({
     try {
       const api = this.data.currentTab === 'my' ? teamApi.getMyTeams : teamApi.getJoinedTeams
       const res = await api()
-      if (res.code === 200) {
-        this.setData({ teams: res.data || [] })
-      }
+      // request.js 已自动解包 Result.data
+      this.setData({ teams: res || [] })
     } catch (e) {
       this.setData({ teams: [] })
     } finally {

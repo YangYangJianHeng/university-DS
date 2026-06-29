@@ -19,3 +19,11 @@ export function inviteTeacher(teamId: number, teacherId: number, message?: strin
 export function getMyTeams() {
   return request.get('/teacher/my-teams')
 }
+
+export function getPendingInvitations() {
+  return request.get('/teacher/invitations/pending')
+}
+
+export function approveInvitation(id: number) {
+  return request.put(`/teacher/invite/${id}/approve`)
+}

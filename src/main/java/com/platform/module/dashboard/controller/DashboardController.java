@@ -111,10 +111,12 @@ public class DashboardController {
                         .eq(Recruit::getStatus, "OPEN"));
         data.put("activeRecruitCount", activeRecruitCount);
 
-        // Recent recruits (limit 5)
+        // Recent recruits (limit 5, only OPEN + APPROVED — hide rejected/pending/closed)
         List<Recruit> recruits = recruitMapper.selectPage(
                 new Page<>(1, 5),
                 new LambdaQueryWrapper<Recruit>()
+                        .eq(Recruit::getStatus, "OPEN")
+                        .eq(Recruit::getAuditStatus, "APPROVED")
                         .orderByDesc(Recruit::getCreatedAt))
                 .getRecords();
         // Batch lookup publisher names

@@ -24,16 +24,14 @@ Page({
     this.setData({ loading: true })
     try {
       const res = await adminApi.getPendingRecruits({ page: 1, size: 100 })
-      if (res.code === 200) {
-        const data = res.data
-        const recruits = data.records || data.list || data || []
-        this.setData({
-          recruits,
-          totalCount: recruits.length,
-          loading: false
-        })
-        this.applyFilter()
-      }
+      const data = res.records || res.list || res
+      const recruits = Array.isArray(data) ? data : (data.records || [])
+      this.setData({
+        recruits,
+        totalCount: recruits.length,
+        loading: false
+      })
+      this.applyFilter()
     } catch (e) {
       this.setData({ loading: false })
     }

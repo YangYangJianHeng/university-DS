@@ -171,7 +171,26 @@
           </el-tag>
         </div>
       </template>
-      <div v-if="notifications.length === 0" class="notif-empty">
+
+      <!-- 待审批教师邀请（导师角色时显示） -->
+      <div v-if="userStore.userInfo?.role === 'TEACHER' && pendingInvites.length > 0" class="pending-invites-section">
+        <div class="section-label">📨 待审批导师邀请</div>
+        <div v-for="inv in pendingInvites" :key="inv.id" class="invite-card">
+          <div class="invite-info">
+            <div class="invite-team-name">{{ inv.teamName }}</div>
+            <div class="invite-from">来自：{{ inv.inviterName }}</div>
+            <div class="invite-msg" v-if="inv.message">{{ inv.message }}</div>
+          </div>
+          <div class="invite-actions">
+            <el-button type="success" size="small" :loading="inv._approving" @click.stop="handleApproveInvite(inv)">
+              同意
+            </el-button>
+          </div>
+        </div>
+        <el-divider />
+      </div>
+
+      <div v-if="notifications.length === 0 && pendingInvites.length === 0" class="notif-empty">
         <div class="empty-icon">
           <el-icon :size="52"><Bell /></el-icon>
         </div>
@@ -203,6 +222,8 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { listNotifications, getUnreadCount, markAsRead } from '@/api/notification'
+import { getPendingInvitations, approveInvitation } from '@/api/teacher'
+import { ElMessage } from 'element-plus'
 
 const router = useRouter()
 const route = useRoute()
@@ -212,6 +233,7 @@ const isExpanded = ref(false)
 const showNotifications = ref(false)
 const notifications = ref<any[]>([])
 const unreadCount = ref(0)
+const pendingInvites = ref<any[]>([])
 let hoverTimer: ReturnType<typeof setTimeout> | null = null
 
 const menuItems = [
@@ -256,6 +278,34 @@ async function loadNotifications() {
     const res = await listNotifications()
     notifications.value = res.data || []
   } catch (_) {}
+  // 导师角色时加载待处理邀请
+  if (userStore.userInfo?.role === 'TEACHER') {
+    loadPendingInvites()
+  }
+}
+
+async function loadPendingInvites() {
+  try {
+    const res = await getPendingInvitations()
+    pendingInvites.value = (res.data || []).map((inv: any) => ({ ...inv, _approving: false }))
+    // 更新未读数（待审批邀请也算未处理消息）
+    unreadCount.value = Math.max(0, unreadCount.value) + pendingInvites.value.length
+  } catch (_) {
+    pendingInvites.value = []
+  }
+}
+
+async function handleApproveInvite(inv: any) {
+  inv._approving = true
+  try {
+    await approveInvitation(inv.id)
+    ElMessage.success('已同意导师邀请，您已成为该团队指导老师')
+    pendingInvites.value = pendingInvites.value.filter((i: any) => i.id !== inv.id)
+    unreadCount.value = Math.max(0, unreadCount.value - 1)
+  } catch (_) {
+  } finally {
+    inv._approving = false
+  }
 }
 
 async function handleRead(n: any) {
@@ -642,6 +692,55 @@ function handleLogout() {
 .notif-time {
   font-size: 11px;
   color: var(--color-text-placeholder);
+}
+
+/* 待审批教师邀请 */
+.pending-invites-section {
+  padding: 0 4px;
+  margin-bottom: 12px;
+}
+.section-label {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--color-primary);
+  margin-bottom: 12px;
+}
+.invite-card {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 12px;
+  margin-bottom: 8px;
+  background: var(--color-primary-light, #f0f5ff);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border-light);
+}
+.invite-info {
+  flex: 1;
+  min-width: 0;
+}
+.invite-team-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  margin-bottom: 4px;
+}
+.invite-from {
+  font-size: 12px;
+  color: var(--color-text-muted);
+  margin-bottom: 4px;
+}
+.invite-msg {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  margin-top: 4px;
+  padding: 6px 8px;
+  background: var(--color-bg);
+  border-radius: 4px;
+}
+.invite-actions {
+  flex-shrink: 0;
+  margin-left: 12px;
 }
 
 /* ===== Responsive ===== */

@@ -70,6 +70,59 @@
           </div>
         </el-tab-pane>
 
+        <!-- Tab 1b: 导师信息（仅 TEACHER 角色显示） -->
+        <el-tab-pane v-if="userInfo.role === 'TEACHER'" label="导师信息" name="teacher">
+          <div class="tab-content">
+            <h3 class="tab-title">导师资料</h3>
+
+            <!-- 认证状态 & 评分 -->
+            <div class="teacher-status-bar">
+              <el-tag :type="userInfo.isVerified === 1 ? 'success' : 'warning'" size="large" effect="dark">
+                {{ userInfo.isVerified === 1 ? '已认证' : '待认证' }}
+              </el-tag>
+              <span class="teacher-rating" v-if="userInfo.rating != null">
+                评分：<strong>{{ userInfo.rating }}</strong> / 5.0
+              </span>
+              <span class="teacher-teams" v-if="userInfo.maxTeams != null">
+                指导：{{ userInfo.currentTeams ?? 0 }} / {{ userInfo.maxTeams }} 团队
+              </span>
+            </div>
+
+            <el-divider />
+
+            <el-form ref="teacherFormRef" :model="teacherForm" label-width="90px" size="large" class="profile-form">
+              <el-form-item label="所在院系" prop="department">
+                <el-input v-model="teacherForm.department" placeholder="如：计算机科学与技术学院" maxlength="100" />
+              </el-form-item>
+              <el-form-item label="职称" prop="title">
+                <el-select v-model="teacherForm.title" style="width:100%" placeholder="请选择职称">
+                  <el-option label="教授" value="教授" />
+                  <el-option label="副教授" value="副教授" />
+                  <el-option label="讲师" value="讲师" />
+                  <el-option label="助教" value="助教" />
+                  <el-option label="高级工程师" value="高级工程师" />
+                  <el-option label="研究员" value="研究员" />
+                </el-select>
+              </el-form-item>
+              <el-form-item label="研究方向" prop="researchFields">
+                <el-input
+                  v-model="teacherForm.researchFields"
+                  type="textarea"
+                  :rows="3"
+                  placeholder="如：人工智能、机器学习、数据挖掘"
+                  maxlength="200"
+                  show-word-limit
+                />
+              </el-form-item>
+              <el-form-item>
+                <el-button type="primary" :loading="savingTeacher" @click="handleUpdateTeacherProfile">
+                  保存导师资料
+                </el-button>
+              </el-form-item>
+            </el-form>
+          </div>
+        </el-tab-pane>
+
         <!-- Tab 2: Skills -->
         <el-tab-pane label="技能特长" name="skills">
           <div class="tab-content">
@@ -114,6 +167,13 @@
                 <el-button @click="handleResetPasswordForm">重置</el-button>
               </el-form-item>
             </el-form>
+
+            <el-divider />
+            <div class="danger-zone">
+              <h4 class="danger-title">⚠️ 注销账户</h4>
+              <p class="danger-desc">注销后，您的所有数据（个人信息、技能、团队、任务等）将被永久删除且不可恢复。</p>
+              <el-button type="danger" :icon="Delete" :loading="deletingAccount" @click="handleDeleteAccount">注销账户</el-button>
+            </div>
           </div>
         </el-tab-pane>
 
@@ -220,7 +280,7 @@
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted, watch } from 'vue'
 import { useUserStore } from '@/stores/user'
-import { getProfile, updateProfile, addSkill, deleteSkill, uploadAvatar, changePassword } from '@/api/user'
+import { getProfile, updateProfile, addSkill, deleteSkill, uploadAvatar, changePassword, deleteAccount, updateTeacherProfile } from '@/api/user'
 import { getStatistics, getSkillRadar, getBadges } from '@/api/dashboard'
 import { checkNewCertificates, getUserCertificates } from '@/api/certificate'
 import { ElMessage, ElMessageBox } from 'element-plus'
@@ -250,6 +310,14 @@ const profileRules: FormRules = {
 
 const skills = ref<any[]>([])
 const newSkill = reactive({ name: '', level: '熟练' })
+
+// 导师信息表单
+const teacherFormRef = ref<FormInstance>()
+const savingTeacher = ref(false)
+const teacherForm = reactive({ department: '', title: '', researchFields: '' })
+
+// 注销账户
+const deletingAccount = ref(false)
 
 // 修改密码
 const passwordFormRef = ref<FormInstance>()
@@ -411,6 +479,10 @@ async function fetchProfileData() {
     profileForm.email = data.email || ''
     profileForm.bio = data.bio || ''
     skills.value = data.skills || data.skillList || []
+    // 导师信息
+    teacherForm.department = data.department || ''
+    teacherForm.title = data.title || ''
+    teacherForm.researchFields = data.researchFields || ''
   } catch (_) {}
 }
 
@@ -495,6 +567,23 @@ async function handleUpdateProfile() {
   } finally { saving.value = false }
 }
 
+async function handleUpdateTeacherProfile() {
+  savingTeacher.value = true
+  try {
+    await updateTeacherProfile({
+      department: teacherForm.department,
+      title: teacherForm.title,
+      researchFields: teacherForm.researchFields,
+    })
+    ElMessage.success('导师资料更新成功')
+    // 刷新 profile 以显示最新数据
+    await fetchProfileData()
+  } catch (_) {
+  } finally {
+    savingTeacher.value = false
+  }
+}
+
 async function handleAddSkill() {
   if (!newSkill.name.trim()) { ElMessage.warning('请输入技能名称'); return }
   try {
@@ -525,6 +614,48 @@ function handleResetPasswordForm() {
   passwordForm.newPassword = ''
   passwordForm.confirmPassword = ''
   passwordFormRef.value?.resetFields()
+}
+
+async function handleDeleteAccount() {
+  try {
+    await ElMessageBox.confirm(
+      '注销后账户及所有数据将被永久删除且无法恢复。\n\n请确认您要注销当前账户？',
+      '⚠️ 注销账户确认',
+      {
+        confirmButtonText: '确认注销',
+        cancelButtonText: '取消',
+        type: 'warning',
+        confirmButtonClass: 'el-button--danger',
+      }
+    )
+    // 双重确认
+    await ElMessageBox.confirm(
+      '这是最后一步！确认后将立即执行：\n• 删除您的所有个人信息和技能\n• 删除您所在的团队和项目数据\n• 删除您的聊天记录和通知\n\n此操作不可逆，是否继续？',
+      '⚠️ 最终确认',
+      {
+        confirmButtonText: '我已知晓风险，确认注销',
+        cancelButtonText: '取消',
+        type: 'error',
+        confirmButtonClass: 'el-button--danger',
+      }
+    )
+  } catch {
+    return
+  }
+
+  deletingAccount.value = true
+  try {
+    await deleteAccount()
+    ElMessage.success('账户已注销，即将跳转到首页')
+    localStorage.removeItem('token')
+    localStorage.removeItem('userInfo')
+    setTimeout(() => {
+      window.location.href = '/'
+    }, 1500)
+  } catch (_) {
+  } finally {
+    deletingAccount.value = false
+  }
 }
 
 onMounted(() => {
@@ -717,4 +848,41 @@ watch(activeTab, (tab) => {
 .new-cert-image-wrapper { border-radius: 8px; overflow: hidden; }
 
 .cert-full-preview { text-align: center; }
+
+/* 导师信息状态栏 */
+.teacher-status-bar {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 4px 0;
+  flex-wrap: wrap;
+}
+.teacher-rating {
+  font-size: 14px;
+  color: var(--color-text-secondary);
+}
+.teacher-rating strong {
+  color: var(--color-primary);
+  font-size: 16px;
+}
+.teacher-teams {
+  font-size: 13px;
+  color: var(--color-text-muted);
+}
+
+/* 注销账户区域 */
+.danger-zone {
+  padding: 16px 0;
+}
+.danger-title {
+  margin: 0 0 8px;
+  font-size: 15px;
+  color: var(--el-color-danger, #f56c6c);
+}
+.danger-desc {
+  margin: 0 0 16px;
+  font-size: 13px;
+  color: var(--color-text-muted);
+  line-height: 1.6;
+}
 </style>

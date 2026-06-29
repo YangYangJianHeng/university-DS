@@ -24,21 +24,18 @@ Page({
   async fetchDetail() {
     this.setData({ loading: true })
     try {
-      const res = await teamApi.getDetail(this.data.id)
-      if (res.code === 200) {
-        const team = res.data
-        const members = team.members || []
-        const uid = app.globalData.userInfo?.id
+      const team = await teamApi.getTeam(this.data.id)
+      const members = team.members || []
+      const uid = app.globalData.userInfo?.id
 
-        this.setData({
-          team,
-          members,
-          isMember: uid ? members.some(m => (m.userId || m.id) === uid) : false,
-          isLeader: uid ? members.some(m => (m.userId || m.id) === uid && (m.role === 'LEADER' || m.role === 'leader')) : false
-        })
+      this.setData({
+        team,
+        members,
+        isMember: uid ? members.some(m => (m.userId || m.id) === uid) : false,
+        isLeader: uid ? members.some(m => (m.userId || m.id) === uid && (m.role === 'LEADER' || m.role === 'leader')) : false
+      })
 
-        this.fetchTimeline()
-      }
+      this.fetchTimeline()
     } catch (e) {
       // ignore
     } finally {
@@ -49,9 +46,7 @@ Page({
   async fetchTimeline() {
     try {
       const res = await teamApi.getTimeline(this.data.id)
-      if (res.code === 200) {
-        this.setData({ timeline: res.data || [] })
-      }
+      this.setData({ timeline: res || [] })
     } catch (e) {
       // ignore
     }
@@ -65,11 +60,9 @@ Page({
 
     this.setData({ joining: true })
     try {
-      const res = await teamApi.join(this.data.id)
-      if (res.code === 200) {
-        wx.showToast({ title: '加入成功', icon: 'success' })
-        this.fetchDetail()
-      }
+      await teamApi.joinTeam(this.data.id)
+      wx.showToast({ title: '加入成功', icon: 'success' })
+      this.fetchDetail()
     } catch (e) {
       // ignore
     } finally {
@@ -84,7 +77,7 @@ Page({
       success: async (modalRes) => {
         if (!modalRes.confirm) return
         try {
-          await teamApi.leave(this.data.id)
+          await teamApi.quitTeam(this.data.id)
           wx.showToast({ title: '已退出团队', icon: 'success' })
           setTimeout(() => wx.navigateBack(), 500)
         } catch (e) {

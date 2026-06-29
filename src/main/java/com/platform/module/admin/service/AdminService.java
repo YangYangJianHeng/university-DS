@@ -43,6 +43,9 @@ public interface AdminService {
     // User role management
     void updateUserRole(Long userId, String role);
 
+    // User deletion (admin only)
+    void deleteUser(Long userId, Long operatorId);
+
     // ---- Admin full management ----
 
     // Project management

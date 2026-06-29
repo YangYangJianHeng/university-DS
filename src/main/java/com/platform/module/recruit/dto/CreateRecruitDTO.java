@@ -2,6 +2,7 @@ package com.platform.module.recruit.dto;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.Positive;
 import lombok.Data;
 
@@ -22,6 +23,7 @@ public class CreateRecruitDTO {
 
     private String projectType;
 
+    @NotEmpty(message = "至少需要添加一项所需技能")
     private List<String> requiredSkills;
 
     @Positive(message = "最大成员数必须为正数")

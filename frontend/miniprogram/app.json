@@ -92,7 +92,6 @@
     "t-empty": "tdesign-miniprogram/empty/empty",
     "t-popup": "tdesign-miniprogram/popup/popup",
     "t-swiper": "tdesign-miniprogram/swiper/swiper",
-    "t-swiper-item": "tdesign-miniprogram/swiper-item/swiper-item",
     "t-image": "tdesign-miniprogram/image/image",
     "t-divider": "tdesign-miniprogram/divider/divider",
     "t-checkbox": "tdesign-miniprogram/checkbox/checkbox",

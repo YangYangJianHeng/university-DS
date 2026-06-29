@@ -60,7 +60,8 @@
       <t-cell title="我的项目" leftIcon="folder-open" arrow bind:click="goMyProjects" />
       <t-cell title="我的任务" leftIcon="task" arrow bind:click="goMyTasks" />
       <t-cell title="竞赛收藏" leftIcon="star" arrow bind:click="goFavorites" />
-      <t-cell title="导师信息" leftIcon="user-talk" arrow bind:click="goTeacher" />
+      <t-cell title="导师信息" leftIcon="user-talk" arrow wx:if="{{userInfo.role !== 'TEACHER'}}" bind:click="goTeacher" />
+      <t-cell title="编辑导师资料" leftIcon="edit-1" arrow wx:if="{{userInfo.role === 'TEACHER'}}" bind:click="openTeacherDialog" />
       <t-cell title="文件中心" leftIcon="folder" arrow bind:click="goFiles" />
     </t-cell-group>
   </view>
@@ -87,4 +88,41 @@
   </view>
 
   <view class="safe-bottom"></view>
+
+  <!-- 导师信息编辑弹窗（仅 TEACHER 可见） -->
+  <t-popup visible="{{showTeacherDialog}}" placement="center" bind:visible-change="onTeacherDialogClose">
+    <view class="teacher-dialog">
+      <view class="dialog-header">
+        <text class="dialog-title">编辑导师资料</text>
+        <t-icon name="close" size="44rpx" color="#999" bind:tap="closeTeacherDialog" />
+      </view>
+      <view class="dialog-body">
+        <view class="form-item">
+          <text class="form-label">院系</text>
+          <input class="form-input" placeholder="如：计算机科学与技术学院"
+            value="{{teacherForm.department}}" data-field="department" bindinput="onTeacherFieldChange" maxlength="50" />
+        </view>
+        <view class="form-item">
+          <text class="form-label">职称</text>
+          <picker mode="selector" range="{{titleOptions}}" value="{{teacherTitleIndex}}"
+            data-field="title" bindchange="onTeacherTitleChange">
+            <view class="form-picker {{teacherForm.title ? '' : 'placeholder'}}">
+              {{teacherForm.title || '请选择职称'}}
+              <t-icon name="chevron-down" size="32rpx" color="#ccc" style="margin-left:auto;" />
+            </view>
+          </picker>
+        </view>
+        <view class="form-item">
+          <text class="form-label">研究方向</text>
+          <textarea class="form-textarea" placeholder="如：人工智能、机器学习、数据挖掘"
+            value="{{teacherForm.researchFields}}" data-field="researchFields" bindinput="onTeacherFieldChange"
+            auto-height maxlength="200" />
+        </view>
+      </view>
+      <view class="dialog-footer">
+        <t-button theme="light" variant="base" size="large" bind:tap="closeTeacherDialog">取消</t-button>
+        <t-button theme="primary" size="large" loading="{{savingTeacher}}" bind:tap="handleSaveTeacher">保存</t-button>
+      </view>
+    </view>
+  </t-popup>
 </view>

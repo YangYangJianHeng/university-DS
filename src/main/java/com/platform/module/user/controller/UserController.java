@@ -116,4 +116,22 @@ public class UserController {
         result.put("url", avatarUrl);
         return Result.success(result);
     }
+
+    @PutMapping("/teacher-profile")
+    public Result<Void> updateTeacherProfile(@RequestBody Map<String, String> params) {
+        Long userId = UserContext.getCurrentUserId();
+        userService.updateTeacherProfile(userId,
+                params.get("department"),
+                params.get("title"),
+                params.get("researchFields"));
+        return Result.<Void>success("导师信息已更新", null);
+    }
+
+    @DeleteMapping("/account")
+    public Result<Void> deleteAccount() {
+        Long userId = UserContext.getCurrentUserId();
+        userService.deleteAccount(userId);
+        UserContext.clear();
+        return Result.<Void>success("账户已注销", null);
+    }
 }

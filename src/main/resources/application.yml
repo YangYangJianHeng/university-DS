@@ -19,7 +19,7 @@ spring:
   sql:
     init:
       mode: always
-      schema-locations: classpath:schema.sql
+      schema-locations: classpath:init-all.sql
       defer-datasource-initialization: true
       continue-on-error: true
 

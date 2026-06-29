@@ -17,7 +17,7 @@
           <view class="flex-row">
             <t-icon name="user" size="28rpx" color="#fff" />
             <text class="ml-1" style="color:rgba(255,255,255,0.8);font-size:24rpx;">
-              {{recruit.currentCount || 0}}/{{recruit.requiredCount || recruit.targetCount || 0}}人
+              {{recruit.currentMembers || 0}}/{{recruit.maxMembers || 0}}人
             </text>
           </view>
           <view class="flex-row ml-4">
@@ -40,7 +40,7 @@
         </view>
         <view class="info-item">
           <text class="info-label">招募人数</text>
-          <text class="info-value">{{recruit.requiredCount || recruit.targetCount || 0}}人</text>
+          <text class="info-value">{{recruit.maxMembers || 0}}人</text>
         </view>
         <view class="info-item">
           <text class="info-label">截止日期</text>

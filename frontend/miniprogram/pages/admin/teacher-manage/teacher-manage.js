@@ -22,16 +22,14 @@ Page({
   async loadTeachers(page = 1) {
     this.setData({ loading: true })
     try {
-      const res = await adminApi.getTeachers({ page, size: 20 })
-      if (res.code === 200) {
-        const data = res.data
-        this.setData({
-          teachers: data.records || [],
-          total: data.total || 0,
-          page,
-          loading: false
-        })
-      }
+      const res = await adminApi.getAllTeachers({ page, size: 20 })
+      const data = res.records || res
+      this.setData({
+        teachers: Array.isArray(data) ? data : (data.records || []),
+        total: res.total || 0,
+        page,
+        loading: false
+      })
     } catch (e) {
       this.setData({ loading: false })
     }
@@ -41,7 +39,7 @@ Page({
     const { id, verified } = e.currentTarget.dataset
     const isVerified = verified === 1 || verified === '1' ? 0 : 1
     try {
-      await adminApi.updateTeacher(id, { isVerified })
+      await adminApi.updateTeacherInfo(id, { isVerified })
       wx.showToast({ title: isVerified ? '已认证' : '已取消认证', icon: 'success' })
       this.loadTeachers(this.data.page)
     } catch (e) {}

@@ -137,6 +137,7 @@ function request(options) {
       },
       fail(err) {
         if (showLoading) wx.hideLoading();
+        console.error(`[请求失败] ${method} ${url}:`, err.errMsg || err);
         if (!skipErrorToast) {
           wx.showToast({ title: '网络连接失败', icon: 'none' });
         }
@@ -163,7 +164,14 @@ function post(url, data = {}, options = {}) {
 
 /** PUT 请求 */
 function put(url, data = {}, options = {}) {
-  return request({ ...options, url, method: 'PUT', data });
+  // 支持 query params
+  const params = options.params || {};
+  const queryString = Object.entries(params)
+    .filter(([_, v]) => v !== undefined && v !== null && v !== '')
+    .map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`)
+    .join('&');
+  const fullUrl = queryString ? `${url}?${queryString}` : url;
+  return request({ ...options, url: fullUrl, method: 'PUT', data });
 }
 
 /** DELETE 请求 */

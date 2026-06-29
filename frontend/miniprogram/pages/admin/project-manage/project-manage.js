@@ -30,16 +30,14 @@ Page({
   async loadProjects(page = 1) {
     this.setData({ loading: true })
     try {
-      const res = await adminApi.getProjects({ page, size: 20 })
-      if (res.code === 200) {
-        const data = res.data
-        this.setData({
-          projects: (data.records || []).map(p => ({ ...p, _editStatus: p.status })),
-          total: data.total || 0,
-          page,
-          loading: false
-        })
-      }
+      const res = await adminApi.getAllProjects({ page, size: 20 })
+      const data = res.records || res
+      this.setData({
+        projects: (Array.isArray(data) ? data : (data.records || [])).map(p => ({ ...p, _editStatus: p.status })),
+        total: res.total || 0,
+        page,
+        loading: false
+      })
     } catch (e) {
       this.setData({ loading: false })
     }

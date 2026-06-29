@@ -22,20 +22,18 @@ Page({
   async loadTasks(page = 1) {
     this.setData({ loading: true })
     try {
-      const res = await adminApi.getTasks({ page, size: 20 })
-      if (res.code === 200) {
-        const data = res.data
-        this.setData({
-          tasks: (data.records || []).map(t => ({
-            ...t,
-            _editPriority: t.priority,
-            _editStatus: t.status
-          })),
-          total: data.total || 0,
-          page,
-          loading: false
-        })
-      }
+      const res = await adminApi.getAllTasks({ page, size: 20 })
+      const data = res.records || res
+      this.setData({
+        tasks: (Array.isArray(data) ? data : (data.records || [])).map(t => ({
+          ...t,
+          _editPriority: t.priority,
+          _editStatus: t.status
+        })),
+        total: res.total || 0,
+        page,
+        loading: false
+      })
     } catch (e) {
       this.setData({ loading: false })
     }

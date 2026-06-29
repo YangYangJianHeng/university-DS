@@ -76,6 +76,10 @@ Page({
       wx.showToast({ title: '请输入有效的招募人数', icon: 'none' })
       return
     }
+    if (skills.length === 0) {
+      wx.showToast({ title: '至少需要添加一项所需技能', icon: 'none' })
+      return
+    }
 
     this.setData({ submitting: true })
 
@@ -83,19 +87,20 @@ Page({
       const data = {
         title: form.title.trim(),
         projectType: form.projectType.trim(),
-        requiredCount: parseInt(form.requiredCount),
-        deadline: form.deadline ? form.deadline + 'T23:59:59' : '',
+        maxMembers: parseInt(form.requiredCount),
         description: form.description.trim(),
         requiredSkills: skills
       }
-
-      const res = await recruitApi.create(data)
-      if (res.code === 200) {
-        wx.showToast({ title: '发布成功', icon: 'success' })
-        setTimeout(() => {
-          wx.navigateBack()
-        }, 500)
+      // deadline需要匹配后端 @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+      if (form.deadline) {
+        data.deadline = form.deadline + ' 23:59:59'
       }
+
+      await recruitApi.create(data)
+      wx.showToast({ title: '发布成功', icon: 'success' })
+      setTimeout(() => {
+        wx.redirectTo({ url: '/pages/recruit/list/list' })
+      }, 500)
     } catch (e) {
       // ignore
     } finally {

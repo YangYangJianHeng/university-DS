@@ -42,8 +42,13 @@ const recruitApi = {
   getList(params) { return get('/recruit/list', params); },
   update(id, data) { return put(`/recruit/${id}`, data); },
   close(id) { return del(`/recruit/${id}`); },
-  match(id) { return get(`/recruit/match`, { id }); },
-  apply(id) { return post(`/recruit/${id}/apply`); }
+  match(id) { return get(`/recruit/match`, { recruitId: id }); },
+  apply(id) { return post(`/recruit/${id}/apply`); },
+  getMyRecruits() { return get('/recruit/my'); },
+  getApplications(id) { return get(`/recruit/${id}/applications`); },
+  approveApplication(applicationId, approved) { return put(`/recruit/applications/${applicationId}`, null, { params: { approved } }); },
+  convertToProject(id, data) { return post(`/recruit/${id}/convert-to-project`, data); },
+  toggleContinueRecruit(id, continueRecruit) { return put(`/recruit/${id}/continue-recruit`, null, { params: { continueRecruit } }); }
 };
 
 // ==================== 项目管理 ====================
@@ -54,7 +59,10 @@ const projectApi = {
   update(id, data) { return put(`/project/${id}`, data); },
   delete(id) { return del(`/project/${id}`); },
   getMembers(id) { return get(`/project/${id}/members`); },
-  updateStatus(id, status) { return put(`/project/${id}/status`, null, { params: { status } }); }
+  updateStatus(id, status) { return put(`/project/${id}/status`, null, { params: { status } }); },
+  getGantt(id) { return get(`/project/${id}/gantt`); },
+  getRisk(id) { return get(`/project/${id}/risk`); },
+  getMyProjects() { return get('/project/my'); }
 };
 
 // ==================== 任务管理 ====================
@@ -73,14 +81,18 @@ const competitionApi = {
   getList(params) { return get('/competition/list', params); },
   getDetail(id) { return get(`/competition/${id}`); },
   create(data) { return post('/competition', data); },
-  getMyCompetitions() { return get('/competition/my'); }
+  getMyCompetitions() { return get('/competition/my'); },
+  toggleCollect(id) { return post(`/competition/${id}/collect`); }
 };
 
 // ==================== 导师库 ====================
 const teacherApi = {
   getList(params) { return get('/teacher/list', params); },
   getDetail(id) { return get(`/teacher/${id}`); },
-  applyTeacher(data) { return post('/teacher/apply', data); }
+  applyTeacher(data) { return post('/teacher/apply', data); },
+  invite(teamId, teacherId) { return post(`/team/${teamId}/teacher/invite`, { teacherId }); },
+  /** 更新当前登录导师的院系、职称、研究方向 */
+  updateMyInfo(data) { return put('/user/teacher-profile', data); }
 };
 
 // ==================== 成果展厅 ====================
@@ -89,7 +101,9 @@ const achievementApi = {
   getDetail(id) { return get(`/achievement/${id}`); },
   create(data) { return post('/achievement', data); },
   update(id, data) { return put(`/achievement/${id}`, data); },
-  delete(id) { return del(`/achievement/${id}`); }
+  delete(id) { return del(`/achievement/${id}`); },
+  toggleLike(id) { return post(`/achievement/${id}/like`); },
+  toggleCollect(id) { return post(`/achievement/${id}/collect`); }
 };
 
 // ==================== 通知消息 ====================
@@ -139,7 +153,8 @@ const adminApi = {
   getAllTeachers(params) { return get('/admin/teachers', params); },
   getPendingTeachers(params) { return get('/admin/teachers/pending', params); },
   approveTeacher(id) { return put(`/admin/teachers/${id}/approve`); },
-  updateTeacherInfo(id, data) { return put(`/admin/teachers/${id}`, data); }
+  updateTeacherInfo(id, data) { return put(`/admin/teachers/${id}`, data); },
+  deleteTeacher(id) { return del(`/admin/teachers/${id}`); }
 };
 
 module.exports = {

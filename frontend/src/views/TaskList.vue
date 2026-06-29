@@ -1120,7 +1120,7 @@ function openCreateDialog() {
 }
 
 function resetCreateForm() {
-  createForm.value = { projectId: null, title: '', requiredSkills: '', priority: 'MEDIUM', deadline: null, description: '', assignees: [] }
+  createForm.value = { projectId: null, title: '', requiredSkills: '', priority: 'MEDIUM', deadline: null, description: '', assignees: [], files: [], uploadedFileIds: [] }
   recommendList.value = []
   currentProjectMembers.value = []
 }
@@ -1201,7 +1201,8 @@ async function handleCreateTask() {
       requiredSkills: createForm.value.requiredSkills,
       priority: createForm.value.priority,
       deadline: createForm.value.deadline,
-      assignees: createForm.value.assignees.map(a => ({ userId: a.userId, assignmentNote: a.assignmentNote }))
+      assignees: createForm.value.assignees.map(a => ({ userId: a.userId, assignmentNote: a.assignmentNote })),
+      fileIds: createForm.value.uploadedFileIds
     }
     await createTask(payload)
     ElMessage.success('任务创建成功')
@@ -1210,6 +1211,21 @@ async function handleCreateTask() {
     await loadTasks()
   } catch (_) {}
   finally { submitting.value = false }
+}
+
+// 创建任务 — 文件上传成功回调
+function onCreateFileSuccess(response: any, _file: any) {
+  const data = response.data
+  if (data?.id) {
+    if (!createForm.value.uploadedFileIds.includes(data.id)) {
+      createForm.value.uploadedFileIds.push(data.id)
+    }
+  }
+}
+
+// 创建任务 — 文件上传失败回调
+function onCreateFileError() {
+  ElMessage.error('文件上传失败')
 }
 
 // ========== 任务详情 ==========

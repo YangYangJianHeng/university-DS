@@ -43,22 +43,20 @@ Page({
       if (keyword) params.keyword = keyword
       if (filterType) params.status = filterType
 
+      // request.js 已自动解包 Result.data，res 直接是 IPage 对象
       const res = await recruitApi.getList(params)
-      if (res.code === 200) {
-        const data = res.data
-        const list = data.records || data.list || data || []
-        const total = data.total || list.length
-        const newRecruits = currentPage === 1 ? list : [...recruits, ...list]
+      const list = res.records || res.list || (Array.isArray(res) ? res : [])
+      const total = res.total || list.length
+      const newRecruits = currentPage === 1 ? list : [...recruits, ...list]
 
-        this.setData({
-          recruits: newRecruits,
-          total,
-          hasMore: newRecruits.length < total,
-          currentPage: currentPage + 1
-        })
-      }
+      this.setData({
+        recruits: newRecruits,
+        total,
+        hasMore: newRecruits.length < total,
+        currentPage: currentPage + 1
+      })
     } catch (e) {
-      // ignore
+      console.error('获取招募列表失败:', e)
     } finally {
       this.setData({ loading: false })
     }

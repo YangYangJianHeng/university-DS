@@ -184,6 +184,21 @@
                 {{ row.createdAt ? dayjs(row.createdAt).format('YYYY-MM-DD') : '--' }}
               </template>
             </el-table-column>
+            <el-table-column label="操作" width="90" fixed="right">
+              <template #default="{ row }">
+                <el-button
+                  v-if="row.role !== 'ADMIN'"
+                  size="small"
+                  type="danger"
+                  plain
+                  :loading="row._deleting"
+                  @click="handleDeleteUser(row)"
+                >
+                  删除
+                </el-button>
+                <span v-else style="color:#999;font-size:12px;">--</span>
+              </template>
+            </el-table-column>
           </el-table>
         </el-tab-pane>
 
@@ -1218,6 +1233,34 @@ async function handleToggleTeacher(row: any, makeTeacher: boolean) {
   } catch (_) {
   } finally {
     row._teacherToggling = false
+  }
+}
+
+async function handleDeleteUser(row: any) {
+  try {
+    await ElMessageBox.confirm(
+      `确认删除用户「${row.username}」(${row.phone})？\n\n该操作将永久删除该用户的所有数据（个人信息、技能、团队、项目、招募等），且不可恢复。`,
+      '⚠️ 删除用户确认',
+      {
+        confirmButtonText: '确认删除',
+        cancelButtonText: '取消',
+        type: 'warning',
+        confirmButtonClass: 'el-button--danger',
+      }
+    )
+  } catch {
+    return
+  }
+
+  row._deleting = true
+  try {
+    await request.delete(`/admin/users/${row.id}`)
+    ElMessage.success('用户已删除')
+    await loadUsers()
+    await loadStats()
+  } catch (_) {
+  } finally {
+    row._deleting = false
   }
 }
 

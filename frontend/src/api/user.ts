@@ -40,3 +40,11 @@ export function uploadAvatar(formData: FormData) {
 export function changePassword(data: { oldPassword: string; newPassword: string }) {
   return request.put('/user/password', data)
 }
+
+export function deleteAccount() {
+  return request.delete('/user/account')
+}
+
+export function updateTeacherProfile(data: { department: string; title: string; researchFields: string }) {
+  return request.put('/user/teacher-profile', data)
+}

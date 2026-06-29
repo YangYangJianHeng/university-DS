@@ -27,26 +27,30 @@ Page({
   async fetchDetail() {
     this.setData({ loading: true })
     try {
-      const res = await recruitApi.getDetail(this.data.id)
-      if (res.code === 200) {
-        const recruit = res.data
-        // 提取技能标签
-        const skills = recruit.skills || recruit.requiredSkills || []
-        this.setData({
-          recruit,
-          skills: Array.isArray(skills) ? skills : (skills.split ? skills.split(',') : [])
-        })
-        // 判断当前用户是否是发布者
-        const currentUserId = app.globalData.userInfo?.id
-        if (currentUserId && recruit.publisherId === currentUserId) {
-          this.setData({ isPublisher: true })
-          this.fetchApplications()
-        }
-        // 异步加载智能匹配
-        this.fetchMatches()
+      // request.js 已自动解包 Result.data，res 直接是 RecruitVO 对象
+      const recruit = await recruitApi.getDetail(this.data.id)
+      if (!recruit || !recruit.id) {
+        wx.showToast({ title: '招募信息不存在', icon: 'none' })
+        return
       }
+      // 提取技能标签
+      const skills = recruit.skills || recruit.requiredSkills || []
+      this.setData({
+        recruit,
+        skills: Array.isArray(skills) ? skills : (skills.split ? skills.split(',') : [])
+      })
+
+      // 判断当前用户是否是发布者或管理员
+      const currentUserId = app.globalData.userInfo?.id
+      const currentUserRole = app.globalData.userInfo?.role
+      if (currentUserId && (recruit.publisherId === currentUserId || currentUserRole === 'ADMIN')) {
+        this.setData({ isPublisher: true })
+        this.fetchApplications()
+      }
+      // 异步加载智能匹配
+      this.fetchMatches()
     } catch (e) {
-      // ignore
+      console.error('获取招募详情失败:', e)
     } finally {
       this.setData({ loading: false })
     }
@@ -54,10 +58,9 @@ Page({
 
   async fetchMatches() {
     try {
+      // request.js 已自动解包，res 直接是 List<Map>
       const res = await recruitApi.match(this.data.id)
-      if (res.code === 200) {
-        this.setData({ matchResults: res.data || [] })
-      }
+      this.setData({ matchResults: res || [] })
     } catch (e) {
       // ignore
     }
@@ -68,9 +71,7 @@ Page({
     this.setData({ loadingApplications: true })
     try {
       const res = await recruitApi.getApplications(this.data.id)
-      if (res.code === 200) {
-        this.setData({ applications: res.data || [] })
-      }
+      this.setData({ applications: res || [] })
     } catch (e) {
       // ignore
     } finally {
@@ -87,12 +88,10 @@ Page({
       success: async (modalRes) => {
         if (!modalRes.confirm) return
         try {
-          const res = await recruitApi.approveApplication(applicationId, true)
-          if (res.code === 200) {
-            wx.showToast({ title: '已通过', icon: 'success' })
-            this.fetchDetail()
-            this.fetchApplications()
-          }
+          await recruitApi.approveApplication(applicationId, true)
+          wx.showToast({ title: '已通过', icon: 'success' })
+          this.fetchDetail()
+          this.fetchApplications()
         } catch (e) {
           // ignore
         }
@@ -109,11 +108,9 @@ Page({
       success: async (modalRes) => {
         if (!modalRes.confirm) return
         try {
-          const res = await recruitApi.approveApplication(applicationId, false)
-          if (res.code === 200) {
-            wx.showToast({ title: '已拒绝', icon: 'success' })
-            this.fetchApplications()
-          }
+          await recruitApi.approveApplication(applicationId, false)
+          wx.showToast({ title: '已拒绝', icon: 'success' })
+          this.fetchApplications()
         } catch (e) {
           // ignore
         }
@@ -162,11 +159,9 @@ Page({
 
         this.setData({ applying: true })
         try {
-          const res = await recruitApi.apply(this.data.id)
-          if (res.code === 200) {
-            wx.showToast({ title: '申请成功', icon: 'success' })
-            this.fetchDetail()
-          }
+          await recruitApi.apply(this.data.id)
+          wx.showToast({ title: '申请成功', icon: 'success' })
+          this.fetchDetail()
         } catch (e) {
           // ignore
         } finally {

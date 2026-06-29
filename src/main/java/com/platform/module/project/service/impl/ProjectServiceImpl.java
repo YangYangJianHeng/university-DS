@@ -4,6 +4,7 @@ import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.platform.common.exception.BusinessException;
 import com.platform.common.util.UserContext;
@@ -20,7 +21,9 @@ import com.platform.module.file.mapper.FileMapper;
 import com.platform.module.project.entity.Project;
 import com.platform.module.project.mapper.ProjectMapper;
 import com.platform.module.project.service.ProjectService;
+import com.platform.module.recruit.entity.Application;
 import com.platform.module.recruit.entity.Recruit;
+import com.platform.module.recruit.mapper.ApplicationMapper;
 import com.platform.module.recruit.mapper.RecruitMapper;
 import com.platform.module.team.entity.Team;
 import com.platform.module.team.entity.TeamMember;
@@ -32,6 +35,10 @@ import com.platform.module.user.entity.User;
 import com.platform.module.user.entity.UserSkill;
 import com.platform.module.user.mapper.UserMapper;
 import com.platform.module.user.mapper.UserSkillMapper;
+import com.platform.module.achievement.entity.Achievement;
+import com.platform.module.achievement.mapper.AchievementMapper;
+import com.platform.module.collaboration.entity.Message;
+import com.platform.module.collaboration.mapper.MessageMapper;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
@@ -52,6 +59,9 @@ public class ProjectServiceImpl extends ServiceImpl<ProjectMapper, Project> impl
     private final UserMapper userMapper;
     private final UserSkillMapper userSkillMapper;
     private final RecruitMapper recruitMapper;
+    private final ApplicationMapper applicationMapper;
+    private final AchievementMapper achievementMapper;
+    private final MessageMapper messageMapper;
 
     public ProjectServiceImpl(TeamMapper teamMapper, TeamMemberMapper teamMemberMapper,
                               TeamTeacherMapper teamTeacherMapper,
@@ -59,7 +69,8 @@ public class ProjectServiceImpl extends ServiceImpl<ProjectMapper, Project> impl
                               TaskSubmissionMapper taskSubmissionMapper, TaskCommentMapper taskCommentMapper,
                               FileMapper fileMapper,
                               UserMapper userMapper, UserSkillMapper userSkillMapper,
-                              RecruitMapper recruitMapper) {
+                              RecruitMapper recruitMapper, ApplicationMapper applicationMapper,
+                              AchievementMapper achievementMapper, MessageMapper messageMapper) {
         this.teamMapper = teamMapper;
         this.teamMemberMapper = teamMemberMapper;
         this.teamTeacherMapper = teamTeacherMapper;
@@ -71,6 +82,9 @@ public class ProjectServiceImpl extends ServiceImpl<ProjectMapper, Project> impl
         this.userMapper = userMapper;
         this.userSkillMapper = userSkillMapper;
         this.recruitMapper = recruitMapper;
+        this.applicationMapper = applicationMapper;
+        this.achievementMapper = achievementMapper;
+        this.messageMapper = messageMapper;
     }
 
     @Override
@@ -321,11 +335,36 @@ public class ProjectServiceImpl extends ServiceImpl<ProjectMapper, Project> impl
         fileMapper.delete(
                 new LambdaQueryWrapper<FileEntity>().eq(FileEntity::getProjectId, projectId));
 
+        // 2.5 删除项目关联成果（achievement.project_id → project.id 外键，必须先于项目删除）
+        achievementMapper.delete(
+                new LambdaQueryWrapper<Achievement>().eq(Achievement::getProjectId, projectId));
+
         // 3. 删除项目本身
         removeById(projectId);
 
-        // 4. 级联删除关联团队相关数据
+        // 4. 级联删除关联团队相关数据（解散团队）
         if (teamId != null) {
+            // 删除团队成果（清理仅关联团队、不关联项目的成果）
+            achievementMapper.delete(
+                    new LambdaQueryWrapper<Achievement>().eq(Achievement::getTeamId, teamId));
+            // 删除团队消息
+            messageMapper.delete(
+                    new LambdaQueryWrapper<Message>().eq(Message::getTeamId, teamId));
+            // 删除团队招募关联的申请记录
+            List<Recruit> teamRecruits = recruitMapper.selectList(
+                    new LambdaQueryWrapper<Recruit>().eq(Recruit::getTeamId, teamId));
+            if (!teamRecruits.isEmpty()) {
+                List<Long> recruitIds = teamRecruits.stream().map(Recruit::getId).collect(Collectors.toList());
+                applicationMapper.delete(
+                        new LambdaQueryWrapper<Application>().in(Application::getRecruitId, recruitIds));
+            }
+            // 解除团队对招募的外键引用（必须用显式UpdateWrapper，MyBatis-Plus默认忽略null字段）
+            teamMapper.update(null, new LambdaUpdateWrapper<Team>()
+                    .set(Team::getRecruitId, null)
+                    .eq(Team::getId, teamId));
+            // 删除团队招募
+            recruitMapper.delete(
+                    new LambdaQueryWrapper<Recruit>().eq(Recruit::getTeamId, teamId));
             // 删除团队成员
             teamMemberMapper.delete(
                     new LambdaQueryWrapper<TeamMember>().eq(TeamMember::getTeamId, teamId));

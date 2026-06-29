@@ -152,6 +152,9 @@ const rules: FormRules = {
   ],
   description: [{ required: true, message: '请输入项目描述', trigger: 'blur' }],
   projectType: [{ required: true, message: '请选择项目类型', trigger: 'change' }],
+  requiredSkills: [
+    { type: 'array', required: true, min: 1, message: '至少需要添加一项所需技能', trigger: 'change' },
+  ],
   maxMembers: [{ required: true, message: '请设置最大人数', trigger: 'blur' }],
   deadline: [{ required: true, message: '请选择截止日期', trigger: 'change' }],
 }
@@ -182,7 +185,8 @@ async function handleSubmit() {
   if (!valid) return
   submitting.value = true
   try {
-    const deadlineStr = form.deadline ? form.deadline + 'T23:59:59' : null
+    // 后端 @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")，用空格而非 T
+    const deadlineStr = form.deadline ? form.deadline + ' 23:59:59' : null
     const res = await createRecruit({
       title: form.title,
       projectName: form.projectName,
@@ -194,7 +198,7 @@ async function handleSubmit() {
       deadline: deadlineStr,
     })
     ElMessage.success('招募发布成功')
-    router.push(`/recruit/${res.data?.id || ''}`)
+    router.push('/recruit')
   } catch {} finally { submitting.value = false }
 }
 </script>

@@ -30,9 +30,8 @@ Page({
     this.setData({ loading: true })
     try {
       const res = await projectApi.getList()
-      if (res.code === 200) {
-        this.setData({ projects: res.data || [] })
-      }
+      // request.js 已自动解包 Result.data
+      this.setData({ projects: (res.records || res || []) })
     } catch (e) {
       this.setData({ projects: [] })
     } finally {

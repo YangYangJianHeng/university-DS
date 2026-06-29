@@ -22,18 +22,16 @@ Page({
   async fetchDetail() {
     this.setData({ loading: true })
     try {
-      const res = await projectApi.getDetail(this.data.id)
-      if (res.code === 200) {
-        const project = res.data
-        this.setData({ project })
+      const project = await projectApi.getDetail(this.data.id)
+      // request.js 已自动解包 Result.data
+      this.setData({ project })
 
-        // 解析里程碑
-        if (project.milestones) {
-          const milestones = typeof project.milestones === 'string'
-            ? JSON.parse(project.milestones)
-            : project.milestones
-          this.setData({ milestones: Array.isArray(milestones) ? milestones : [] })
-        }
+      // 解析里程碑
+      if (project.milestones) {
+        const milestones = typeof project.milestones === 'string'
+          ? JSON.parse(project.milestones)
+          : project.milestones
+        this.setData({ milestones: Array.isArray(milestones) ? milestones : [] })
       }
     } catch (e) {
       // ignore
@@ -48,25 +46,22 @@ Page({
 
   async fetchGantt() {
     try {
-      const res = await projectApi.getGantt(this.data.id)
-      if (res.code === 200) {
-        const tasks = res.data || []
-        if (tasks.length > 0) {
-          const times = tasks.flatMap(t => [new Date(t.startDate).getTime(), new Date(t.endDate).getTime()])
-          const minTime = Math.min(...times)
-          const maxTime = Math.max(...times)
-          const totalMs = maxTime - minTime || 1
+      const tasks = await projectApi.getGantt(this.data.id)
+      if (tasks && tasks.length > 0) {
+        const times = tasks.flatMap(t => [new Date(t.startDate).getTime(), new Date(t.endDate).getTime()])
+        const minTime = Math.min(...times)
+        const maxTime = Math.max(...times)
+        const totalMs = maxTime - minTime || 1
 
-          const colors = ['#4e6ef2', '#52c41a', '#fa8c16', '#8b5cf6', '#f5222d', '#13c2c2']
-          const ganttData = tasks.map((t, i) => ({
-            name: t.name || t.title,
-            left: ((new Date(t.startDate).getTime() - minTime) / totalMs) * 100,
-            width: Math.max(((new Date(t.endDate).getTime() - new Date(t.startDate).getTime()) / totalMs) * 100, 3),
-            color: colors[i % colors.length]
-          }))
+        const colors = ['#4e6ef2', '#52c41a', '#fa8c16', '#8b5cf6', '#f5222d', '#13c2c2']
+        const ganttData = tasks.map((t, i) => ({
+          name: t.name || t.title,
+          left: ((new Date(t.startDate).getTime() - minTime) / totalMs) * 100,
+          width: Math.max(((new Date(t.endDate).getTime() - new Date(t.startDate).getTime()) / totalMs) * 100, 3),
+          color: colors[i % colors.length]
+        }))
 
-          this.setData({ ganttData })
-        }
+        this.setData({ ganttData })
       }
     } catch (e) {
       // ignore
@@ -75,9 +70,8 @@ Page({
 
   async fetchRisk() {
     try {
-      const res = await projectApi.getRisk(this.data.id)
-      if (res.code === 200 && res.data) {
-        const risk = res.data
+      const risk = await projectApi.getRisk(this.data.id)
+      if (risk) {
         const colorMap = { '低': '#52c41a', '中': '#fa8c16', '高': '#f5222d' }
         this.setData({
           riskInfo: risk,

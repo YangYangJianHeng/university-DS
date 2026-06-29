@@ -330,11 +330,11 @@ function dispose() {
   window.removeEventListener('resize', onResize)
 
   for (const shape of shapes) {
-    shape.traverse((child) => {
+    shape.traverse((child: THREE.Object3D) => {
       if (child instanceof THREE.Mesh) {
         child.geometry.dispose()
         if (Array.isArray(child.material)) {
-          child.material.forEach((m) => m.dispose())
+          child.material.forEach((m: THREE.Material) => m.dispose())
         } else {
           child.material.dispose()
         }

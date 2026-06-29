@@ -35,8 +35,8 @@ public class TeacherController {
 
     @GetMapping("/teacher/list")
     @Operation(summary = "List all teachers")
-    public Result<List<Teacher>> list() {
-        return Result.success(teacherService.list());
+    public Result<List<Map<String, Object>>> list(@RequestParam(required = false) String department) {
+        return Result.success(teacherService.listWithUserInfo(department));
     }
 
     @GetMapping("/teacher/{id}")
@@ -73,6 +73,13 @@ public class TeacherController {
     public Result<Void> approve(@PathVariable Long id) {
         teacherService.approveInvitation(id);
         return Result.success();
+    }
+
+    @GetMapping("/teacher/invitations/pending")
+    @Operation(summary = "Get pending teacher invitations")
+    public Result<List<Map<String, Object>>> getPendingInvitations() {
+        Long userId = UserContext.getCurrentUserId();
+        return Result.success(teacherService.getPendingInvitations(userId));
     }
 
     @GetMapping("/teacher/my-teams")

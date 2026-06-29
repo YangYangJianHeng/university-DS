@@ -52,7 +52,7 @@ Page({
     this.setData({ loading: true })
 
     try {
-      const res = await userApi.register({
+      await userApi.register({
         phone: phone.trim(),
         username: username.trim(),
         password: password.trim(),
@@ -60,12 +60,10 @@ Page({
         studentId: studentId.trim()
       })
 
-      if (res.code === 200) {
-        wx.showToast({ title: '注册成功', icon: 'success' })
-        setTimeout(() => {
-          wx.navigateBack()
-        }, 500)
-      }
+      wx.showToast({ title: '注册成功', icon: 'success' })
+      setTimeout(() => {
+        wx.navigateBack()
+      }, 500)
     } catch (err) {
       console.error('注册失败:', err)
     } finally {

@@ -45,10 +45,9 @@ Page({
 
     this.setData({ loading: true })
     try {
-      const res = await taskApi.getMyTasks()
-      if (res.code === 200) {
-        this.setData({ tasks: res.data || [] })
-      }
+      const res = await taskApi.getList({ page: 1, size: 99 })
+      // request.js 已自动解包 Result.data
+      this.setData({ tasks: (res.records || res || []) })
     } catch (e) {
       this.setData({ tasks: [] })
     } finally {

@@ -21,12 +21,10 @@ Page({
     this.setData({ loading: true })
     try {
       const res = await competitionApi.getDetail(this.data.id)
-      if (res.code === 200) {
-        this.setData({
-          competition: res.data,
-          isFavorited: res.data.isFavorited || false
-        })
-      }
+      this.setData({
+        competition: res,
+        isFavorited: res.isFavorited || false
+      })
     } catch (e) {
       // ignore
     } finally {

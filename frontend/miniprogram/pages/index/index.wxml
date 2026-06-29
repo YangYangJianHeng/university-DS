@@ -41,6 +41,17 @@
 
   <!-- 已登录 - 工作台 -->
   <block wx:else>
+    <!-- 加载错误提示 -->
+    <view class="network-error-card" wx:if="{{loadError}}">
+      <view class="error-icon">⚠️</view>
+      <view class="error-msg">数据加载失败</view>
+      <view class="error-desc">请确认后端服务已启动(端口8080)</view>
+      <view class="error-desc">且MySQL、Redis正常运行</view>
+      <t-button theme="primary" size="medium" bind:tap="fetchDashboard" class="retry-btn">
+        重新加载
+      </t-button>
+    </view>
+
     <!-- 问候语 -->
     <view class="greeting-section">
       <view class="greeting-text">

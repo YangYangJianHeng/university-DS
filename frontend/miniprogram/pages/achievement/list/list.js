@@ -32,19 +32,17 @@ Page({
       const params = { page: currentPage, size: 10 }
       if (keyword) params.keyword = keyword
 
+      // request.js 已自动解包 Result.data，res 直接是 IPage 对象
       const res = await achievementApi.getList(params)
-      if (res.code === 200) {
-        const data = res.data
-        const list = data.records || data.list || data || []
-        const total = data.total || list.length
-        const newList = currentPage === 1 ? list : [...achievements, ...list]
+      const list = res.records || res.list || (Array.isArray(res) ? res : [])
+      const total = res.total || list.length
+      const newList = currentPage === 1 ? list : [...achievements, ...list]
 
-        this.setData({
-          achievements: newList,
-          hasMore: newList.length < total,
-          currentPage: currentPage + 1
-        })
-      }
+      this.setData({
+        achievements: newList,
+        hasMore: newList.length < total,
+        currentPage: currentPage + 1
+      })
     } catch (e) {
       // ignore
     } finally {

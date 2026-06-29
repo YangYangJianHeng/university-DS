@@ -182,7 +182,7 @@ function scrollToFeatures() {
 
 async function fetchStats() {
   try {
-    const res = await getPlatformStats()
+    const res: any = await getPlatformStats()
     if (res.code === 200 && res.data) {
       stats.value = res.data
     }

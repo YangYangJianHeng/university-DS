@@ -132,8 +132,8 @@ const avatarColors = [
 function projectStatusType(status: string): 'success' | 'warning' | 'danger' | 'info' {
   switch (status) {
     case 'PLANNING': case 'IN_PROGRESS': return 'success'
-    case 'REVIEW': return ''
-    case 'COMPLETED': return ''
+    case 'REVIEW': return 'warning'
+    case 'COMPLETED': return 'info'
     case 'ARCHIVED': return 'warning'
     case 'CLOSED': return 'danger'
     default: return 'info'

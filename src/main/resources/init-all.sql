@@ -1,9 +1,21 @@
 -- =============================================
 -- 大学生竞赛/科研项目组队匹配与过程管理平台
--- 完整建表+初始化数据（共23张表）
+-- 完整数据库初始化脚本（MySQL）
+-- 
+-- 整合了以下文件：
+--   - mysql-init.sql（建库）
+--   - schema.sql（建表）
+--   - init-all.sql（示例数据）
+--   - migration*.sql（变更已合并到建表语句）
+-- 
+-- 使用方式：
+--   mysql -u root -p < init-all.sql
+--   或直接在 Navicat/DataGrip 中执行
 -- =============================================
 
-CREATE DATABASE IF NOT EXISTS `university_platform` DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE DATABASE IF NOT EXISTS `university_platform`
+    DEFAULT CHARACTER SET utf8mb4
+    DEFAULT COLLATE utf8mb4_unicode_ci;
 
 USE `university_platform`;
 
@@ -129,7 +141,7 @@ CREATE TABLE IF NOT EXISTS `team_teacher` (
     `invited_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
     `approved_at` DATETIME,
     FOREIGN KEY (`team_id`) REFERENCES `team`(`id`),
-    FOREIGN KEY (`teacher_id`) REFERENCES `user`(`id`)
+    FOREIGN KEY (`teacher_id`) REFERENCES `teacher`(`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- =============================================
@@ -391,48 +403,127 @@ CREATE TABLE IF NOT EXISTS `system_config` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- =============================================
+-- 24. 徽章定义表
+-- =============================================
+CREATE TABLE IF NOT EXISTS `badge` (
+    `id` BIGINT AUTO_INCREMENT PRIMARY KEY,
+    `name` VARCHAR(50) NOT NULL,
+    `description` VARCHAR(200),
+    `icon` VARCHAR(50) DEFAULT 'badge_default',
+    `condition_type` VARCHAR(30) COMMENT 'COMPLETED_TASKS / TEAM_COUNT / SKILL_COUNT / ACHIEVEMENT_COUNT / COMPETITION_COUNT / MASTER_SKILL / HAS_HONOR / RECRUIT_COUNT / PROJECT_COUNT / EXPERIENCE_COUNT / ALL_ROUNDER',
+    `condition_value` INT DEFAULT 0,
+    `category` VARCHAR(30) DEFAULT 'general',
+    `sort_order` INT DEFAULT 0,
+    `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- =============================================
+-- 25. 奖状/证书表
+-- =============================================
+CREATE TABLE IF NOT EXISTS `certificate` (
+    `id` BIGINT AUTO_INCREMENT PRIMARY KEY,
+    `user_id` BIGINT NOT NULL COMMENT '获奖用户ID',
+    `badge_id` BIGINT NOT NULL COMMENT '对应徽章ID',
+    `badge_name` VARCHAR(50) NOT NULL COMMENT '徽章/奖项名称',
+    `user_name` VARCHAR(50) NOT NULL COMMENT '用户姓名（生成时快照）',
+    `student_id` VARCHAR(20) COMMENT '学号（生成时快照）',
+    `image_path` VARCHAR(500) COMMENT '奖状图片路径',
+    `awarded_at` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '获奖时间',
+    `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (`user_id`) REFERENCES `user`(`id`),
+    FOREIGN KEY (`badge_id`) REFERENCES `badge`(`id`),
+    UNIQUE KEY `uk_user_badge` (`user_id`, `badge_id`),
+    INDEX `idx_user_id` (`user_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- =============================================
+-- 26. AI 聊天会话表
+-- =============================================
+CREATE TABLE IF NOT EXISTS `ai_chat_session` (
+    `id` BIGINT AUTO_INCREMENT PRIMARY KEY,
+    `user_id` BIGINT NOT NULL COMMENT '用户ID',
+    `title` VARCHAR(200) DEFAULT '新的对话' COMMENT '会话标题（由AI自动生成）',
+    `summary` TEXT COMMENT '历史对话摘要（压缩后的旧消息）',
+    `message_count` INT DEFAULT 0 COMMENT '消息总数',
+    `status` VARCHAR(20) DEFAULT 'ACTIVE' COMMENT 'ACTIVE/ARCHIVED',
+    `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+    `updated_at` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (`user_id`) REFERENCES `user`(`id`),
+    INDEX `idx_user_id` (`user_id`),
+    INDEX `idx_updated_at` (`updated_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- =============================================
+-- 27. AI 聊天消息表
+-- =============================================
+CREATE TABLE IF NOT EXISTS `ai_chat_message` (
+    `id` BIGINT AUTO_INCREMENT PRIMARY KEY,
+    `session_id` BIGINT NOT NULL COMMENT '会话ID',
+    `user_id` BIGINT NOT NULL COMMENT '用户ID（冗余，方便按用户查询）',
+    `role` VARCHAR(20) NOT NULL COMMENT 'user / assistant / system',
+    `content` TEXT NOT NULL COMMENT '消息内容',
+    `compressed` TINYINT DEFAULT 0 COMMENT '是否已被压缩（1=已压缩到摘要中）',
+    `token_count` INT DEFAULT 0 COMMENT '估算token数',
+    `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (`session_id`) REFERENCES `ai_chat_session`(`id`),
+    FOREIGN KEY (`user_id`) REFERENCES `user`(`id`),
+    INDEX `idx_session_id` (`session_id`),
+    INDEX `idx_user_id` (`user_id`),
+    INDEX `idx_created_at` (`created_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- =============================================
 -- 初始化示例数据
 -- 
 -- 注意：用户、技能、招募、团队、项目、通知、导师、成果、审核日志、竞赛
 -- 等数据已由 DataInitializer.java 统一管理（启动时自动初始化），
--- 本脚本仅保留 SQL 独有的初始化数据。
+-- 以下仅包含 SQL 独有的初始化数据。
+-- 所有 INSERT 使用 WHERE NOT EXISTS 保证幂等性，可重复执行。
 -- =============================================
 
--- 示例系统配置
-INSERT INTO `system_config` (`config_key`, `config_value`, `description`) VALUES ('platform.name', '大学生竞赛/科研项目组队匹配与过程管理平台', '平台名称');
-INSERT INTO `system_config` (`config_key`, `config_value`, `description`) VALUES ('platform.version', '1.0.0', '平台版本号');
-INSERT INTO `system_config` (`config_key`, `config_value`, `description`) VALUES ('audit.required', 'true', '是否需要审核');
+-- 系统配置
+INSERT INTO `system_config` (`config_key`, `config_value`, `description`)
+SELECT * FROM (SELECT 'platform.name' AS k, '大学生竞赛/科研项目组队匹配与过程管理平台' AS v, '平台名称' AS d) AS tmp
+WHERE NOT EXISTS (SELECT 1 FROM `system_config` WHERE `config_key` = tmp.k) LIMIT 1;
 
--- =============================================
--- 任务执行人关联、任务成果提交、任务评论
--- （DataInitializer 未处理，仅在本脚本中初始化）
--- =============================================
+INSERT INTO `system_config` (`config_key`, `config_value`, `description`)
+SELECT * FROM (SELECT 'platform.version', '1.0.0', '平台版本号') AS tmp
+WHERE NOT EXISTS (SELECT 1 FROM `system_config` WHERE `config_key` = 'platform.version') LIMIT 1;
+
+INSERT INTO `system_config` (`config_key`, `config_value`, `description`)
+SELECT * FROM (SELECT 'audit.required', 'true', '是否需要审核') AS tmp
+WHERE NOT EXISTS (SELECT 1 FROM `system_config` WHERE `config_key` = 'audit.required') LIMIT 1;
 
 -- 任务执行人关联
-INSERT INTO `task_assignee` (`task_id`, `user_id`, `assignment_note`, `skill_match_score`, `status`) VALUES (1, 2, '整体负责需求分析和系统设计', 0.95, 'ACCEPTED');
-INSERT INTO `task_assignee` (`task_id`, `user_id`, `assignment_note`, `skill_match_score`, `status`) VALUES (2, 4, '负责用户管理模块的后端开发', 0.88, 'ACCEPTED');
-INSERT INTO `task_assignee` (`task_id`, `user_id`, `assignment_note`, `skill_match_score`, `status`) VALUES (3, 6, '负责数据采集和存储模块', 0.82, 'ASSIGNED');
-INSERT INTO `task_assignee` (`task_id`, `user_id`, `assignment_note`, `skill_match_score`, `status`) VALUES (4, 5, '负责核心推荐算法实现', 0.91, 'ASSIGNED');
-INSERT INTO `task_assignee` (`task_id`, `user_id`, `assignment_note`, `skill_match_score`, `status`) VALUES (5, 4, '负责前端页面开发', 0.75, 'ASSIGNED');
+INSERT IGNORE INTO `task_assignee` (`task_id`, `user_id`, `assignment_note`, `skill_match_score`, `status`) VALUES
+(1, 2, '整体负责需求分析和系统设计', 0.95, 'ACCEPTED'),
+(2, 4, '负责用户管理模块的后端开发', 0.88, 'ACCEPTED'),
+(3, 6, '负责数据采集和存储模块', 0.82, 'ASSIGNED'),
+(4, 5, '负责核心推荐算法实现', 0.91, 'ASSIGNED'),
+(5, 4, '负责前端页面开发', 0.75, 'ASSIGNED');
 
 -- 任务成果提交
-INSERT INTO `task_submission` (`task_id`, `submitter_id`, `title`, `description`, `status`, `review_comment`, `reviewer_id`, `reviewed_at`)
+INSERT IGNORE INTO `task_submission` (`task_id`, `submitter_id`, `title`, `description`, `status`, `review_comment`, `reviewer_id`, `reviewed_at`)
 VALUES (1, 2, '需求分析文档V1.0', '包含功能需求、非功能需求、用例图和系统架构图，共计45页。', 'APPROVED', '文档内容详尽，架构设计合理，通过验收。', 2, '2026-06-14 10:30:00');
 
-INSERT INTO `task_submission` (`task_id`, `submitter_id`, `title`, `description`, `status`)
+INSERT IGNORE INTO `task_submission` (`task_id`, `submitter_id`, `title`, `description`, `status`)
 VALUES (2, 4, '用户注册登录模块初版', '已完成用户注册、登录、JWT鉴权功能的后端API开发，正在进行前端联调。', 'PENDING_REVIEW');
 
 -- 任务评论
-INSERT INTO `task_comment` (`task_id`, `user_id`, `content`) VALUES (1, 2, '需求分析文档已经完成，请大家查阅并提出修改意见。');
-INSERT INTO `task_comment` (`task_id`, `user_id`, `content`) VALUES (1, 4, '收到，架构设计清晰，数据库设计也符合预期。');
-INSERT INTO `task_comment` (`task_id`, `user_id`, `content`) VALUES (2, 2, '用户管理模块的API文档已经更新到Swagger，注意接口鉴权逻辑。');
-INSERT INTO `task_comment` (`task_id`, `user_id`, `content`, `mentioned_user_ids`) VALUES (2, 4, '王五，注册接口的验证码逻辑需要增加限流保护。', '[4]');
+INSERT INTO `task_comment` (`task_id`, `user_id`, `content`) VALUES
+(1, 2, '需求分析文档已经完成，请大家查阅并提出修改意见。'),
+(1, 4, '收到，架构设计清晰，数据库设计也符合预期。'),
+(2, 2, '用户管理模块的API文档已经更新到Swagger，注意接口鉴权逻辑。');
+INSERT INTO `task_comment` (`task_id`, `user_id`, `content`, `mentioned_user_ids`) VALUES
+(2, 4, '王五，注册接口的验证码逻辑需要增加限流保护。', '[4]');
 
--- =============================================
 -- 公告数据
--- =============================================
-
-INSERT INTO `announcement` (`title`, `content`, `type`) VALUES
+INSERT IGNORE INTO `announcement` (`title`, `content`, `type`) VALUES
 ('平台正式上线公告', '大学生竞赛/科研项目组队匹配与过程管理平台已正式上线！欢迎大家注册使用，发布招募信息，组建参赛团队。', 'SYSTEM'),
 ('2026年互联网+大赛报名通知', '2026年中国国际"互联网+"大学生创新创业大赛已启动报名，报名截止时间：2026年5月30日。请有意参赛的同学尽快组队并提交报名材料。', 'COMPETITION'),
 ('团队协作功能更新', '平台新增任务中心功能，支持多人任务指派、成果提交和评论沟通，帮助团队更高效地协作完成项目。', 'SYSTEM');
+
+-- =============================================
+-- 初始化完成
+-- =============================================
+SELECT '✅ 数据库初始化完成！共创建 27 张表' AS 状态;

@@ -15,7 +15,8 @@ Page({
       activeRecruitCount: 0
     },
     recentRecruits: [],
-    loading: true
+    loading: true,
+    loadError: false
   },
 
   onShow() {
@@ -33,7 +34,7 @@ Page({
 
   onPullDownRefresh() {
     if (app.globalData.isLoggedIn) {
-      Promise.all([this.fetchDashboard(), this.fetchUnreadCount()]).finally(() => {
+      this.fetchDashboard().finally(() => {
         wx.stopPullDownRefresh()
       })
     } else {
@@ -51,19 +52,26 @@ Page({
   },
 
   async fetchDashboard() {
-    this.setData({ loading: true })
+    this.setData({ loading: true, loadError: false })
     try {
-      // 并行获取各模块数据
       const [teams, recruits, tasks, unread] = await Promise.allSettled([
-        teamApi.getMyTeams().catch(() => []),
-        recruitApi.getList({ page: 1, size: 5 }).catch(() => ({ records: [] })),
-        taskApi.getList({ page: 1, size: 99 }).catch(() => ({ records: [] })),
-        notificationApi.getUnreadCount().catch(() => 0)
+        teamApi.getMyTeams(),
+        recruitApi.getList({ page: 1, size: 5 }),
+        taskApi.getList({ page: 1, size: 99 }),
+        notificationApi.getUnreadCount()
       ])
+
+      // 检查是否所有请求都失败了（可能是后端未启动或网络不通）
+      const allFailed = [teams, recruits, tasks, unread].every(r => r.status === 'rejected')
+      if (allFailed) {
+        console.error('仪表盘所有API请求失败:', teams.reason || '后端无法连接')
+        this.setData({ loadError: true })
+        return
+      }
 
       const teamData = teams.status === 'fulfilled' ? (teams.value || []) : []
       const recruitData = recruits.status === 'fulfilled' ? (recruits.value || {}) : {}
-      const taskData = tasks.status === 'fulfilled' ? (taskDataVal = tasks.value || {}) : {}
+      const taskData = tasks.status === 'fulfilled' ? (tasks.value || {}) : {}
       const unreadVal = unread.status === 'fulfilled' ? (unread.value || 0) : 0
 
       const taskRecords = taskData.records || taskData || []

@@ -31,4 +31,14 @@ public interface UserService {
     UserVO getUserById(Long userId);
 
     String uploadAvatar(Long userId, MultipartFile file);
+
+    /**
+     * 更新导师信息（院系、职称、研究方向）
+     */
+    void updateTeacherProfile(Long userId, String department, String title, String researchFields);
+
+    /**
+     * 注销账户（普通用户和导师可用）- 清理所有关联数据并删除账户
+     */
+    void deleteAccount(Long userId);
 }

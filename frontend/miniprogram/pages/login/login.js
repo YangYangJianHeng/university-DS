@@ -47,7 +47,7 @@ Page({
       const res = await userApi.getCaptcha()
       if (res && res.captchaImage) {
         this.setData({
-          captchaSrc: 'data:image/png;base64,' + res.captchaImage,
+          captchaSrc: res.captchaImage,
           'form.captchaKey': res.captchaKey,
           'form.captchaCode': ''
         })

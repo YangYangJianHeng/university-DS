@@ -48,14 +48,14 @@
           <view class="recruit-desc text-secondary text-sm mt-2">{{item.description || '暂无描述'}}</view>
 
           <view class="recruit-tags mt-2">
-            <text class="tag tag-primary" wx:for="{{item.skills || item.requiredSkills || []}}" wx:for-item="skill" wx:key="*this">{{skill}}</text>
+            <text class="tag tag-primary" wx:for="{{item.requiredSkills || item.skills || []}}" wx:for-item="skill" wx:key="*this">{{skill}}</text>
           </view>
 
           <view class="recruit-footer flex-between mt-3">
             <view class="flex-row">
               <view class="flex-row recruit-meta-item">
                 <t-icon name="user" size="24rpx" color="#8c8c8c" />
-                <text class="text-sm text-muted ml-1">{{item.currentCount || 0}}/{{item.requiredCount || item.targetCount || 0}}人</text>
+                <text class="text-sm text-muted ml-1">{{item.currentMembers || 0}}/{{item.maxMembers || 0}}人</text>
               </view>
               <view class="flex-row recruit-meta-item ml-3">
                 <t-icon name="time" size="24rpx" color="#8c8c8c" />

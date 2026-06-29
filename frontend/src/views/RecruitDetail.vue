@@ -322,10 +322,12 @@ const matchResults = ref<any[]>([])
 const applications = ref<any[]>([])
 
 const isPublisher = computed(() => {
+  if (!recruit.value) return false
   const userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}')
   const currentUserId = Number(userInfo.id || '0')
+  const recruiterId = Number(recruit.value.publisherId || '0')
   const isAdmin = userInfo.role === 'ADMIN'
-  return recruit.value && currentUserId > 0 && (recruit.value.publisherId === currentUserId || isAdmin)
+  return currentUserId > 0 && recruiterId > 0 && (recruiterId === currentUserId || isAdmin)
 })
 
 const memberPercent = computed(() => {
@@ -346,7 +348,9 @@ const memberStatusClass = computed(() =>
 const canToggleContinueRecruit = computed(() => {
   if (!recruit.value?.projectId) return false
   const userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}')
-  return recruit.value.publisherId === Number(userInfo.id || '0') || userInfo.role === 'ADMIN'
+  const currentUserId = Number(userInfo.id || '0')
+  const recruiterId = Number(recruit.value.publisherId || '0')
+  return recruiterId > 0 && (recruiterId === currentUserId || userInfo.role === 'ADMIN')
 })
 
 const togglingContinue = ref(false)
@@ -404,7 +408,10 @@ async function loadMatches() {
   try {
     const res = await matchRecruit(id)
     matchResults.value = Array.isArray(res.data) ? res.data : []
-  } catch { matchResults.value = [] } finally { matchingLoading.value = false }
+  } catch { 
+    console.error('智能匹配加载失败')
+    matchResults.value = [] 
+  } finally { matchingLoading.value = false }
 }
 
 async function handleToggleContinueRecruit() {

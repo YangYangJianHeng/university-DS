@@ -123,499 +123,429 @@ public class DataInitializer implements CommandLineRunner {
     }
 
     private void initUsers() {
-        // 管理员
+        // 不再自动创建任何假用户。
+        // 系统启动时仅确保存在一个管理员账号（用于首次部署登录），其余所有用户均通过注册入口真实创建。
         User admin = findUserByPhone("13800000000");
         if (admin == null) {
             admin = createUser("13800000000", "ADMIN001", "管理员", "admin123", null, null, "ADMIN", 1);
             System.out.println("Admin user created (id=" + admin.getId() + ")");
         }
-
-        // 演示用户
-        User demo = findUserByPhone("13800000001");
-        if (demo == null) {
-            demo = createUser("13800000001", "2024001", "张三", "123456",
-                    "计算机科学与技术", "2023级", "USER", 1);
-            System.out.println("Demo user created (id=" + demo.getId() + ")");
-        }
-
-        // ---- 学生用户 ----
-        if (findUserByPhone("13800000002") == null) {
-            createUser("13800000002", "2024002", "李四", "123456",
-                    "计算机科学与技术", "2023级", "USER", 1);
-        }
-        if (findUserByPhone("13800000003") == null) {
-            createUser("13800000003", "2024003", "王五", "123456",
-                    "软件工程", "2022级", "USER", 1);
-        }
-        if (findUserByPhone("13800000004") == null) {
-            createUser("13800000004", "2024004", "赵六", "123456",
-                    "人工智能", "2023级", "USER", 1);
-        }
-        if (findUserByPhone("13800000005") == null) {
-            createUser("13800000005", "2024005", "陈七", "123456",
-                    "数据科学与大数据技术", "2024级", "USER", 1);
-        }
-        if (findUserByPhone("13800000006") == null) {
-            createUser("13800000006", "2024006", "刘八", "123456",
-                    "电子信息工程", "2022级", "USER", 1);
-        }
-        if (findUserByPhone("13800000007") == null) {
-            createUser("13800000007", "2024007", "孙九", "123456",
-                    "数学与应用数学", "2023级", "USER", 1);
-        }
-        if (findUserByPhone("13800000008") == null) {
-            createUser("13800000008", "2024008", "周十", "123456",
-                    "物联网工程", "2024级", "USER", 1);
-        }
-
-        // ---- 教师用户 ----
-        if (findUserByPhone("13800000010") == null) {
-            createUser("13800000010", "T2024001", "王教授", "123456",
-                    "计算机科学与技术", null, "TEACHER", 1);
-        }
-        if (findUserByPhone("13800000011") == null) {
-            createUser("13800000011", "T2024002", "李教授", "123456",
-                    "人工智能", null, "TEACHER", 1);
-        }
-        if (findUserByPhone("13800000012") == null) {
-            createUser("13800000012", "T2024003", "张教授", "123456",
-                    "电子信息工程", null, "TEACHER", 1);
-        }
     }
 
     private void initSkills() {
-        // 已存在的技能不再重复插入
         if (userSkillMapper.selectCount(new LambdaQueryWrapper<>()) > 0) return;
 
-        // 李四 - 计算机科学与技术
-        addSkill(3L, "Java", "ADVANCED");
-        addSkill(3L, "Spring Boot", "INTERMEDIATE");
-        addSkill(3L, "MySQL", "INTERMEDIATE");
-        addSkill(3L, "Vue.js", "BEGINNER");
+        // 动态查找所有 USER 角色且尚未添加技能的用户，添加默认技能
+        List<User> normalUsers = userMapper.selectList(
+                new LambdaQueryWrapper<User>().eq(User::getRole, "USER"));
+        if (normalUsers.isEmpty()) {
+            System.out.println("No USER role users found, skip skill init.");
+            return;
+        }
 
-        // 王五 - 软件工程
-        addSkill(4L, "Python", "ADVANCED");
-        addSkill(4L, "Django", "INTERMEDIATE");
-        addSkill(4L, "React", "INTERMEDIATE");
-        addSkill(4L, "Docker", "INTERMEDIATE");
+        String[][] defaultSkillPairs = {
+            {"Java", "Python"}, {"前端开发", "数据库"}, {"数据分析", "机器学习"},
+            {"C++", "算法设计"}, {"项目管理", "团队协作"}, {"UI设计", "原型设计"},
+        };
 
-        // 赵六 - 人工智能
-        addSkill(5L, "Python", "ADVANCED");
-        addSkill(5L, "PyTorch", "INTERMEDIATE");
-        addSkill(5L, "TensorFlow", "INTERMEDIATE");
-        addSkill(5L, "Machine Learning", "ADVANCED");
+        int added = 0;
+        for (int i = 0; i < normalUsers.size(); i++) {
+            User user = normalUsers.get(i);
+            Long existing = userSkillMapper.selectCount(
+                    new LambdaQueryWrapper<UserSkill>().eq(UserSkill::getUserId, user.getId()));
+            if (existing > 0) continue;
 
-        // 陈七 - 数据科学
-        addSkill(6L, "Python", "INTERMEDIATE");
-        addSkill(6L, "数据分析", "ADVANCED");
-        addSkill(6L, "Tableau", "INTERMEDIATE");
-        addSkill(6L, "SQL", "INTERMEDIATE");
+            String[] pair = defaultSkillPairs[i % defaultSkillPairs.length];
+            addSkill(user.getId(), pair[0], "INTERMEDIATE");
+            addSkill(user.getId(), pair[1], "BEGINNER");
+            added++;
+        }
 
-        // 刘八 - 电子信息
-        addSkill(7L, "C++", "ADVANCED");
-        addSkill(7L, "嵌入式开发", "INTERMEDIATE");
-        addSkill(7L, "FPGA", "BEGINNER");
-        addSkill(7L, "电路设计", "INTERMEDIATE");
-
-        // 孙九 - 数学
-        addSkill(8L, "数学建模", "ADVANCED");
-        addSkill(8L, "Python", "INTERMEDIATE");
-        addSkill(8L, "R语言", "INTERMEDIATE");
-        addSkill(8L, "统计分析", "ADVANCED");
-
-        // 周十 - 物联网
-        addSkill(9L, "嵌入式开发", "INTERMEDIATE");
-        addSkill(9L, "Java", "INTERMEDIATE");
-        addSkill(9L, "物联网通信", "INTERMEDIATE");
-        addSkill(9L, "硬件设计", "BEGINNER");
-
-        // 张三维现有技能
-        addSkill(2L, "Java", "INTERMEDIATE");
-        addSkill(2L, "前端开发", "INTERMEDIATE");
-        addSkill(2L, "项目管理", "INTERMEDIATE");
+        System.out.println("Seed skills created for " + added + " users.");
     }
 
     private void initRecruits() {
         if (recruitMapper.selectCount(new LambdaQueryWrapper<>()) > 0) return;
 
-        // 招募1: 互联网+竞赛组队
-        Recruit r1 = new Recruit();
-        r1.setPublisherId(2L);
-        r1.setTitle("互联网+创新创业大赛项目组队");
-        r1.setDescription("我们正在准备2026年互联网+大赛，项目主题是AI驱动的教育平台。需要志同道合的队友一起完成项目开发和商业计划书撰写。");
-        r1.setProjectType("INNOVATION");
-        r1.setRequiredSkills("[\"Java\",\"Python\",\"前端开发\",\"商业分析\"]");
-        r1.setMaxMembers(6);
-        r1.setCurrentMembers(1);
-        r1.setDeadline(LocalDateTime.of(2026, 7, 15, 23, 59));
-        r1.setStatus("OPEN");
-        r1.setViewCount(0);
-        recruitMapper.insert(r1);
+        // 动态从数据库查找所有USER角色用户
+        List<User> userUsers = userMapper.selectList(
+                new LambdaQueryWrapper<User>().eq(User::getRole, "USER"));
+        if (userUsers.size() < 2) {
+            System.out.println("Not enough USER role users for recruit init (need >=2), skip.");
+            return;
+        }
 
-        // 招募2: 数学建模竞赛
-        Recruit r2 = new Recruit();
-        r2.setPublisherId(8L);
-        r2.setTitle("全国大学生数学建模竞赛队友招募");
-        r2.setDescription("寻找数模队友！本人有两次参赛经验，擅长建模和论文写作。希望找到擅长编程和数据分析的同学组队。");
-        r2.setProjectType("ACADEMIC");
-        r2.setRequiredSkills("[\"数学建模\",\"Python\",\"数据分析\",\"LaTeX\"]");
-        r2.setMaxMembers(3);
-        r2.setCurrentMembers(1);
-        r2.setDeadline(LocalDateTime.of(2026, 8, 20, 23, 59));
-        r2.setStatus("OPEN");
-        r2.setViewCount(0);
-        recruitMapper.insert(r2);
+        // 招募模板数据（只有内容，不包含任何用户ID）
+        String[][] recruitTemplates = {
+            {"互联网+创新创业大赛项目组队", "我们正在准备2026年互联网+大赛，项目主题是AI驱动的教育平台。需要志同道合的队友一起完成项目开发和商业计划书撰写。",
+             "INNOVATION", "[\"Java\",\"Python\",\"前端开发\",\"商业分析\"]", "6", "2026-07-15T23:59"},
+            {"全国大学生数学建模竞赛队友招募", "寻找数模队友！本人有两次参赛经验，擅长建模和论文写作。希望找到擅长编程和数据分析的同学组队。",
+             "ACADEMIC", "[\"数学建模\",\"Python\",\"数据分析\",\"LaTeX\"]", "3", "2026-08-20T23:59"},
+            {"挑战杯-智慧校园项目组队", "基于物联网的智慧教室管理系统，已有一个原型。需要Web全栈、嵌入式开发和UI设计的同学加入。已有指导老师支持。",
+             "ACADEMIC", "[\"Java\",\"Spring Boot\",\"Vue.js\",\"嵌入式开发\",\"UI设计\"]", "5", "2026-07-30T23:59"},
+            {"AI辅助医学影像分析科研项目", "与医学院合作的交叉学科项目，用深度学习技术辅助CT影像分析。需要有机器学习和Python基础的同学，医学知识由合作方提供。",
+             "RESEARCH", "[\"Python\",\"PyTorch\",\"机器学习\",\"图像处理\"]", "4", "2026-08-31T23:59"},
+        };
 
-        // 招募3: 挑战杯项目
-        Recruit r3 = new Recruit();
-        r3.setPublisherId(4L);
-        r3.setTitle("挑战杯-智慧校园项目组队");
-        r3.setDescription("基于物联网的智慧教室管理系统，已有一个原型。需要Web全栈、嵌入式开发和UI设计的同学加入。已有指导老师支持。");
-        r3.setProjectType("ACADEMIC");
-        r3.setRequiredSkills("[\"Java\",\"Spring Boot\",\"Vue.js\",\"嵌入式开发\",\"UI设计\"]");
-        r3.setMaxMembers(5);
-        r3.setCurrentMembers(1);
-        r3.setDeadline(LocalDateTime.of(2026, 7, 30, 23, 59));
-        r3.setStatus("OPEN");
-        r3.setViewCount(0);
-        recruitMapper.insert(r3);
+        int recruitCount = Math.min(userUsers.size(), recruitTemplates.length);
+        java.util.List<Recruit> createdRecruits = new java.util.ArrayList<>();
+        for (int i = 0; i < recruitCount; i++) {
+            User publisher = userUsers.get(i);
+            String[] t = recruitTemplates[i];
+            Recruit r = new Recruit();
+            r.setPublisherId(publisher.getId());
+            r.setTitle(t[0]);
+            r.setDescription(t[1]);
+            r.setProjectType(t[2]);
+            r.setRequiredSkills(t[3]);
+            r.setMaxMembers(Integer.parseInt(t[4]));
+            r.setCurrentMembers(1);
+            r.setDeadline(LocalDateTime.parse(t[5]));
+            r.setStatus("OPEN");
+            r.setViewCount(0);
+            recruitMapper.insert(r);
+            createdRecruits.add(r);
+        }
 
-        // 招募4: 科研项目
-        Recruit r4 = new Recruit();
-        r4.setPublisherId(5L);
-        r4.setTitle("AI辅助医学影像分析科研项目");
-        r4.setDescription("与医学院合作的交叉学科项目，用深度学习技术辅助CT影像分析。需要有机器学习和Python基础的同学，医学知识由合作方提供。");
-        r4.setProjectType("RESEARCH");
-        r4.setRequiredSkills("[\"Python\",\"PyTorch\",\"机器学习\",\"图像处理\"]");
-        r4.setMaxMembers(4);
-        r4.setCurrentMembers(1);
-        r4.setDeadline(LocalDateTime.of(2026, 8, 31, 23, 59));
-        r4.setStatus("OPEN");
-        r4.setViewCount(0);
-        recruitMapper.insert(r4);
+        // 为招募创建申请：剩余用户申请第一个招募
+        if (!createdRecruits.isEmpty()) {
+            Recruit firstRecruit = createdRecruits.get(0);
+            for (int i = recruitCount; i < userUsers.size(); i++) {
+                Application app = new Application();
+                app.setRecruitId(firstRecruit.getId());
+                app.setApplicantId(userUsers.get(i).getId());
+                app.setStatus("PENDING");
+                applicationMapper.insert(app);
+            }
+            // 如果恰好有被招募用户，将其中一条设为ACCEPTED表示已接受
+            List<Application> apps = applicationMapper.selectList(
+                    new LambdaQueryWrapper<Application>().eq(Application::getRecruitId, firstRecruit.getId()));
+            if (!apps.isEmpty()) {
+                Application accepted = apps.get(0);
+                accepted.setStatus("ACCEPTED");
+                applicationMapper.updateById(accepted);
+            }
+        }
 
-        // ---- 申请记录 ----
-        // 赵六申请招募1(互联网+)
-        Application a1 = new Application();
-        a1.setRecruitId(r1.getId());
-        a1.setApplicantId(5L);
-        a1.setStatus("PENDING");
-        applicationMapper.insert(a1);
-
-        // 陈七申请招募1
-        Application a2 = new Application();
-        a2.setRecruitId(r1.getId());
-        a2.setApplicantId(6L);
-        a2.setStatus("PENDING");
-        applicationMapper.insert(a2);
-
-        // 刘八申请招募2(数模)
-        Application a3 = new Application();
-        a3.setRecruitId(r2.getId());
-        a3.setApplicantId(7L);
-        a3.setStatus("PENDING");
-        applicationMapper.insert(a3);
-
-        // 王五申请招募3(挑战杯)
-        Application a4 = new Application();
-        a4.setRecruitId(r3.getId());
-        a4.setApplicantId(3L);
-        a4.setStatus("ACCEPTED");
-        applicationMapper.insert(a4);
-
-        System.out.println("Seed recruits and applications created.");
+        System.out.println("Seed recruits created: " + createdRecruits.size());
     }
 
     private void initTeams() {
         if (teamMapper.selectCount(new LambdaQueryWrapper<>()) > 0) return;
 
-        // 查看招募1的信息
-        Recruit r1 = recruitMapper.selectOne(
-                new LambdaQueryWrapper<Recruit>().eq(Recruit::getTitle, "互联网+创新创业大赛项目组队"));
-        if (r1 == null) return;
+        // 动态从数据库查第一个招募记录和第一个USER用户作为队长
+        Recruit firstRecruit = recruitMapper.selectOne(
+                new LambdaQueryWrapper<Recruit>().last("LIMIT 1"));
+        if (firstRecruit == null) {
+            System.out.println("No recruits found, skip team init.");
+            return;
+        }
 
-        // 团队1: 互联网+项目团队
-        Team t1 = new Team();
-        t1.setName("AI教育先锋队");
-        t1.setLeaderId(2L);
-        t1.setRecruitId(r1.getId());
-        t1.setStatus("ACTIVE");
-        teamMapper.insert(t1);
+        // 查找该招募发布者作为队长
+        User leader = userMapper.selectById(firstRecruit.getPublisherId());
+        if (leader == null) return;
+
+        // 查找该招募下一条已接受的申请者作为成员
+        Application acceptedApp = applicationMapper.selectOne(
+                new LambdaQueryWrapper<Application>()
+                        .eq(Application::getRecruitId, firstRecruit.getId())
+                        .eq(Application::getStatus, "ACCEPTED"));
+        User member = null;
+        if (acceptedApp != null) {
+            member = userMapper.selectById(acceptedApp.getApplicantId());
+        }
+
+        // 如果招募更新了currentMembers但实际没有已接受申请，就找第一条PENDING
+        if (member == null) {
+            Application pendingApp = applicationMapper.selectOne(
+                    new LambdaQueryWrapper<Application>()
+                            .eq(Application::getRecruitId, firstRecruit.getId())
+                            .eq(Application::getStatus, "PENDING"));
+            if (pendingApp != null) {
+                member = userMapper.selectById(pendingApp.getApplicantId());
+            }
+        }
+
+        // 团队名称由招募标题派生
+        String teamName = firstRecruit.getTitle().contains("互联网+") ? "AI教育先锋队"
+                : firstRecruit.getTitle().contains("数模") ? "数学建模精英队"
+                : firstRecruit.getTitle().contains("挑战杯") ? "智慧校园创新队"
+                : "科研探索队";
+
+        Team team = new Team();
+        team.setName(teamName);
+        team.setLeaderId(leader.getId());
+        team.setRecruitId(firstRecruit.getId());
+        team.setStatus("ACTIVE");
+        teamMapper.insert(team);
 
         // 队长作为成员
-        TeamMember tm1 = new TeamMember();
-        tm1.setTeamId(t1.getId());
-        tm1.setUserId(2L);
-        tm1.setRole("LEADER");
-        teamMemberMapper.insert(tm1);
+        TeamMember tmLeader = new TeamMember();
+        tmLeader.setTeamId(team.getId());
+        tmLeader.setUserId(leader.getId());
+        tmLeader.setRole("LEADER");
+        teamMemberMapper.insert(tmLeader);
 
-        // 已接受的申请者作为成员
-        TeamMember tm2 = new TeamMember();
-        tm2.setTeamId(t1.getId());
-        tm2.setUserId(3L);
-        tm2.setRole("MEMBER");
-        teamMemberMapper.insert(tm2);
+        // 如果有成员，加入团队
+        if (member != null) {
+            TeamMember tmMember = new TeamMember();
+            tmMember.setTeamId(team.getId());
+            tmMember.setUserId(member.getId());
+            tmMember.setRole("MEMBER");
+            teamMemberMapper.insert(tmMember);
 
-        // 更新招募current_members
-        r1.setCurrentMembers(2);
-        recruitMapper.updateById(r1);
+            firstRecruit.setCurrentMembers(2);
+        } else {
+            firstRecruit.setCurrentMembers(1);
+        }
+        recruitMapper.updateById(firstRecruit);
 
-        System.out.println("Seed team created: " + t1.getName());
+        System.out.println("Seed team created: " + teamName);
     }
 
     private void initProjects() {
         if (projectMapper.selectCount(new LambdaQueryWrapper<>()) > 0) return;
 
-        Team t1 = teamMapper.selectOne(
-                new LambdaQueryWrapper<Team>().eq(Team::getName, "AI教育先锋队"));
-        if (t1 == null) return;
+        // 动态从数据库查第一个团队和该团队的LEADER成员
+        Team firstTeam = teamMapper.selectOne(
+                new LambdaQueryWrapper<Team>().last("LIMIT 1"));
+        if (firstTeam == null) {
+            System.out.println("No teams found, skip project init.");
+            return;
+        }
 
-        // 项目（带leader_id）
-        Project p1 = new Project();
-        p1.setTeamId(t1.getId());
-        p1.setLeaderId(2L); // 张三作为项目负责人
-        p1.setName("基于AI的个性化学习推荐平台");
-        p1.setDescription("利用机器学习算法分析学生学习行为，提供个性化的学习资源推荐。项目目标：完成核心推荐算法、Web端和移动端适配。");
-        p1.setStatus("ONGOING");
-        p1.setStartedAt(LocalDate.of(2026, 6, 1));
-        p1.setEndedAt(LocalDate.of(2026, 10, 30));
-        projectMapper.insert(p1);
+        // 查找该团队的LEADER作为项目负责人
+        TeamMember leaderMember = teamMemberMapper.selectOne(
+                new LambdaQueryWrapper<TeamMember>()
+                        .eq(TeamMember::getTeamId, firstTeam.getId())
+                        .eq(TeamMember::getRole, "LEADER"));
+        if (leaderMember == null) {
+            System.out.println("No team leader found, skip project init.");
+            return;
+        }
+        User leader = userMapper.selectById(leaderMember.getUserId());
+        if (leader == null) return;
 
-        // 项目任务（新结构：creator_id + required_skills）
-        Task task1 = new Task();
-        task1.setProjectId(p1.getId());
-        task1.setCreatorId(2L);
-        task1.setTitle("需求分析与系统设计");
-        task1.setDescription("完成项目需求文档、系统架构设计和数据库设计");
-        task1.setRequiredSkills("Java,Spring Boot,系统设计");
-        task1.setPriority("HIGH");
-        task1.setStatus("DONE");
-        task1.setDeadline(LocalDateTime.of(2026, 6, 15, 23, 59));
-        taskMapper.insert(task1);
+        // 项目名称由团队名称派生
+        String projectName = "基于AI的个性化学习推荐平台";
 
-        Task task2 = new Task();
-        task2.setProjectId(p1.getId());
-        task2.setCreatorId(2L);
-        task2.setTitle("用户管理模块开发");
-        task2.setDescription("实现用户注册、登录、个人信息管理等功能");
-        task2.setRequiredSkills("Java,Spring Boot,Vue.js");
-        task2.setPriority("HIGH");
-        task2.setStatus("IN_PROGRESS");
-        task2.setDeadline(LocalDateTime.of(2026, 7, 10, 23, 59));
-        taskMapper.insert(task2);
+        Project project = new Project();
+        project.setTeamId(firstTeam.getId());
+        project.setLeaderId(leader.getId());
+        project.setName(projectName);
+        project.setDescription("利用机器学习算法分析学生学习行为，提供个性化的学习资源推荐。项目目标：完成核心推荐算法、Web端和移动端适配。");
+        project.setStatus("ONGOING");
+        project.setStartedAt(LocalDate.of(2026, 6, 1));
+        project.setEndedAt(LocalDate.of(2026, 10, 30));
+        projectMapper.insert(project);
 
-        Task task3 = new Task();
-        task3.setProjectId(p1.getId());
-        task3.setCreatorId(2L);
-        task3.setTitle("学习行为数据采集");
-        task3.setDescription("设计并实现用户学习行为的数据采集和存储模块");
-        task3.setRequiredSkills("Python,数据分析,MySQL");
-        task3.setPriority("MEDIUM");
-        task3.setStatus("TODO");
-        task3.setDeadline(LocalDateTime.of(2026, 7, 20, 23, 59));
-        taskMapper.insert(task3);
+        // 项目任务模板（只包含内容，不包含任何外键）
+        String[][] taskTemplates = {
+            {"需求分析与系统设计", "完成项目需求文档、系统架构设计和数据库设计", "Java,Spring Boot,系统设计", "HIGH", "DONE", "2026-06-15T23:59"},
+            {"用户管理模块开发", "实现用户注册、登录、个人信息管理等功能", "Java,Spring Boot,Vue.js", "HIGH", "IN_PROGRESS", "2026-07-10T23:59"},
+            {"学习行为数据采集", "设计并实现用户学习行为的数据采集和存储模块", "Python,数据分析,MySQL", "MEDIUM", "TODO", "2026-07-20T23:59"},
+            {"推荐算法原型开发", "基于协同过滤和知识图谱的混合推荐算法实现", "Python,PyTorch,机器学习", "HIGH", "TODO", "2026-08-15T23:59"},
+            {"前端页面开发", "实现Web端主要页面，包括首页、学习推荐、个人中心等", "Vue.js,TypeScript,前端开发", "MEDIUM", "TODO", "2026-08-30T23:59"},
+        };
 
-        Task task4 = new Task();
-        task4.setProjectId(p1.getId());
-        task4.setCreatorId(2L);
-        task4.setTitle("推荐算法原型开发");
-        task4.setDescription("基于协同过滤和知识图谱的混合推荐算法实现");
-        task4.setRequiredSkills("Python,PyTorch,机器学习");
-        task4.setPriority("HIGH");
-        task4.setStatus("TODO");
-        task4.setDeadline(LocalDateTime.of(2026, 8, 15, 23, 59));
-        taskMapper.insert(task4);
+        for (String[] tt : taskTemplates) {
+            Task task = new Task();
+            task.setProjectId(project.getId());
+            task.setCreatorId(leader.getId());
+            task.setTitle(tt[0]);
+            task.setDescription(tt[1]);
+            task.setRequiredSkills(tt[2]);
+            task.setPriority(tt[3]);
+            task.setStatus(tt[4]);
+            task.setDeadline(LocalDateTime.parse(tt[5]));
+            taskMapper.insert(task);
+        }
 
-        Task task5 = new Task();
-        task5.setProjectId(p1.getId());
-        task5.setCreatorId(2L);
-        task5.setTitle("前端页面开发");
-        task5.setDescription("实现Web端主要页面，包括首页、学习推荐、个人中心等");
-        task5.setRequiredSkills("Vue.js,TypeScript,前端开发");
-        task5.setPriority("MEDIUM");
-        task5.setStatus("TODO");
-        task5.setDeadline(LocalDateTime.of(2026, 8, 30, 23, 59));
-        taskMapper.insert(task5);
-
-        System.out.println("Seed project and tasks created: " + p1.getName());
+        System.out.println("Seed project created: " + projectName);
     }
 
     private void initNotifications() {
         if (notificationMapper.selectCount(new LambdaQueryWrapper<>()) > 0) return;
 
-        // 通知：王五的申请被接受
-        Notification n1 = new Notification();
-        n1.setUserId(3L);
-        n1.setTitle("申请已通过");
-        n1.setContent("你申请加入的「挑战杯-智慧校园项目」已通过，请尽快联系发布者。");
-        n1.setType("APPLICATION");
-        n1.setIsRead(0);
-        notificationMapper.insert(n1);
+        // 动态查询数据库中所有用户，为每个人创建欢迎通知
+        List<User> allUsers = userMapper.selectList(new LambdaQueryWrapper<>());
+        if (allUsers.isEmpty()) {
+            System.out.println("No users found, skip notification init.");
+            return;
+        }
 
-        // 通知：系统公告
-        Notification n2 = new Notification();
-        n2.setUserId(1L);
-        n2.setTitle("系统上线通知");
-        n2.setContent("大学生竞赛/科研项目组队匹配与过程管理平台已正式上线，欢迎使用！");
-        n2.setType("SYSTEM");
-        n2.setIsRead(0);
-        notificationMapper.insert(n2);
+        int sent = 0;
+        for (User user : allUsers) {
+            // 系统公告 — 仅给管理员发
+            if ("ADMIN".equals(user.getRole())) {
+                Notification sysNotice = new Notification();
+                sysNotice.setUserId(user.getId());
+                sysNotice.setTitle("系统上线通知");
+                sysNotice.setContent("大学生竞赛/科研项目组队匹配与过程管理平台已正式上线，欢迎使用！");
+                sysNotice.setType("SYSTEM");
+                sysNotice.setIsRead(0);
+                notificationMapper.insert(sysNotice);
+                sent++;
+                continue;
+            }
 
-        // 更多通知
-        List.of(2L, 3L, 4L, 5L).forEach(userId -> {
-            Notification n = new Notification();
-            n.setUserId(userId);
-            n.setTitle("欢迎使用平台");
-            n.setContent("欢迎加入！完善个人资料和技能标签，可以获得更精准的组队推荐。");
-            n.setType("SYSTEM");
-            n.setIsRead(0);
-            notificationMapper.insert(n);
-        });
+            // 给所有普通用户/导师发欢迎通知
+            Notification welcome = new Notification();
+            welcome.setUserId(user.getId());
+            welcome.setTitle("欢迎使用平台");
+            welcome.setContent("欢迎加入！完善个人资料和技能标签，可以获得更精准的组队推荐。");
+            welcome.setType("SYSTEM");
+            welcome.setIsRead(0);
+            notificationMapper.insert(welcome);
+            sent++;
+        }
 
-        System.out.println("Seed notifications created.");
+        // 如果存在申请记录，为被接受的申请人发通知
+        List<Application> acceptedApps = applicationMapper.selectList(
+                new LambdaQueryWrapper<Application>().eq(Application::getStatus, "ACCEPTED"));
+        for (Application app : acceptedApps) {
+            User applicant = userMapper.selectById(app.getApplicantId());
+            if (applicant != null) {
+                Notification appNotice = new Notification();
+                appNotice.setUserId(applicant.getId());
+                appNotice.setTitle("申请已通过");
+                appNotice.setContent("你的组队申请已被接受，请尽快联系团队负责人。");
+                appNotice.setType("APPLICATION");
+                appNotice.setIsRead(0);
+                notificationMapper.insert(appNotice);
+                sent++;
+            }
+        }
+
+        System.out.println("Seed notifications created: " + sent);
     }
 
     private void initTeachers() {
         if (teacherMapper.selectCount(new LambdaQueryWrapper<>()) > 0) return;
 
-        // 王教授 - 计算机科学与技术 (userId=10, phone=13800000010)
-        Teacher t1 = new Teacher();
-        t1.setUserId(10L);
-        t1.setDepartment("计算机科学与技术学院");
-        t1.setTitle("教授");
-        t1.setResearchFields("[\"分布式系统\",\"云计算\",\"大数据\"]");
-        t1.setMaxTeams(3);
-        t1.setCurrentTeams(0);
-        t1.setIsVerified(1);
-        t1.setRating(new java.math.BigDecimal("4.8"));
-        teacherMapper.insert(t1);
+        // 动态查找数据库中所有 TEACHER 角色的用户
+        List<User> teacherUsers = userMapper.selectList(
+                new LambdaQueryWrapper<User>().eq(User::getRole, "TEACHER"));
+        if (teacherUsers.isEmpty()) {
+            System.out.println("No TEACHER role users found, skip teacher init.");
+            return;
+        }
 
-        // 李教授 - 人工智能 (userId=11, phone=13800000011)
-        Teacher t2 = new Teacher();
-        t2.setUserId(11L);
-        t2.setDepartment("人工智能学院");
-        t2.setTitle("副教授");
-        t2.setResearchFields("[\"机器学习\",\"自然语言处理\",\"知识图谱\"]");
-        t2.setMaxTeams(5);
-        t2.setCurrentTeams(1);
-        t2.setIsVerified(1);
-        t2.setRating(new java.math.BigDecimal("4.5"));
-        teacherMapper.insert(t2);
+        // 导师模板数据：每个导师有独特的职称、院系、研究方向、评分（按顺序匹配）
+        // 格式: {职称, 院系, 研究方向JSON数组字符串, 最大团队数, 当前团队数, 评分}
+        String[][] teacherTemplates = {
+            {"教授",   "计算机科学与技术学院", "[\"人工智能\",\"机器学习\",\"深度学习\"]",           "6", "2", "4.8"},
+            {"副教授", "人工智能学院",         "[\"自然语言处理\",\"大模型\",\"知识图谱\"]",           "5", "1", "4.5"},
+            {"讲师",   "电子信息工程学院",     "[\"嵌入式系统\",\"物联网\",\"信号处理\"]",             "4", "0", "4.2"},
+            {"教授",   "数学与统计学院",       "[\"应用数学\",\"数值计算\",\"优化算法\"]",             "5", "3", "4.9"},
+            {"副教授", "软件工程学院",         "[\"软件工程\",\"DevOps\",\"云计算\"]",                 "5", "1", "4.3"},
+            {"讲师",   "数据科学学院",         "[\"数据挖掘\",\"大数据分析\",\"数据可视化\"]",          "4", "0", "4.0"},
+        };
 
-        // 张教授 - 电子信息工程 (userId=12, phone=13800000012)
-        Teacher t3 = new Teacher();
-        t3.setUserId(12L);
-        t3.setDepartment("电子信息工程学院");
-        t3.setTitle("教授");
-        t3.setResearchFields("[\"嵌入式系统\",\"物联网\",\"信号处理\"]");
-        t3.setMaxTeams(4);
-        t3.setCurrentTeams(0);
-        t3.setIsVerified(1);
-        t3.setRating(new java.math.BigDecimal("4.6"));
-        teacherMapper.insert(t3);
+        int created = 0;
+        for (int i = 0; i < teacherUsers.size(); i++) {
+            User user = teacherUsers.get(i);
+            String[] tpl = teacherTemplates[i % teacherTemplates.length];
 
-        System.out.println("Seed teachers created: 王教授, 李教授, 张教授");
+            Teacher t = new Teacher();
+            t.setUserId(user.getId());
+            t.setDepartment(tpl[1]);
+            t.setTitle(tpl[0]);
+            t.setResearchFields(tpl[2]);
+            t.setMaxTeams(Integer.parseInt(tpl[3]));
+            t.setCurrentTeams(Integer.parseInt(tpl[4]));
+            t.setIsVerified(1);
+            t.setRating(new java.math.BigDecimal(tpl[5]));
+            teacherMapper.insert(t);
+            created++;
+        }
+
+        System.out.println("Seed teachers created: " + created + " (from TEACHER role users)");
     }
 
     private void initAchievements() {
         if (achievementMapper.selectCount(new LambdaQueryWrapper<>()) > 0) return;
 
-        Team t1 = teamMapper.selectOne(
-                new LambdaQueryWrapper<Team>().eq(Team::getName, "AI教育先锋队"));
-        if (t1 == null) return;
+        // 动态从数据库查第一个团队
+        Team firstTeam = teamMapper.selectOne(
+                new LambdaQueryWrapper<Team>().last("LIMIT 1"));
+        if (firstTeam == null) {
+            System.out.println("No teams found, skip achievement init.");
+            return;
+        }
 
-        // 成果1: 竞赛获奖
-        Achievement a1 = new Achievement();
-        a1.setTeamId(t1.getId());
-        a1.setTitle("2025年全国大学生AI创新应用大赛一等奖");
-        a1.setType("AWARD");
-        a1.setDescription("团队开发的「智能学习助手」在全国大学生AI创新应用大赛中荣获一等奖。项目基于大语言模型和知识图谱技术，为学生提供个性化学习辅导。");
-        a1.setAwardLevel("NATIONAL");
-        a1.setIsPublic(1);
-        a1.setIsFeatured(1);
-        a1.setViewCount(256);
-        a1.setLikeCount(48);
-        achievementMapper.insert(a1);
+        // 成果模板数据
+        String[][] achievementTemplates = {
+            {"2025年全国大学生AI创新应用大赛一等奖", "AWARD", "NATIONAL",
+             "团队开发的「智能学习助手」在全国大学生AI创新应用大赛中荣获一等奖。项目基于大语言模型和知识图谱技术，为学生提供个性化学习辅导。", "1"},
+            {"基于深度强化学习的自适应学习路径推荐方法", "PAPER", "NATIONAL",
+             "发表于《计算机教育》2025年第3期。提出了一种结合知识追踪和深度强化学习的自适应学习路径推荐方法。", "0"},
+            {"智能学习推荐平台V1.0", "SOFTWARE", "NATIONAL",
+             "登记号：2025SR1234567。基于协同过滤和知识图谱的混合推荐算法，实现了学习资源的精准推荐。", "0"},
+            {"一种基于用户画像的学习资源个性化推荐方法", "PATENT", "PROVINCIAL",
+             "发明专利，申请号：CN202510012345.6。通过构建多维用户画像，实现学习资源的智能推荐。", "0"},
+        };
 
-        // 成果2: 论文
-        Achievement a2 = new Achievement();
-        a2.setTeamId(t1.getId());
-        a2.setTitle("基于深度强化学习的自适应学习路径推荐方法");
-        a2.setType("PAPER");
-        a2.setDescription("发表于《计算机教育》2025年第3期。提出了一种结合知识追踪和深度强化学习的自适应学习路径推荐方法。");
-        a2.setAwardLevel("NATIONAL");
-        a2.setIsPublic(1);
-        a2.setIsFeatured(0);
-        a2.setViewCount(132);
-        a2.setLikeCount(23);
-        achievementMapper.insert(a2);
+        for (int i = 0; i < achievementTemplates.length; i++) {
+            String[] at = achievementTemplates[i];
+            Achievement a = new Achievement();
+            a.setTeamId(firstTeam.getId());
+            a.setTitle(at[0]);
+            a.setType(at[1]);
+            a.setAwardLevel(at[2]);
+            a.setDescription(at[3]);
+            a.setIsFeatured(Integer.parseInt(at[4]));
+            a.setIsPublic(1);
+            a.setViewCount(50 + i * 30);
+            a.setLikeCount(10 + i * 5);
+            achievementMapper.insert(a);
+        }
 
-        // 成果3: 软件著作权
-        Achievement a3 = new Achievement();
-        a3.setTeamId(t1.getId());
-        a3.setTitle("智能学习推荐平台V1.0");
-        a3.setType("SOFTWARE");
-        a3.setDescription("登记号：2025SR1234567。基于协同过滤和知识图谱的混合推荐算法，实现了学习资源的精准推荐。");
-        a3.setAwardLevel("NATIONAL");
-        a3.setIsPublic(1);
-        a3.setIsFeatured(0);
-        a3.setViewCount(89);
-        a3.setLikeCount(15);
-        achievementMapper.insert(a3);
-
-        // 成果4: 专利
-        Achievement a4 = new Achievement();
-        a4.setTeamId(t1.getId());
-        a4.setTitle("一种基于用户画像的学习资源个性化推荐方法");
-        a4.setType("PATENT");
-        a4.setDescription("发明专利，申请号：CN202510012345.6。通过构建多维用户画像，实现学习资源的智能推荐。");
-        a4.setAwardLevel("PROVINCIAL");
-        a4.setIsPublic(1);
-        a4.setIsFeatured(0);
-        a4.setViewCount(67);
-        a4.setLikeCount(10);
-        achievementMapper.insert(a4);
-
-        System.out.println("Seed achievements created: 4 items");
+        System.out.println("Seed achievements created: " + achievementTemplates.length + " items");
     }
 
     private void initAuditLogs() {
         if (auditLogMapper.selectCount(new LambdaQueryWrapper<>()) > 0) return;
 
-        // 审核日志1: 审核通过的招募
-        AuditLog log1 = new AuditLog();
-        log1.setTargetType("RECRUIT");
-        log1.setTargetId(1L);
-        log1.setOperatorId(1L);
-        log1.setAction("APPROVE");
-        log1.setReason("符合平台规范，项目内容完整");
-        log1.setBeforeStatus("PENDING");
-        log1.setAfterStatus("APPROVED");
-        auditLogMapper.insert(log1);
+        // 动态从数据库查找ADMIN角色用户
+        User admin = userMapper.selectOne(
+                new LambdaQueryWrapper<User>().eq(User::getRole, "ADMIN"));
+        if (admin == null) {
+            System.out.println("No ADMIN user found, skip audit log init.");
+            return;
+        }
 
-        // 审核日志2: 审核驳回的招募
-        AuditLog log2 = new AuditLog();
-        log2.setTargetType("RECRUIT");
-        log2.setTargetId(2L);
-        log2.setOperatorId(1L);
-        log2.setAction("REJECT");
-        log2.setReason("项目描述不够详细，需要补充具体方案");
-        log2.setBeforeStatus("PENDING");
-        log2.setAfterStatus("REJECTED");
-        auditLogMapper.insert(log2);
+        // 动态从数据库查找实际存在的招募记录
+        List<Recruit> recruits = recruitMapper.selectList(new LambdaQueryWrapper<>());
+        if (recruits.isEmpty()) {
+            System.out.println("No recruits found, skip audit log init.");
+            return;
+        }
 
-        // 审核日志3: 审核通过的招募
-        AuditLog log3 = new AuditLog();
-        log3.setTargetType("RECRUIT");
-        log3.setTargetId(3L);
-        log3.setOperatorId(1L);
-        log3.setAction("APPROVE");
-        log3.setReason("项目创新性好，符合大赛要求");
-        log3.setBeforeStatus("PENDING");
-        log3.setAfterStatus("APPROVED");
-        auditLogMapper.insert(log3);
+        // 为每个招募创建一条审核日志（最多3条）
+        String[][] auditData = {
+            {"APPROVE", "符合平台规范，项目内容完整", "PENDING", "APPROVED"},
+            {"REJECT", "项目描述不够详细，需要补充具体方案", "PENDING", "REJECTED"},
+            {"APPROVE", "项目创新性好，符合大赛要求", "PENDING", "APPROVED"},
+        };
 
-        System.out.println("Seed audit logs created: 3 records");
+        int count = 0;
+        for (int i = 0; i < Math.min(recruits.size(), auditData.length); i++) {
+            Recruit r = recruits.get(i);
+            String[] ad = auditData[i];
+            AuditLog log = new AuditLog();
+            log.setTargetType("RECRUIT");
+            log.setTargetId(r.getId());
+            log.setOperatorId(admin.getId());
+            log.setAction(ad[0]);
+            log.setReason(ad[1]);
+            log.setBeforeStatus(ad[2]);
+            log.setAfterStatus(ad[3]);
+            auditLogMapper.insert(log);
+            count++;
+        }
+
+        System.out.println("Seed audit logs created: " + count + " records");
     }
 
     private void initCompetitions() {

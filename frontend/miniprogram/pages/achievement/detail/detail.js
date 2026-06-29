@@ -21,13 +21,11 @@ Page({
     this.setData({ loading: true })
     try {
       const res = await achievementApi.getDetail(this.data.id)
-      if (res.code === 200) {
-        this.setData({
-          achievement: res.data,
-          isLiked: res.data.isLiked || false,
-          isFavorited: res.data.isFavorited || false
-        })
-      }
+      this.setData({
+        achievement: res,
+        isLiked: res.isLiked || false,
+        isFavorited: res.isFavorited || false
+      })
     } catch (e) {
       // ignore
     } finally {

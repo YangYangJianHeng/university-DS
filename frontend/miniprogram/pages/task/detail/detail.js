@@ -20,9 +20,8 @@ Page({
     this.setData({ loading: true })
     try {
       const res = await taskApi.getDetail(this.data.id)
-      if (res.code === 200) {
-        this.setData({ task: res.data })
-      }
+      // request.js 已自动解包 Result.data，res 直接是 TaskVO
+      this.setData({ task: res })
     } catch (e) {
       // ignore
     } finally {
@@ -47,11 +46,9 @@ Page({
   async updateStatus(e) {
     const status = e.currentTarget.dataset.status
     try {
-      const res = await taskApi.updateStatus(this.data.id, status)
-      if (res.code === 200) {
-        wx.showToast({ title: '状态已更新', icon: 'success' })
-        this.fetchDetail()
-      }
+      await taskApi.updateStatus(this.data.id, status)
+      wx.showToast({ title: '状态已更新', icon: 'success' })
+      this.fetchDetail()
     } catch (e) {
       // ignore
     }

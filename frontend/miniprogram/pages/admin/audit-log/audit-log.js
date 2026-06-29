@@ -22,16 +22,14 @@ Page({
   async loadLogs() {
     this.setData({ loading: true })
     try {
-      const res = await adminApi.getAuditLogs({ page: 1, size: 100 })
-      if (res.code === 200) {
-        const data = res.data
-        const logs = data.records || data.list || data || []
-        this.setData({
-          logs,
-          loading: false
-        })
-        this.applyFilter()
-      }
+      const res = await adminApi.getAuditList({ page: 1, size: 100 })
+      const data = res.records || res.list || res
+      const logs = Array.isArray(data) ? data : (data.records || [])
+      this.setData({
+        logs,
+        loading: false
+      })
+      this.applyFilter()
     } catch (e) {
       this.setData({ loading: false })
     }

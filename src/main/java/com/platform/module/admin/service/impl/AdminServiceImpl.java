@@ -19,6 +19,8 @@ import com.platform.module.collaboration.entity.Task;
 import com.platform.module.collaboration.mapper.TaskMapper;
 import com.platform.module.project.entity.Project;
 import com.platform.module.project.mapper.ProjectMapper;
+import com.platform.module.notification.entity.Notification;
+import com.platform.module.notification.mapper.NotificationMapper;
 import com.platform.module.recruit.entity.Recruit;
 import com.platform.module.recruit.mapper.RecruitMapper;
 import com.platform.module.teacher.entity.Teacher;
@@ -28,6 +30,7 @@ import com.platform.module.team.entity.Team;
 import com.platform.module.team.mapper.TeamMapper;
 import com.platform.module.user.entity.User;
 import com.platform.module.user.mapper.UserMapper;
+import com.platform.module.user.service.UserCleanupService;
 import org.springframework.transaction.annotation.Transactional;
 import com.platform.module.competition.mapper.CompetitionMapper;
 import org.springframework.stereotype.Service;
@@ -55,6 +58,8 @@ public class AdminServiceImpl implements AdminService {
     private final AchievementMapper achievementMapper;
     private final BadgeMapper badgeMapper;
     private final CertificateService certificateService;
+    private final NotificationMapper notificationMapper;
+    private final UserCleanupService userCleanupService;
 
     public AdminServiceImpl(UserMapper userMapper, AuditLogMapper auditLogMapper,
                             RecruitMapper recruitMapper, TeamMapper teamMapper,
@@ -63,7 +68,9 @@ public class AdminServiceImpl implements AdminService {
                             AnnouncementMapper announcementMapper,
                             AchievementMapper achievementMapper,
                             BadgeMapper badgeMapper,
-                            CertificateService certificateService) {
+                            CertificateService certificateService,
+                            NotificationMapper notificationMapper,
+                            UserCleanupService userCleanupService) {
         this.userMapper = userMapper;
         this.auditLogMapper = auditLogMapper;
         this.recruitMapper = recruitMapper;
@@ -76,6 +83,8 @@ public class AdminServiceImpl implements AdminService {
         this.achievementMapper = achievementMapper;
         this.badgeMapper = badgeMapper;
         this.certificateService = certificateService;
+        this.notificationMapper = notificationMapper;
+        this.userCleanupService = userCleanupService;
     }
 
     @Override
@@ -260,8 +269,9 @@ public class AdminServiceImpl implements AdminService {
             recruit.setAuditStatus("APPROVED");
         } else if ("REJECT".equals(action)) {
             recruit.setAuditStatus("REJECTED");
-            // 注意: 不修改 recruit.status，该字段控制招募展示状态（OPEN/CLOSED）
-            // auditStatus 控制审核状态（PENDING/APPROVED/REJECTED）
+            recruit.setStatus("CLOSED");
+            // 发送通知给发布者
+            sendRejectNotification(recruit);
         } else {
             throw BusinessException.badRequest("无效操作: " + action);
         }
@@ -311,6 +321,28 @@ public class AdminServiceImpl implements AdminService {
             // 取消导师角色时，删除对应的 Teacher 记录
             teacherMapper.delete(new LambdaQueryWrapper<Teacher>().eq(Teacher::getUserId, userId));
         }
+    }
+
+    @Override
+    @Transactional
+    @CacheEvict(value = {"admin", "publicStats"}, allEntries = true)
+    public void deleteUser(Long userId, Long operatorId) {
+        // 不能删除自己
+        if (userId.equals(operatorId)) {
+            throw BusinessException.badRequest("不能删除自己的账户");
+        }
+
+        User targetUser = userMapper.selectById(userId);
+        if (targetUser == null) {
+            throw BusinessException.notFound("用户不存在");
+        }
+
+        // 不能删除超级管理员（id=1）
+        if (userId == 1L && "ADMIN".equals(targetUser.getRole())) {
+            throw BusinessException.forbidden("不能删除超级管理员账户");
+        }
+
+        userCleanupService.cleanupAndDeleteUser(userId);
     }
 
     // ---- Project Management ----
@@ -597,5 +629,22 @@ public class AdminServiceImpl implements AdminService {
     @Override
     public List<Certificate> regenerateAllCertificates() {
         return certificateService.regenerateAllCertificates();
+    }
+
+    /**
+     * 招募被驳回后，给发布者发送通知
+     */
+    private void sendRejectNotification(Recruit recruit) {
+        try {
+            Notification notification = new Notification();
+            notification.setUserId(recruit.getPublisherId());
+            notification.setTitle("招募审核被驳回");
+            notification.setContent("您发布的招募「" + recruit.getTitle() + "」未通过管理员审核，已被驳回并自动关闭。如有疑问请联系管理员。");
+            notification.setType("SYSTEM");
+            notification.setIsRead(0);
+            notificationMapper.insert(notification);
+        } catch (Exception e) {
+            // 通知发送失败不影响主流程
+        }
     }
 }

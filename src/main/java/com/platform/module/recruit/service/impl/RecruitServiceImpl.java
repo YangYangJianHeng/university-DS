@@ -96,6 +96,13 @@ public class RecruitServiceImpl implements RecruitService {
         if (recruit == null) {
             throw BusinessException.notFound("招募信息不存在");
         }
+        // 非公开招募（审核未通过/待审核）只有发布者和管理员可以查看
+        if (!"APPROVED".equals(recruit.getAuditStatus())) {
+            Long currentUserId = UserContext.getCurrentUserId();
+            if (!recruit.getPublisherId().equals(currentUserId) && !isAdmin()) {
+                throw BusinessException.notFound("招募信息不存在");
+            }
+        }
         // Increment view count asynchronously
         recruitMapper.incrementViewCount(id);
         recruit.setViewCount(recruit.getViewCount() + 1);
@@ -107,6 +114,7 @@ public class RecruitServiceImpl implements RecruitService {
         Page<Recruit> recruitPage = new Page<>(page, size);
 
         LambdaQueryWrapper<Recruit> wrapper = new LambdaQueryWrapper<Recruit>()
+                .eq(Recruit::getAuditStatus, "APPROVED")
                 .eq(StringUtils.hasText(projectType), Recruit::getProjectType, projectType)
                 .eq(StringUtils.hasText(status), Recruit::getStatus, status)
                 .orderByDesc(Recruit::getCreatedAt);
@@ -192,18 +200,26 @@ public class RecruitServiceImpl implements RecruitService {
         try {
             requiredSkills = JSON.parseArray(recruit.getRequiredSkills(), String.class);
         } catch (Exception e) {
+            log.warn("招募 requiredSkills 解析失败: recruitId={}, raw={}", recruitId, recruit.getRequiredSkills());
             requiredSkills = Collections.emptyList();
         }
 
         if (requiredSkills == null || requiredSkills.isEmpty()) {
+            log.warn("智能匹配: 招募未设置所需技能 recruitId={}", recruitId);
             return Collections.emptyList();
         }
 
         // Get all user skills from the user_skill table
         List<UserSkill> allUserSkills = userSkillMapper.selectList(null);
+        if (allUserSkills.isEmpty()) {
+            log.warn("智能匹配: user_skill 表无数据 recruitId={}", recruitId);
+            return Collections.emptyList();
+        }
 
-        // Group skills by user
+        // Group skills by user (exclude the publisher)
+        Long publisherId = recruit.getPublisherId();
         Map<Long, List<String>> userSkillsMap = allUserSkills.stream()
+                .filter(skill -> !skill.getUserId().equals(publisherId))
                 .collect(Collectors.groupingBy(
                         UserSkill::getUserId,
                         Collectors.mapping(UserSkill::getSkillName, Collectors.toList())
@@ -227,6 +243,10 @@ public class RecruitServiceImpl implements RecruitService {
 
                 results.add(item);
             }
+        }
+
+        if (results.isEmpty()) {
+            log.info("智能匹配: 未找到匹配用户 recruitId={}, requiredSkills={}", recruitId, requiredSkills);
         }
 
         // Sort by similarity descending

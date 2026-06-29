@@ -25,9 +25,7 @@ Page({
       if (this.data.department) params.department = this.data.department
 
       const res = await teacherApi.getList(params)
-      if (res.code === 200) {
-        this.setData({ teachers: res.data || [] })
-      }
+      this.setData({ teachers: res || [] })
     } catch (e) {
       this.setData({ teachers: [] })
     } finally {

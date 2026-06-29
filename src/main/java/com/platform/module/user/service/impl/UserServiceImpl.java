@@ -8,10 +8,14 @@ import com.platform.module.user.dto.ChangePasswordDTO;
 import com.platform.module.user.dto.LoginDTO;
 import com.platform.module.user.dto.RegisterDTO;
 import com.platform.module.user.dto.UpdateProfileDTO;
+import com.platform.module.teacher.entity.Teacher;
+import com.platform.module.teacher.mapper.TeacherMapper;
 import com.platform.module.user.entity.User;
 import com.platform.module.user.entity.UserSkill;
 import com.platform.module.user.mapper.UserMapper;
 import com.platform.module.user.mapper.UserSkillMapper;
+import com.platform.common.exception.BusinessException;
+import com.platform.module.user.service.UserCleanupService;
 import com.platform.module.user.service.UserService;
 import com.platform.module.user.vo.UserVO;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -34,15 +38,21 @@ public class UserServiceImpl implements UserService {
     private final UserSkillMapper userSkillMapper;
     private final JwtUtil jwtUtil;
     private final PasswordEncoder passwordEncoder;
+    private final UserCleanupService userCleanupService;
+    private final TeacherMapper teacherMapper;
 
     public UserServiceImpl(UserMapper userMapper,
                            UserSkillMapper userSkillMapper,
                            JwtUtil jwtUtil,
-                           PasswordEncoder passwordEncoder) {
+                           PasswordEncoder passwordEncoder,
+                           UserCleanupService userCleanupService,
+                           TeacherMapper teacherMapper) {
         this.userMapper = userMapper;
         this.userSkillMapper = userSkillMapper;
         this.jwtUtil = jwtUtil;
         this.passwordEncoder = passwordEncoder;
+        this.userCleanupService = userCleanupService;
+        this.teacherMapper = teacherMapper;
     }
 
     @Override
@@ -272,6 +282,34 @@ public class UserServiceImpl implements UserService {
         }
     }
 
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void deleteAccount(Long userId) {
+        User user = userMapper.selectById(userId);
+        if (user == null) {
+            throw BusinessException.notFound("用户不存在");
+        }
+        // 管理员不能通过此接口自行注销
+        if ("ADMIN".equals(user.getRole())) {
+            throw BusinessException.forbidden("管理员账户不能通过此方式注销，请联系超级管理员");
+        }
+        userCleanupService.cleanupAndDeleteUser(userId);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void updateTeacherProfile(Long userId, String department, String title, String researchFields) {
+        Teacher teacher = teacherMapper.selectOne(
+                new LambdaQueryWrapper<Teacher>().eq(Teacher::getUserId, userId));
+        if (teacher == null) {
+            throw BusinessException.notFound("您还不是导师，无法更新导师信息");
+        }
+        if (department != null) teacher.setDepartment(department);
+        if (title != null) teacher.setTitle(title);
+        if (researchFields != null) teacher.setResearchFields(researchFields);
+        teacherMapper.updateById(teacher);
+    }
+
     private UserVO buildUserVO(User user) {
         UserVO vo = new UserVO();
         vo.setId(user.getId());
@@ -284,6 +322,21 @@ public class UserServiceImpl implements UserService {
         vo.setBio(user.getBio());
         vo.setRole(user.getRole());
         vo.setStatus(user.getStatus());
+
+        // 如果是导师，加载 Teacher 表信息
+        if ("TEACHER".equals(user.getRole())) {
+            Teacher teacher = teacherMapper.selectOne(
+                    new LambdaQueryWrapper<Teacher>().eq(Teacher::getUserId, user.getId()));
+            if (teacher != null) {
+                vo.setDepartment(teacher.getDepartment());
+                vo.setTitle(teacher.getTitle());
+                vo.setResearchFields(teacher.getResearchFields());
+                vo.setIsVerified(teacher.getIsVerified());
+                vo.setRating(teacher.getRating());
+                vo.setMaxTeams(teacher.getMaxTeams());
+                vo.setCurrentTeams(teacher.getCurrentTeams());
+            }
+        }
 
         // Fetch skills for this user
         List<UserSkill> skills = userSkillMapper.selectList(
