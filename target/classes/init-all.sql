@@ -19,6 +19,9 @@ CREATE DATABASE IF NOT EXISTS `university_platform`
 
 USE `university_platform`;
 
+-- 关闭外键检查：保证建表/初始化数据的执行顺序不受外键依赖影响（脚本结束时恢复）
+SET FOREIGN_KEY_CHECKS = 0;
+
 -- =============================================
 -- 1. 用户表
 -- =============================================
@@ -130,7 +133,23 @@ CREATE TABLE IF NOT EXISTS `team_member` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- =============================================
--- 8. 团队-导师关联表
+-- 8. 导师表（前置：team_teacher 的外键依赖此表）
+-- =============================================
+CREATE TABLE IF NOT EXISTS `teacher` (
+    `id` BIGINT AUTO_INCREMENT PRIMARY KEY,
+    `user_id` BIGINT NOT NULL,
+    `department` VARCHAR(100),
+    `title` VARCHAR(50),
+    `research_fields` VARCHAR(500) COMMENT '研究方向，逗号分隔',
+    `max_teams` INT DEFAULT 3,
+    `current_teams` INT DEFAULT 0,
+    `is_verified` TINYINT DEFAULT 0,
+    `rating` DECIMAL(2,1) DEFAULT 0,
+    FOREIGN KEY (`user_id`) REFERENCES `user`(`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- =============================================
+-- 9. 团队-导师关联表
 -- =============================================
 CREATE TABLE IF NOT EXISTS `team_teacher` (
     `id` BIGINT AUTO_INCREMENT PRIMARY KEY,
@@ -145,7 +164,7 @@ CREATE TABLE IF NOT EXISTS `team_teacher` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- =============================================
--- 9. 项目表
+-- 10. 项目表
 -- =============================================
 CREATE TABLE IF NOT EXISTS `project` (
     `id` BIGINT AUTO_INCREMENT PRIMARY KEY,
@@ -164,7 +183,7 @@ CREATE TABLE IF NOT EXISTS `project` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- =============================================
--- 10. 任务表（v2.0：多人指派）
+-- 11. 任务表（v2.0：多人指派）
 -- =============================================
 CREATE TABLE IF NOT EXISTS `task` (
     `id` BIGINT AUTO_INCREMENT PRIMARY KEY,
@@ -183,7 +202,7 @@ CREATE TABLE IF NOT EXISTS `task` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- =============================================
--- 11. 任务执行人关联表（多人指派）
+-- 12. 任务执行人关联表（多人指派）
 -- =============================================
 CREATE TABLE IF NOT EXISTS `task_assignee` (
     `id` BIGINT AUTO_INCREMENT PRIMARY KEY,
@@ -201,7 +220,7 @@ CREATE TABLE IF NOT EXISTS `task_assignee` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- =============================================
--- 12. 任务成果提交表（阶段性成果）
+-- 13. 任务成果提交表（阶段性成果）
 -- =============================================
 CREATE TABLE IF NOT EXISTS `task_submission` (
     `id` BIGINT AUTO_INCREMENT PRIMARY KEY,
@@ -222,7 +241,7 @@ CREATE TABLE IF NOT EXISTS `task_submission` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- =============================================
--- 13. 任务评论表
+-- 14. 任务评论表
 -- =============================================
 CREATE TABLE IF NOT EXISTS `task_comment` (
     `id` BIGINT AUTO_INCREMENT PRIMARY KEY,
@@ -237,7 +256,7 @@ CREATE TABLE IF NOT EXISTS `task_comment` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- =============================================
--- 14. 竞赛信息表
+-- 15. 竞赛信息表
 -- =============================================
 CREATE TABLE IF NOT EXISTS `competition` (
     `id` BIGINT AUTO_INCREMENT PRIMARY KEY,
@@ -255,22 +274,6 @@ CREATE TABLE IF NOT EXISTS `competition` (
     `view_count` INT DEFAULT 0,
     `collect_count` INT DEFAULT 0,
     `status` VARCHAR(20) DEFAULT 'UPCOMING'
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
--- =============================================
--- 15. 导师表
--- =============================================
-CREATE TABLE IF NOT EXISTS `teacher` (
-    `id` BIGINT AUTO_INCREMENT PRIMARY KEY,
-    `user_id` BIGINT NOT NULL,
-    `department` VARCHAR(100),
-    `title` VARCHAR(50),
-    `research_fields` JSON,
-    `max_teams` INT DEFAULT 3,
-    `current_teams` INT DEFAULT 0,
-    `is_verified` TINYINT DEFAULT 0,
-    `rating` DECIMAL(2,1) DEFAULT 0,
-    FOREIGN KEY (`user_id`) REFERENCES `user`(`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- =============================================
@@ -510,11 +513,11 @@ INSERT IGNORE INTO `task_submission` (`task_id`, `submitter_id`, `title`, `descr
 VALUES (2, 4, '用户注册登录模块初版', '已完成用户注册、登录、JWT鉴权功能的后端API开发，正在进行前端联调。', 'PENDING_REVIEW');
 
 -- 任务评论
-INSERT INTO `task_comment` (`task_id`, `user_id`, `content`) VALUES
+INSERT IGNORE INTO `task_comment` (`task_id`, `user_id`, `content`) VALUES
 (1, 2, '需求分析文档已经完成，请大家查阅并提出修改意见。'),
 (1, 4, '收到，架构设计清晰，数据库设计也符合预期。'),
 (2, 2, '用户管理模块的API文档已经更新到Swagger，注意接口鉴权逻辑。');
-INSERT INTO `task_comment` (`task_id`, `user_id`, `content`, `mentioned_user_ids`) VALUES
+INSERT IGNORE INTO `task_comment` (`task_id`, `user_id`, `content`, `mentioned_user_ids`) VALUES
 (2, 4, '王五，注册接口的验证码逻辑需要增加限流保护。', '[4]');
 
 -- 公告数据
@@ -522,6 +525,9 @@ INSERT IGNORE INTO `announcement` (`title`, `content`, `type`) VALUES
 ('平台正式上线公告', '大学生竞赛/科研项目组队匹配与过程管理平台已正式上线！欢迎大家注册使用，发布招募信息，组建参赛团队。', 'SYSTEM'),
 ('2026年互联网+大赛报名通知', '2026年中国国际"互联网+"大学生创新创业大赛已启动报名，报名截止时间：2026年5月30日。请有意参赛的同学尽快组队并提交报名材料。', 'COMPETITION'),
 ('团队协作功能更新', '平台新增任务中心功能，支持多人任务指派、成果提交和评论沟通，帮助团队更高效地协作完成项目。', 'SYSTEM');
+
+-- 恢复外键检查
+SET FOREIGN_KEY_CHECKS = 1;
 
 -- =============================================
 -- 初始化完成

@@ -114,6 +114,7 @@ D:\JavaProjects\java_springboot_project\university-DS\src\main\java\com\platform
 D:\JavaProjects\java_springboot_project\university-DS\src\main\java\com\platform\module\collaboration\entity\TaskSubmission.java
 D:\JavaProjects\java_springboot_project\university-DS\src\main\java\com\platform\module\badge\entity\Certificate.java
 D:\JavaProjects\java_springboot_project\university-DS\src\main\java\com\platform\module\admin\mapper\AnnouncementMapper.java
+D:\JavaProjects\java_springboot_project\university-DS\src\main\java\com\platform\module\user\service\UserCleanupService.java
 D:\JavaProjects\java_springboot_project\university-DS\src\main\java\com\platform\module\user\controller\CaptchaController.java
 D:\JavaProjects\java_springboot_project\university-DS\src\main\java\com\platform\module\notification\mapper\NotificationMapper.java
 D:\JavaProjects\java_springboot_project\university-DS\src\main\java\com\platform\module\collaboration\controller\TaskController.java
